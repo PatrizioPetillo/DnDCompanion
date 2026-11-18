@@ -1,0 +1,363 @@
+// Passo 8: Riepilogo (sezione 5.2 e 5.4). La scheda completa con le schede in alto (scelta di Patrizio, 18/11):
+// Combattimento, Abilità, Magia, Zaino, Chi è. In cima gli avvisi da sistemare o accettare; in fondo l'esportazione.
+// La stessa scheda diventerà quella da usare al tavolo (slot, riposi, risorse).
+import { useState } from 'react';
+import { comePersonaggio, type IdPasso } from '../creazione/percorso';
+import { accettaAvviso, avvisiRiepilogo, esportaJSON, nomeFile, riepilogo, type Riepilogo } from '../creazione/riepilogo';
+import { prezzo } from '../creazione/equipaggiamento';
+import type { Bozza } from '../creazione/percorso';
+import { metri } from '../regole/misure';
+import type { Numero, Scheda as SchedaCalcolata } from '../regole/tipi';
+import { calcolaScheda, DATI } from '../regole';
+import type { StatoPartita } from '../partita/partita';
+import { Avatar } from './Avatar';
+import { Fascia, immagine } from './Illustrazione';
+import { iniziali } from '../archivio/archivio';
+import { MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
+
+type Scheda = 'combattimento' | 'abilita' | 'magia' | 'zaino' | 'chi';
+// Icone disegnate a mano (tratto semplice), per riconoscere la scheda al volo
+const ICONE: Record<Scheda, string> = {
+  combattimento: 'M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z',                        // scudo
+  abilita: 'M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7L12 3z',      // stella
+  magia: 'M12 2v6M12 16v6M2 12h6M16 12h6M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19', // scintilla
+  zaino: 'M8 6V5a4 4 0 018 0v1M5 8h14v11a2 2 0 01-2 2H7a2 2 0 01-2-2V8zM9 13h6',             // zaino
+  chi: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 3.6-7 8-7s8 3 8 7',                         // persona
+};
+const SCHEDE: { id: Scheda; titolo: string }[] = [
+  { id: 'combattimento', titolo: 'Combattimento' }, { id: 'abilita', titolo: 'Abilità' }, { id: 'magia', titolo: 'Magia' },
+  { id: 'zaino', titolo: 'Zaino' }, { id: 'chi', titolo: 'Chi è' },
+];
+
+const somma = (n: Numero, finale: string) =>
+  `${n.termini.map((t) => `${t.etichetta} ${t.valore < 0 ? `−${-t.valore}` : t.valore}`).join(' + ')} = ${finale}`;
+const segno = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
+
+export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaPartita, ritratto }: {
+  bozza: Bozza; cambia: (b: Bozza) => void; apri: (p: IdPasso) => void; ricevuta?: boolean;
+  partita?: StatoPartita; cambiaPartita?: (s: StatoPartita) => void;    // uso al tavolo; assenti per una scheda ricevuta
+  ritratto?: string;
+}) {
+  const [vistaScheda, setScheda] = useState<Scheda>('combattimento');
+  const r = riepilogo(bozza);
+  if (!r) return (
+    <section>
+      <h1 className="mb-1 font-titolo text-2xl text-accento">Riepilogo</h1>
+      <p className="text-sm text-testo-2">Scegli almeno classe, background e specie: poi qui trovi la scheda completa.</p>
+    </section>
+  );
+  const schede = SCHEDE.filter((s) => s.id !== 'magia' || r.magia.fonti.length > 0);
+  const pg = comePersonaggio(bozza)!;
+  const scheda: SchedaCalcolata = calcolaScheda(pg);
+  const tavolo: PropsTavolo | null = partita && cambiaPartita && !ricevuta
+    ? { scheda, partita, cambia: cambiaPartita, dado: DATI.classi[pg.classe].dadoVita } : null;
+
+  return (
+    <section>
+      {pg && <Fascia gruppo="classi" id={pg.classe} alto={120} arrotonda={false} suSfondo />}
+      <div className={`mb-3 flex items-center gap-3 ${pg && immagine('classi', pg.classe) ? 'relative -mt-10' : ''}`}>
+        <Avatar ritratto={ritratto} classe={pg?.classe} iniziali={iniziali(r.testata.nome)} />
+        <div className="min-w-0">
+          <h1 className="font-titolo text-2xl text-accento">{r.testata.nome}</h1>
+          <p className="text-sm text-testo-2">{r.testata.descrizione}</p>
+        </div>
+      </div>
+
+      <Avvisi bozza={bozza} cambia={cambia} apri={apri} ricevuta={ricevuta} />
+
+      {tavolo && <Riposi {...tavolo} />}
+
+      <nav className="sticky z-[5] -mx-4 mb-3 border-b border-bordo bg-sfondo/95 px-4 backdrop-blur" style={{ top: 'var(--alto-testata, 0px)' }} aria-label="Sezioni della scheda">
+        <div className="flex justify-between gap-1 overflow-x-auto py-2" role="tablist">
+          {schede.map((s) => (
+            <button key={s.id} role="tab" aria-selected={vistaScheda === s.id} onClick={() => setScheda(s.id)}
+              className={`flex min-h-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-[12px] ${vistaScheda === s.id ? 'bg-accento font-medium text-su-accento' : 'text-testo-2'}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE[s.id]} /></svg>
+              {s.titolo}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <div role="tabpanel">
+        {vistaScheda === 'combattimento' && <Combattimento r={r} tavolo={tavolo} />}
+        {vistaScheda === 'abilita' && <Abilita r={r} />}
+        {vistaScheda === 'magia' && (tavolo ? <MagiaTavolo {...tavolo} /> : <Magia r={r} />)}
+        {vistaScheda === 'zaino' && <Zaino r={r} />}
+        {vistaScheda === 'chi' && <ChiE r={r} />}
+      </div>
+
+      {ricevuta ? <EsportaPdf bozza={bozza} /> : <Esporta bozza={bozza} ritratto={ritratto} />}
+    </section>
+  );
+}
+
+function Avvisi({ bozza, cambia, apri, ricevuta }: { bozza: Bozza; cambia: (b: Bozza) => void; apri: (p: IdPasso) => void; ricevuta?: boolean }) {
+  const tutti = avvisiRiepilogo(bozza);
+  const aperti = tutti.filter((a) => !a.accettato);
+  const accettati = tutti.filter((a) => a.accettato);
+  if (aperti.length === 0 && accettati.length === 0) return <p className="mb-3 rounded-xl border border-ok/50 bg-superficie p-3 text-sm text-testo">Scheda completa e senza avvisi.</p>;
+  // Richiuso: la scheda resta in vista; il numero dice quanti avvisi restano
+  return (
+    <details className={`mb-3 rounded-xl border bg-superficie ${aperti.length ? 'border-attenzione' : 'border-ok/50'}`}>
+      <summary className="flex min-h-12 cursor-pointer items-center px-3 text-sm text-testo">
+        {aperti.length ? `Da controllare: ${aperti.length} ${aperti.length === 1 ? 'avviso' : 'avvisi'}` : 'Scheda completa'}
+        {accettati.length > 0 && <span className="ml-1 text-testo-2">· {accettati.length} {accettati.length === 1 ? 'eccezione accettata' : 'eccezioni accettate'}</span>}
+      </summary>
+    <div className="space-y-2 px-3 pb-3">
+      {aperti.map((a) => (
+        <div key={a.id} className={`rounded-xl border bg-superficie p-3 ${a.livello === 'errore' ? 'border-attenzione' : 'border-attenzione/50'}`}>
+          <p className="text-sm text-testo">{a.messaggio}{a.srd ? <span className="text-testo-2"> (SRD p. {a.srd.pagina})</span> : null}</p>
+          {!ricevuta && <div className="mt-2 flex gap-2">
+            <button onClick={() => apri(a.passo)} className="min-h-11 flex-1 rounded-lg border border-bordo px-3 text-sm text-testo">Vai a {a.titoloPasso}</button>
+            {a.accettabile && (
+              <button onClick={() => cambia(accettaAvviso(bozza, a.id))} className="min-h-11 flex-1 rounded-lg border border-accento px-3 text-sm text-accento">
+                Accetta (ok del master)
+              </button>
+            )}
+          </div>}
+        </div>
+      ))}
+      {accettati.length > 0 && (
+        <div className="rounded-xl border border-bordo p-3">
+          <p className="text-sm text-testo-2">Eccezioni accettate</p>
+          <ul className="mt-2 space-y-2">
+            {accettati.map((a) => (
+              <li key={a.id} className="flex items-start gap-2 text-sm text-testo">
+                <span className="flex-1">{a.messaggio}</span>
+                {!ricevuta && <button onClick={() => cambia(accettaAvviso(bozza, a.id, false))} className="min-h-11 shrink-0 rounded-lg px-2 text-accento">Annulla</button>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+    </details>
+  );
+}
+
+function Combattimento({ r, tavolo }: { r: Riepilogo; tavolo: PropsTavolo | null }) {
+  const [spiega, setSpiega] = useState<string | null>(null);
+  const c = r.combattimento;
+  const aperto = c.numeri.find((n) => n.id === spiega);
+  return (
+    <div className="space-y-4">
+      {tavolo && <PuntiFerita {...tavolo} />}
+      <div className="grid grid-cols-3 gap-2">
+        {c.numeri.filter((n) => !tavolo || n.id !== 'pf').map((n) => (
+          <button key={n.id} disabled={!n.somma} onClick={() => setSpiega(spiega === n.id ? null : n.id)} aria-expanded={spiega === n.id}
+            className={`rounded-xl border bg-superficie p-2 text-center ${spiega === n.id ? 'border-accento' : 'border-bordo'}`}>
+            <span className="block text-xl font-medium text-testo">{n.valore}</span>
+            <span className="block text-xs leading-tight text-testo-2">{n.etichetta}</span>
+          </button>
+        ))}
+      </div>
+      {aperto?.somma && <p className="-mt-2 text-sm text-testo-2">{aperto.etichetta}: {somma(aperto.somma, aperto.valore)}</p>}
+
+      <div>
+        <h2 className="mb-2 text-base font-medium text-testo">Tiri salvezza</h2>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          {c.tiriSalvezza.map((t) => (
+            <div key={t.car} className="flex items-center gap-2 text-sm">
+              <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${t.competente ? 'bg-accento' : 'border border-bordo'}`} />
+              <span className="flex-1 text-testo">{t.nome}</span>
+              <span className="text-testo">{t.valore}</span>
+              {t.competente && <span className="sr-only">con competenza</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-2 text-base font-medium text-testo">Attacchi</h2>
+        <ul className="space-y-2">
+          {c.attacchi.map((a) => (
+            <li key={a.id} className="rounded-xl border border-bordo bg-superficie p-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-base font-medium text-testo">{a.nome}{a.quantita > 1 ? ` × ${a.quantita}` : ''}</span>
+                <span className="text-base text-testo">{segno(a.colpire.totale)}</span>
+              </div>
+              <p className="text-sm text-testo">{a.danni.testo}{a.danni.testoDueMani ? ` · a due mani ${a.danni.testoDueMani}` : ''}</p>
+              <p className="text-xs text-testo-2">
+                {a.gittata ? `Gittata ${metri(a.gittata[0]).replace(' metri', '')}/${metri(a.gittata[1])}` : 'Mischia'}
+                {a.padronanza ? ` · Padronanza: ${a.padronanza}` : ''}
+              </p>
+              {a.note.map((n) => <p key={n} className="text-xs text-attenzione">{n}</p>)}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {c.trucchetti.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-base font-medium text-testo">Trucchetti d'attacco</h2>
+          <ul className="space-y-2">
+            {c.trucchetti.map((t) => (
+              <li key={t.id} className="rounded-xl border border-bordo bg-superficie p-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-base font-medium text-testo">{t.nome}</span>
+                  <span className="shrink-0 text-sm text-testo">{t.tiro}</span>
+                </div>
+                <p className="text-sm text-testo">{t.dadi}</p>
+                <p className="text-xs text-testo-2">{t.fonte}{t.nota ? ` · ${t.nota}` : ''}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {tavolo && <RisorseTavolo {...tavolo} />}
+      {!tavolo && c.risorse.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-base font-medium text-testo">Risorse</h2>
+          <ul className="space-y-1">
+            {c.risorse.map((x) => (
+              <li key={x.nome} className="text-sm text-testo">
+                <span className="font-medium">{x.nome}</span>: {x.usi}{x.dettaglio ? ` (${x.dettaglio})` : ''} <span className="text-testo-2">· {x.recupero}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {c.altro.length > 0 && <ul className="space-y-1 text-sm text-testo">{c.altro.map((x) => <li key={x}>{x}</li>)}</ul>}
+    </div>
+  );
+}
+
+function Abilita({ r }: { r: Riepilogo }) {
+  return (
+    <div className="space-y-3">
+      {r.abilita.map((c) => (
+        <div key={c.car} className="rounded-xl border border-bordo bg-superficie p-3">
+          <div className="flex items-baseline justify-between">
+            <span className="text-base font-medium text-testo">{c.nome}</span>
+            <span className="text-base text-testo">{c.punteggio} <span className="text-testo-2">({c.mod})</span></span>
+          </div>
+          {c.voci.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {c.voci.map((v) => (
+                <li key={v.id} className="flex items-center gap-2 text-sm">
+                  <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${v.maestria ? 'bg-oro ring-2 ring-accento' : v.competente ? 'bg-accento' : 'border border-bordo'}`} />
+                  <span className={`flex-1 ${v.competente ? 'text-testo' : 'text-testo-2'}`}>{v.nome}{v.maestria ? ' (maestria)' : ''}</span>
+                  <span className="text-testo">{v.valore}</span>
+                  {v.competente && !v.maestria && <span className="sr-only">con competenza</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Magia({ r }: { r: Riepilogo }) {
+  return (
+    <div className="space-y-3">
+      {r.magia.slot.length > 0 && <p className="text-sm text-testo">{r.magia.slot.join(' · ')}</p>}
+      {r.magia.fonti.map((f) => (
+        <div key={f.id} className="rounded-xl border border-bordo bg-superficie p-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-base font-medium text-testo">{f.nome}</span>
+            {f.cd !== null && <span className="shrink-0 text-sm text-testo">CD {f.cd} · {f.attacco}</span>}
+          </div>
+          {f.trucchetti.length > 0 && <p className="mt-1 text-sm text-testo"><span className="text-testo-2">Trucchetti: </span>{f.trucchetti.join(', ')}</p>}
+          {f.incantesimi.length > 0 && <p className="mt-1 text-sm text-testo"><span className="text-testo-2">Incantesimi: </span>{f.incantesimi.join(', ')}</p>}
+          {f.lanciGratuiti && <p className="mt-1 text-sm text-testo">{f.lanciGratuiti}</p>}
+          {f.note.map((n) => <p key={n} className="mt-1 text-xs text-testo-2">{n}</p>)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Zaino({ r }: { r: Riepilogo }) {
+  const m = r.zaino.monete.totale;
+  return (
+    <div className="space-y-3">
+      <p className="text-base text-testo">Monete: <span className="font-medium">{m < 0 ? `−${prezzo(-m)}` : prezzo(m)}</span></p>
+      <ul className="overflow-hidden rounded-xl border border-bordo bg-superficie">
+        {r.zaino.inventario.map((v) => (
+          <li key={v.oggetto} className="border-b border-bordo px-3 py-2 last:border-b-0">
+            {v.contenuto ? (
+              <details>
+                <summary className="min-h-8 cursor-pointer text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</summary>
+                <p className="mt-1 text-sm text-testo-2">{v.contenuto.map((c) => `${c.quantita > 1 ? `${c.quantita} × ` : ''}${c.nome}`).join(', ')}</p>
+              </details>
+            ) : <span className="text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</span>}
+          </li>
+        ))}
+        {r.zaino.inventario.length === 0 && <li className="px-3 py-3 text-sm text-testo-2">Lo zaino è vuoto.</li>}
+      </ul>
+    </div>
+  );
+}
+
+function ChiE({ r }: { r: Riepilogo }) {
+  return (
+    <div className="space-y-4">
+      <dl className="space-y-2">
+        {r.chiE.righe.map((x) => (
+          <div key={x.etichetta}>
+            <dt className="text-xs text-testo-2">{x.etichetta}</dt>
+            <dd className="text-base text-testo">{x.valore}</dd>
+          </div>
+        ))}
+      </dl>
+      <div>
+        <h2 className="mb-2 text-base font-medium text-testo">Privilegi e talenti</h2>
+        <ul className="space-y-1 text-sm text-testo">{r.chiE.privilegi.map((p) => <li key={p}>{p}</li>)}</ul>
+      </div>
+    </div>
+  );
+}
+
+function Esporta({ bozza, ritratto }: { bozza: Bozza; ritratto?: string }) {
+  const [stato, setStato] = useState<string | null>(null);
+  const scarica = (dati: BlobPart, tipo: string, nome: string) => {
+    const url = URL.createObjectURL(new Blob([dati], { type: tipo }));
+    const a = document.createElement('a');
+    a.href = url; a.download = nome;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const pdf = async () => {
+    setStato('Preparo il PDF…');
+    try {
+      const { creaPdf } = await import('../esporta/pdf');       // pdf-lib si carica solo adesso
+      scarica(await creaPdf(bozza) as BlobPart, 'application/pdf', nomeFile(bozza).replace(/\.json$/, '.pdf'));
+      setStato(null);
+    } catch { setStato('Non sono riuscito a creare il PDF. Riprova.'); }
+  };
+  const link = async () => {
+    const { creaLink } = await import('../esporta/link');
+    const url = await creaLink(bozza, location.href);
+    try {
+      if (navigator.share) await navigator.share({ title: bozza.nome || 'Scheda', url });
+      else { await navigator.clipboard.writeText(url); setStato('Link copiato: incollalo nel messaggio al master.'); }
+    } catch { /* condivisione annullata */ }
+  };
+  return (
+    <div className="mt-6 space-y-2 border-t border-bordo pt-4">
+      <h2 className="text-base font-medium text-testo">Esporta</h2>
+      <button onClick={pdf} className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Scarica il PDF</button>
+      <button onClick={link} className="h-12 w-full rounded-xl border border-accento text-base font-medium text-accento">Manda il link al master</button>
+      <button onClick={() => scarica(esportaJSON(bozza, ritratto), 'application/json', nomeFile(bozza))} className="h-12 w-full rounded-xl border border-bordo text-base text-testo">
+        Scarica la copia (JSON)
+      </button>
+      {stato && <p role="status" className="text-sm text-testo">{stato}</p>}
+      <p className="text-xs text-testo-2">Il link contiene tutta la scheda: chi lo apre la vede, senza toccare il suo personaggio. Il JSON è una copia di sicurezza, con il ritratto: si reimporta da «I miei personaggi».</p>
+    </div>
+  );
+}
+
+// Scheda ricevuta da un link: il master può solo leggerla o stamparla
+function EsportaPdf({ bozza }: { bozza: Bozza }) {
+  const scarica = async () => {
+    const { creaPdf } = await import('../esporta/pdf');
+    const url = URL.createObjectURL(new Blob([await creaPdf(bozza) as BlobPart], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = nomeFile(bozza).replace(/\.json$/, '.pdf'); a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return <button onClick={scarica} className="mt-6 h-12 w-full rounded-xl border border-accento text-base font-medium text-accento">Scarica il PDF</button>;
+}

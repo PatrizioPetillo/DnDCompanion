@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+@import '@fontsource/cinzel/500.css';
+
+/* Colori dal tema «DomusDraconis Compendio». Giorno = pergamena, notte = notte del drago. */
+:root {
+  --sfondo: #F3E9D2;      /* pergamena */
+  --superficie: #FAF4E6;
+  --bordo: #D6C59D;
+  --testo: #2B2320;       /* inchiostro */
+  --testo-2: #6B5434;
+  --accento: #6E1A1A;     /* rosso */
+  --su-accento: #FAF4E6;
+  --oro: #B08A3E;         /* ottone */
+  --attenzione: #A8481E;  /* ruggine */
+  --ok: #4F6B2E;
+  color-scheme: light;
+}
+:root[data-tema='notte'] {
+  --sfondo: #1A1512;
+  --superficie: #2B2320;
+  --bordo: #4A3D33;
+  --testo: #F3E9D2;
+  --testo-2: #BFB096;
+  --accento: #C9A253;
+  --su-accento: #1A1512;
+  --oro: #C9A253;
+  --attenzione: #E08A55;
+  --ok: #9DBB6E;
+  color-scheme: dark;
+}
+
+@theme {
+  --color-sfondo: var(--sfondo);
+  --color-superficie: var(--superficie);
+  --color-bordo: var(--bordo);
+  --color-testo: var(--testo);
+  --color-testo-2: var(--testo-2);
+  --color-accento: var(--accento);
+  --color-su-accento: var(--su-accento);
+  --color-oro: var(--oro);
+  --color-attenzione: var(--attenzione);
+  --color-ok: var(--ok);
+  --font-titolo: 'Cinzel', Georgia, serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html, body { background: var(--sfondo); color: var(--testo); }
+body { margin: 0; -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--oro); outline-offset: 2px; }

@@ -51,7 +51,9 @@ export function blocchiMagia(b: Bozza, d: Dati = DATI): Blocco[] {
       const voci = letti(b, m, tipo);
       contatori.push({ tipo, etichetta, scelti: voci.length, attesi, voci });
     };
-    if (m.trucchetti.attesi > 0 && m.scelte.trucchetti) conta('trucchetti', 'Trucchetti', m.trucchetti.attesi);
+      // Il contatore conta solo quelli da scegliere: i trucchetti dati (una specie con Luce + 1 a scelta) non si scelgono
+    const daScegliere = m.trucchetti.attesi - (m.trucchetti.fissi?.length ?? 0);
+    if (daScegliere > 0 && m.scelte.trucchetti) conta('trucchetti', 'Trucchetti', daScegliere);
     if (m.scelte.incantesimi) conta('incantesimi', m.soloRituali ? 'Rituali di 1°' : m.incantesimiQuanti > 1 ? 'Incantesimi di 1°' : 'Incantesimo di 1°', m.incantesimiQuanti);
     if (m.libro) conta('libro', 'Nel libro', m.libro.iniziali);
     if (m.preparati) conta('preparati', 'Preparati', m.preparati.limite);
@@ -83,7 +85,7 @@ function scrivi(b: Bozza, m: MagiaCalcolata, tipo: TipoScelta, v: Id[]): Bozza {
   return b;
 }
 function quanti(m: MagiaCalcolata, tipo: TipoScelta): number {
-  if (tipo === 'trucchetti') return m.trucchetti.attesi;
+  if (tipo === 'trucchetti') return m.trucchetti.attesi - (m.trucchetti.fissi?.length ?? 0);
   if (tipo === 'incantesimi') return m.incantesimiQuanti;
   if (tipo === 'libro') return m.libro?.iniziali ?? 0;
   return m.preparati?.limite ?? 0;

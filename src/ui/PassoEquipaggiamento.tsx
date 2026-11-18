@@ -89,7 +89,7 @@ export function PassoEquipaggiamento({ bozza, cambia }: { bozza: Bozza; cambia: 
         <ul className="mt-3 space-y-2">
           {avvisi.map((a) => (
             <li key={a.id} className={`rounded-xl border bg-superficie p-3 text-sm text-testo ${a.livello === 'errore' ? 'border-attenzione' : 'border-attenzione/50'}`}>
-              {a.messaggio}{a.srd ? <span className="text-testo-2"> (SRD p. {a.srd.pagina})</span> : null}
+              {a.messaggio}{a.srd?.pagina ? <span className="text-testo-2"> (SRD p. {a.srd.pagina})</span> : null}
             </li>
           ))}
         </ul>

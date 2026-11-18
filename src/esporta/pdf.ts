@@ -124,7 +124,7 @@ export async function creaPdf(b: Bozza, oggi = new Date()): Promise<Uint8Array> 
   sx.testo('• competenza   •• maestria', { dim: 7, colore: GRIGIO });
 
   // ───────── Colonna destra: attacchi, risorse, magia ─────────
-  const dx = new Colonna(p1, f, MARGINE + 186, A4.l - 2 * MARGINE - 186, y, () => {
+    const dx = new Colonna(p1, f, MARGINE + 186, A4.l - 2 * MARGINE - 186, y, (): PDFPage => {
     const p = doc.getPages()[doc.getPageCount() - 1];
     return p === dx.pagina ? nuovaPagina() : p;
   });
@@ -190,6 +190,6 @@ function scriviResto(c: Colonna, r: Riepilogo, b: Bozza) {
   const avvisi = avvisiRiepilogo(b);
   if (avvisi.length) {
     c.titolo('Per il master');
-    for (const a of avvisi) c.testo(`${a.accettato ? 'Eccezione accettata' : 'Da controllare'}: ${a.messaggio}${a.srd ? ` (SRD p. ${a.srd.pagina})` : ''}`, { dim: 8 });
+    for (const a of avvisi) c.testo(`${a.accettato ? 'Eccezione accettata' : 'Da controllare'}: ${a.messaggio}${a.srd?.pagina ? ` (SRD p. ${a.srd.pagina})` : ''}`, { dim: 8 });
   }
 }

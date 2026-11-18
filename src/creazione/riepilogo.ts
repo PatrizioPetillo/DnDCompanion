@@ -1,7 +1,7 @@
 // Passo 8: Riepilogo (sezione 5.2 e 5.4). La scheda completa divisa in 5 schede (Combattimento, Abilità, Magia,
 // Zaino, Chi è), gli avvisi da accettare e l'esportazione in JSON. TypeScript puro: l'interfaccia lo mostra e basta.
 import { comePersonaggio, PASSI, statoPassi, type Bozza, type IdPasso } from './percorso';
-import type { Elementi } from './personalizzati';
+import { quanti, type Elementi } from './personalizzati';
 import { calcolaScheda } from '../regole/motore';
 import { DATI, type Dati } from '../regole/dati';
 import { ABILITA, ALLINEAMENTI, NOME_CAR, NOME_LINGUA } from '../regole/dati/base';
@@ -162,7 +162,7 @@ export function pronta(b: Bozza, d: Dati = DATI): boolean {
 const FORMATO = 'companion-b20';
 // Gli elementi personalizzati che la scheda usa (un background dal proprio manuale) viaggiano con lei
 export function esportaJSON(b: Bozza, ritratto?: string, elementi?: Elementi): string {
-  const usati = elementi && Object.keys(elementi.background).length ? { elementi } : {};
+  const usati = elementi && quanti(elementi) ? { elementi } : {};
   return JSON.stringify({ formato: FORMATO, versione: 1, personaggio: b, ...(ritratto ? { ritratto } : {}), ...usati }, null, 2);
 }
 
@@ -173,15 +173,21 @@ export function importaJSON(testo: string, d: Dati = DATI): { bozza: Bozza; ritr
   if (x?.formato !== FORMATO || !x.personaggio) return { errore: 'Questo file non è una scheda di Companion B20.' };
   if (x.versione !== 1 || x.personaggio.schema !== 1) return { errore: 'La scheda è di una versione dell\'app che questa non conosce.' };
   const p = x.personaggio;
-  // Solo background personalizzati ben formati, e mai sopra uno dell'SRD
-  const elementi: Elementi = { background: Object.fromEntries(Object.entries(x.elementi?.background ?? {})
-    .filter(([id, bg]) => bg && typeof bg === 'object' && bg.personalizzato === true && id.startsWith('pers-') && !d.background[id]?.srd)) };
+  // Solo elementi personalizzati ben formati, e mai sopra uno dell'SRD (anche quelli del tavolo dentro la scheda)
+  const buoni = <T extends { personalizzato?: boolean; srd?: unknown }>(r: Record<string, T> | undefined, srd: Record<string, T>) => Object.fromEntries(
+    Object.entries(r ?? {}).filter(([id, v]) => v && typeof v === 'object' && v.personalizzato === true && id.startsWith('pers-') && !srd[id]?.srd));
+  const specieBuone = buoni({ ...p.tavolo?.elementi?.specie, ...x.elementi?.specie }, d.specie);
+  const elementi: Elementi = {
+    background: buoni({ ...p.tavolo?.elementi?.background, ...x.elementi?.background }, d.background),
+    ...(Object.keys(specieBuone).length ? { specie: specieBuone } : {}),
+  };
   const background = { ...d.background, ...elementi.background };
-  for (const [campo, archivio] of [[p.classe, d.classi], [p.specie, d.specie], [p.background, background]] as const)
+  const specie = { ...d.specie, ...elementi.specie };
+  for (const [campo, archivio] of [[p.classe, d.classi], [p.specie, specie], [p.background, background]] as const)
     if (campo && !archivio[campo]) return { errore: `La scheda usa «${campo}», che qui non c'è (forse un elemento personalizzato di un altro tavolo).` };
   const ritratto = typeof x.ritratto === 'string' && x.ritratto.startsWith('data:image/') ? x.ritratto : undefined;
   return { bozza: { ...p, scelte: p.scelte ?? {}, avvisiAccettati: p.avvisiAccettati ?? [], incantesimi: p.incantesimi ?? { preparati: {} } },
-    ...(ritratto ? { ritratto } : {}), ...(Object.keys(elementi.background).length ? { elementi } : {}) };
+    ...(ritratto ? { ritratto } : {}), ...(quanti(elementi) ? { elementi } : {}) };
 }
 
 export const nomeFile = (b: Bozza) => `${(b.nome.trim() || 'personaggio').toLowerCase().replace(/[^a-z0-9àèéìòù]+/g, '-').replace(/^-|-$/g, '')}.json`;

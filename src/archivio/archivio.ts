@@ -3,9 +3,10 @@
 import { bozzaVuota, statoPassi, PASSI, type Bozza } from '../creazione/percorso';
 import { statoVuoto, type StatoPartita } from '../partita/partita';
 import { DATI, type Dati } from '../regole/dati';
-import { elementiVuoti, type Elementi } from '../creazione/personalizzati';
+import { elementiVuoti, unione, type Elementi } from '../creazione/personalizzati';
 import { importaJSON } from '../creazione/riepilogo';
-import type { Background } from '../regole/tipi';
+import type { Background, Specie, Tavolo } from '../regole/tipi';
+import { tavoloVuoto } from '../regole/tavolo';
 
 export interface PersonaggioSalvato {
   id: string;
@@ -15,7 +16,10 @@ export interface PersonaggioSalvato {
   creato: string;             // ISO
   aggiornato: string;         // ISO
 }
-export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attivo: string | null; elementi?: Elementi; ultimaCopia?: string }   // elementi: «I miei elementi»; ultimaCopia: ISO
+export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attivo: string | null; elementi?: Elementi; ultimaCopia?: string; tavoli?: TavoloSalvato[] }   // elementi: «I miei elementi»; ultimaCopia: ISO
+
+// I tavoli creati come master: si riaprono, si modificano, si ricondividono
+export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string }
 
 export const archivioVuoto = (): Archivio => ({ versione: 1, personaggi: [], attivo: null });
 
@@ -83,7 +87,7 @@ export function iniziali(nome: string): string {
 }
 
 // ───────── «I miei elementi»: background inseriti dal proprio manuale ─────────
-export const elementi = (a: Archivio): Elementi => a.elementi ?? elementiVuoti();
+export const elementi = (a: Archivio): Elementi => ({ ...elementiVuoti(), ...a.elementi });
 export const salvaBackground = (a: Archivio, bg: Background): Archivio =>
   ({ ...a, elementi: { ...elementi(a), background: { ...elementi(a).background, [bg.id]: bg } } });
 // Si toglie solo se nessun personaggio lo usa
@@ -95,8 +99,18 @@ export function eliminaBackground(a: Archivio, id: string): { archivio: Archivio
   return { archivio: { ...a, elementi: { ...elementi(a), background: resto } }, usatoDa };
 }
 // Importando una scheda (JSON o link) i suoi elementi entrano tra i miei; a parità di id resta il mio
-export const unisciElementi = (a: Archivio, e?: Elementi): Archivio =>
-  e ? { ...a, elementi: { ...elementi(a), background: { ...e.background, ...elementi(a).background } } } : a;
+export const unisciElementi = (a: Archivio, e?: Partial<Elementi>): Archivio => (e ? { ...a, elementi: unione(e, elementi(a)) } : a);
+
+// Le specie inserite dal proprio manuale, come i background
+export const salvaSpecie = (a: Archivio, sp: Specie): Archivio =>
+  ({ ...a, elementi: { ...elementi(a), specie: { ...elementi(a).specie, [sp.id]: sp } } });
+export function eliminaSpecie(a: Archivio, id: string): { archivio: Archivio; usatoDa: string[] } {
+  const usatoDa = a.personaggi.filter((p) => p.bozza.specie === id).map((p) => p.bozza.nome.trim() || 'Senza nome');
+  if (usatoDa.length) return { archivio: a, usatoDa };
+  const { [id]: _tolta, ...resto } = elementi(a).specie ?? {};
+  void _tolta;
+  return { archivio: { ...a, elementi: { ...elementi(a), specie: resto } }, usatoDa };
+}
 
 // ───────── Copia di sicurezza: tutti i personaggi in un file ─────────
 // Il telefono può cancellare i dati di un sito (Safari, se l'app non è installata): questa copia è l'unico modo di non perderli.
@@ -144,4 +158,24 @@ export function statoCopia(a: Archivio, ora = new Date()): { testo: string; daRi
   const cambiati = a.personaggi.some((p) => p.aggiornato > a.ultimaCopia!);
   const testo = giorni <= 0 ? 'oggi' : giorni === 1 ? 'ieri' : `${giorni} giorni fa`;
   return { testo, daRifare: a.personaggi.length > 0 && (giorni >= 7 || cambiati) };
+}
+
+// ───────── «I miei tavoli» (chi fa il master) ─────────
+export const tavoli = (a: Archivio): TavoloSalvato[] => [...(a.tavoli ?? [])].sort((x, y) => y.aggiornato.localeCompare(x.aggiornato));
+export function nuovoTavolo(a: Archivio, ora = new Date()): { archivio: Archivio; id: string } {
+  const id = `tv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  return { archivio: { ...a, tavoli: [{ id, tavolo: tavoloVuoto(), aggiornato: ora.toISOString() }, ...(a.tavoli ?? [])] }, id };
+}
+export const aggiornaTavolo = (a: Archivio, id: string, t: Tavolo, ora = new Date()): Archivio =>
+  ({ ...a, tavoli: (a.tavoli ?? []).map((x) => (x.id === id ? { ...x, tavolo: t, aggiornato: ora.toISOString() } : x)) });
+export const eliminaTavolo = (a: Archivio, id: string): Archivio => ({ ...a, tavoli: (a.tavoli ?? []).filter((x) => x.id !== id) });
+
+// Un personaggio portato a un tavolo: le sue scelte non cambiano, il tavolo le controlla con avvisi.
+// Gli elementi del master entrano tra i miei, così il motore li conosce anche senza il link.
+export function portaAlTavolo(a: Archivio, id: string, t: Tavolo | undefined, ora = new Date()): Archivio {
+  const p = a.personaggi.find((x) => x.id === id);
+  if (!p) return a;
+  const { tavolo: _vecchio, ...resto } = p.bozza;
+  void _vecchio;
+  return aggiorna(t ? unisciElementi(a, t.elementi) : a, id, { bozza: t ? { ...resto, tavolo: t } : resto }, ora);
 }

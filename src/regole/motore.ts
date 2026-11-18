@@ -4,6 +4,7 @@ import { ABILITA, ALLINEAMENTI, ARMI, COSTO_POINT_BUY, LINGUE_RARE, LINGUE_STAND
 import { DATI, NOME_LISTA, type Dati } from './dati';
 import { DUE_MANI_ARMI, GITTATA_ARMI } from './dati/oggetti';
 import { metri } from './misure';
+import { avvisiTavolo, coperto } from './tavolo';
 import {
   CARATTERISTICHE, type Avviso, type Car, type ConcessioneMagia, type Effetto, type FormulaCA, type Id,
   type Attacco, type LivelloAvviso, type MagiaCalcolata, type Numero, type Personaggio, type RifSRD, type Risorsa, type Scelta,
@@ -53,6 +54,10 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   } else if (pg.punteggi.metodo === 'serieStandard') {
     const v = CARATTERISTICHE.map((c) => base[c]).sort((a, b) => b - a);
     if (v.join() !== SERIE_STANDARD.join()) avvisa('serie-standard', 'errore', 'La serie standard è 15, 14, 13, 12, 10, 8', { pagina: 21 });
+  } else if (pg.punteggi.metodo === 'tiri') {
+    // 4d6, si tengono i tre più alti (p. 21): ogni punteggio va da 3 a 18
+    if (CARATTERISTICHE.some((c) => base[c] !== 0 && (base[c] < 3 || base[c] > 18)))   // 0 = non ancora scritto
+      avvisa('tiri', 'errore', 'Con i tiri ogni punteggio va da 3 a 18 (4d6, tieni i tre più alti)', { pagina: 21 });
   }
   const bonus = pg.bonusBackground;
   const chiavi = Object.keys(bonus) as Car[];
@@ -293,7 +298,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     return {
       id: c.id, nome, caratteristica: car, cd, attacco,
       cdCondizionali: cd ? (c.cdCondizionali ?? []).map((x) => ({ etichetta: x.etichetta, totale: cd.totale + x.bonus })) : [],
-      trucchetti: { attesi: fissi.length + daScegliere, scelti: trucchetti },
+      trucchetti: { attesi: fissi.length + daScegliere, scelti: trucchetti, ...(fissi.length ? { fissi } : {}) },
       semprePreparati, preparati, lanciGratuiti: lanci,
       slot: c.slot ?? (c.puoUsareSlot ? 'qualsiasi' : null),
       ...(c.cambio ? { cambio: c.cambio } : {}),
@@ -496,7 +501,9 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const vel = effetti('velocita');
   const velocita = vel.length ? Math.max(...vel.map((v) => v.effetto.valore)) : specie.velocita;
 
-  for (const a of avvisi) if (pg.avvisiAccettati.includes(a.id)) a.accettato = true;
+    // Regole del tavolo (sezione 5.1): i suoi avvisi, e le eccezioni concesse in anticipo dal master
+  if (pg.tavolo) avvisi.push(...avvisiTavolo(pg, pg.tavolo, d));
+  for (const a of avvisi) if (pg.avvisiAccettati.includes(a.id) || (pg.tavolo && coperto(pg.tavolo, a))) a.accettato = true;
 
   return {
     punteggi, modificatori: mod, competenza: PB, pf, iniziativa,

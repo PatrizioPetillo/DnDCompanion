@@ -163,6 +163,10 @@ export interface Specie extends Elemento {
   velocita: number;
   tratti: Feature[];
   lignaggi?: { scelta: Id; opzioni: Lignaggio[]; srd: RifSRD };
+    // Solo per le specie personalizzate (inserite dall'utente dal suo manuale, sezione 4):
+  rimando?: string;
+  descrizione?: string;
+  modulo?: unknown;                                         // il modulo com'è stato compilato, per riaprirlo
 }
 
 export interface Background extends Elemento {
@@ -186,14 +190,21 @@ export interface Talento extends Elemento {
 }
 
 // ───────────── Tavolo e personaggio ─────────────
+// Eccezioni che il master concede in anticipo (scelta di Patrizio, 18/11): i loro avvisi risultano già accettati
+export type EccezioneTavolo = 'lingue-rare' | 'allineamenti-malvagi' | 'talenti-fuori-srd';
+export type MetodoPunteggi = 'pointBuy27' | 'serieStandard' | 'tiri';
+// Elementi personalizzati (dal manuale di chi li inserisce, sezione 4): viaggiano con il tavolo e con la scheda
+export interface ElementiPersonalizzati { background: Record<Id, Background>; specie?: Record<Id, Specie> }
+
 export interface Tavolo {
   schema: 1;
   nome: string;
   regole: 'srd-5.2';
   livello: 1;
-  metodiPunteggi: ('pointBuy27' | 'serieStandard' | 'tiri')[];
-  fonti: { srd: true; escludi?: Id[] };
-  personalizzati: unknown[];
+  metodiPunteggi: MetodoPunteggi[];
+  fonti: { srd: true; escludi?: Id[] };              // classi, specie, background dell'SRD non ammessi
+  elementi?: ElementiPersonalizzati;                 // quelli del master: per il tavolo sono ammessi
+  eccezioni?: EccezioneTavolo[];
   note?: string;
 }
 
@@ -207,7 +218,7 @@ export interface Personaggio {
   sottoclasse?: Id;
   specie: Id;
   background: Id;
-  punteggi: { metodo: 'pointBuy27' | 'serieStandard' | 'tiri'; base: Record<Car, number> };
+  punteggi: { metodo: MetodoPunteggi; base: Record<Car, number> };
   bonusBackground: Partial<Record<Car, number>>;
   scelte: Record<Id, Id[]>;
   incantesimi: { libro?: Id[]; preparati: Record<Id, Id[]> };
@@ -229,7 +240,7 @@ export interface MagiaCalcolata {
   cd: Numero | null;
   attacco: Numero | null;
   cdCondizionali: { etichetta: string; totale: number }[];
-  trucchetti: { attesi: number; scelti: Id[] };
+  trucchetti: { attesi: number; scelti: Id[]; fissi?: Id[] };   // fissi: quelli dati, non scelti (già dentro scelti)
   semprePreparati: Id[];
   preparati: { limite: number; scelti: Id[] } | null;
   lanciGratuiti: { incantesimi: Id[]; usi: number; recupero: Riposo } | null;

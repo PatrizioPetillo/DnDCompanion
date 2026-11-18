@@ -69,7 +69,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
 
       {tavolo && <Riposi {...tavolo} />}
 
-      <nav className="sticky z-[5] -mx-4 mb-3 border-b border-bordo bg-sfondo/95 px-4 backdrop-blur" style={{ top: 'var(--alto-testata, 0px)' }} aria-label="Sezioni della scheda">
+      <nav className="sticky z-5 -mx-4 mb-3 border-b border-bordo bg-sfondo/95 px-4 backdrop-blur" style={{ top: 'var(--alto-testata, 0px)' }} aria-label="Sezioni della scheda">
         <div className="flex justify-between gap-1 overflow-x-auto py-2" role="tablist">
           {schede.map((s) => (
             <button key={s.id} role="tab" aria-selected={vistaScheda === s.id} onClick={() => setScheda(s.id)}
@@ -109,7 +109,7 @@ function Avvisi({ bozza, cambia, apri, ricevuta }: { bozza: Bozza; cambia: (b: B
     <div className="space-y-2 px-3 pb-3">
       {aperti.map((a) => (
         <div key={a.id} className={`rounded-xl border bg-superficie p-3 ${a.livello === 'errore' ? 'border-attenzione' : 'border-attenzione/50'}`}>
-          <p className="text-sm text-testo">{a.messaggio}{a.srd ? <span className="text-testo-2"> (SRD p. {a.srd.pagina})</span> : null}</p>
+          <p className="text-sm text-testo">{a.messaggio}{a.srd?.pagina ? <span className="text-testo-2"> (SRD p. {a.srd.pagina})</span> : null}</p>
           {!ricevuta && <div className="mt-2 flex gap-2">
             <button onClick={() => apri(a.passo)} className="min-h-11 flex-1 rounded-lg border border-bordo px-3 text-sm text-testo">Vai a {a.titoloPasso}</button>
             {a.accettabile && (

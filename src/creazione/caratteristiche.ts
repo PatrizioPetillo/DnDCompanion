@@ -2,7 +2,7 @@
 import { ABILITA, NOME_CAR, COSTO_POINT_BUY, PUNTI_POINT_BUY, SERIE_PER_CLASSE, SERIE_STANDARD } from '../regole/dati/base';
 import { calcolaScheda } from '../regole';
 import { DATI, type Dati } from '../regole/dati';
-import { CARATTERISTICHE, type Car, type Id, type Personaggio, type Scheda } from '../regole/tipi';
+import { CARATTERISTICHE, type Car, type Id, type MetodoPunteggi, type Personaggio, type Scheda, type Tavolo } from '../regole/tipi';
 import { comePersonaggio, type Bozza } from './percorso';
 
 type Punteggi = Personaggio['punteggi'];
@@ -10,8 +10,9 @@ export const NON_ASSEGNATO = 0;   // serie standard: valore non ancora scelto
 
 const daLista = (v: number[]) => Object.fromEntries(CARATTERISTICHE.map((c, i) => [c, v[i]])) as Record<Car, number>;
 
-export function punteggiIniziali(metodo: 'pointBuy27' | 'serieStandard', classe?: Id): Punteggi {
+export function punteggiIniziali(metodo: MetodoPunteggi, classe?: Id): Punteggi {
   if (metodo === 'pointBuy27') return { metodo, base: daLista([8, 8, 8, 8, 8, 8]) };
+  if (metodo === 'tiri') return { metodo, base: daLista(Array(6).fill(NON_ASSEGNATO)) };   // li scrive il giocatore, dai dadi veri
   const consigliata = classe ? SERIE_PER_CLASSE[classe] : undefined;
   return { metodo, base: daLista(consigliata ?? Array(6).fill(NON_ASSEGNATO)) };
 }
@@ -31,6 +32,8 @@ export function opzioniPunteggio(p: Punteggi, c: Car): { valore: number; etichet
       disattivato: spesi - attuale + costo > PUNTI_POINT_BUY,
     }));
   }
+  // Tiri (p. 21): 4d6 tenendo i tre più alti, quindi da 3 a 18; nessuno scambio, i numeri possono ripetersi
+  if (p.metodo === 'tiri') return Array.from({ length: 16 }, (_, i) => ({ valore: 18 - i, etichetta: String(18 - i), disattivato: false }));
   // Serie standard: tutti e sei i valori; se uno è già usato, sceglierlo scambia i due punteggi (vedi assegna).
   return SERIE_STANDARD.map((v) => {
     const dove = CARATTERISTICHE.find((x) => x !== c && p.base[x] === v);
@@ -55,7 +58,6 @@ export function abilitaPer(c: Car, scheda: Scheda) {
     .map(([id, a]) => ({ id, nome: a.nome, ...scheda.abilita[id] }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
 }
-
 
 // ───────── Abilità della classe, scelte dentro le Caratteristiche ─────────
 // 'data': competenza già data da un'altra fonte (background, specie, talento) → non cliccabile
@@ -92,7 +94,7 @@ export function scegliAbilitaClasse(b: Bozza, id: Id, d: Dati = DATI): Bozza {
   const voce = statoAbilita(b, d).find((a) => a.id === id);
   if (!s || !voce) return b;
   const prese = b.scelte[s.id] ?? [];
-    if (voce.stato === 'scelta') {
+  if (voce.stato === 'scelta') {
     // Tolta l'abilità, se aveva la Maestria la perde anche lei (la Maestria richiede la competenza, p. 61)
     const m = sceltaMaestria(b, d);
     const maestria = m && (b.scelte[m.id] ?? []).includes(id) ? { [m.id]: (b.scelte[m.id] ?? []).filter((x) => x !== id) } : {};
@@ -102,14 +104,12 @@ export function scegliAbilitaClasse(b: Bozza, id: Id, d: Dati = DATI): Bozza {
   return b;
 }
 
-
 // Un riquadro è «da completare» se mancano abilità della classe e lì ce n'è almeno una ancora sceglibile:
 // bordo evidenziato e riquadro aperto.
 export function daCompletare(b: Bozza, c: Car, d: Dati = DATI): boolean {
   const { scelte, quante } = contatoreAbilitaClasse(b, d);
   return scelte < quante && statoAbilita(b, d).some((a) => a.car === c && a.stato === 'sceglibile');
 }
-
 
 // ───────── Maestria (ladro, p. 61): competenza doppia su abilità in cui hai già competenza ─────────
 function sceltaMaestria(b: Bozza, d: Dati): { id: Id; quantita: number } | undefined {
@@ -133,3 +133,9 @@ export function scegliMaestria(b: Bozza, id: Id, d: Dati = DATI): Bozza {
   if (!voce || !(voce.stato === 'data' || voce.stato === 'scelta') || prese.length >= s.quantita) return b;
   return { ...b, scelte: { ...b.scelte, [s.id]: [...prese, id] } };
 }
+
+// Metodi che si possono usare: senza tavolo tutti e tre; con il tavolo quelli del master.
+// Si parte dal point buy se c'è, altrimenti dal primo ammesso.
+export const TUTTI_I_METODI: MetodoPunteggi[] = ['pointBuy27', 'serieStandard', 'tiri'];
+export const metodiAmmessi = (t?: Tavolo): MetodoPunteggi[] => t?.metodiPunteggi.length ? TUTTI_I_METODI.filter((m) => t.metodiPunteggi.includes(m)) : TUTTI_I_METODI;
+export const metodoIniziale = (t?: Tavolo): MetodoPunteggi => metodiAmmessi(t).includes('pointBuy27') ? 'pointBuy27' : metodiAmmessi(t)[0];

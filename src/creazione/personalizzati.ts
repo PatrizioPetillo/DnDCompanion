@@ -3,7 +3,7 @@
 // il libro, con un modulo guidato. Si salvano tra «I miei elementi» e viaggiano con la scheda (JSON e link).
 import { DATI, type Dati } from '../regole/dati';
 import { STRUMENTI_ARTIGIANO, STRUMENTI_MUSICALI } from '../regole/dati/base';
-import { type Background, type Car, type Id, type Scelta } from '../regole/tipi';
+import { type Background, type Car, type ElementiPersonalizzati, type Id, type Scelta } from '../regole/tipi';
 
 // I background del Manuale del Giocatore 2024 che non sono nell'SRD: solo nomi (nomi italiani da verificare sul manuale)
 export const DAL_MANUALE: { id: string; nome: string; nomeEn: string }[] = [
@@ -115,21 +115,34 @@ export function moduloDa(bg: Background): ModuloBackground {
 }
 
 // ───────── «I miei elementi» ─────────
-export interface Elementi { background: Record<Id, Background> }
-export const elementiVuoti = (): Elementi => ({ background: {} });
+// Background e specie (le specie dalla versione con le specie personalizzate: nei dati vecchi possono mancare)
+export type Elementi = ElementiPersonalizzati;
+export const elementiVuoti = (): Elementi => ({ background: {}, specie: {} });
 
 // I dati del motore con anche gli elementi personalizzati (senza toccare quelli dell'SRD)
-export const datiCon = (e: Elementi, d: Dati = DATI): Dati => ({ ...d, background: { ...d.background, ...e.background } });
+export const datiCon = (e: Elementi, d: Dati = DATI): Dati => ({ ...d, background: { ...d.background, ...e.background }, specie: { ...d.specie, ...e.specie } });
 
 // L'app usa un solo insieme di dati condiviso: gli elementi personalizzati si registrano lì quando cambiano.
 // Si tolgono solo i personalizzati, mai quelli dell'SRD.
 export function registra(e: Elementi, d: Dati = DATI) {
   for (const [id, bg] of Object.entries(d.background)) if (bg.personalizzato && !e.background[id]) delete d.background[id];
   for (const [id, bg] of Object.entries(e.background)) d.background[id] = bg;
+  const sp = e.specie ?? {};
+  for (const [id, s] of Object.entries(d.specie)) if (s.personalizzato && !sp[id]) delete d.specie[id];
+  for (const [id, s] of Object.entries(sp)) d.specie[id] = s;
 }
 
 // Gli elementi che servono a una scheda (per il JSON e il link): solo quelli che usa
-export function elementiUsati(b: { background?: Id }, e: Elementi): Elementi {
-  return { background: b.background && e.background[b.background] ? { [b.background]: e.background[b.background] } : {} };
+export function elementiUsati(b: { background?: Id; specie?: Id }, e: Elementi): Elementi {
+  return {
+    background: b.background && e.background[b.background] ? { [b.background]: e.background[b.background] } : {},
+    ...(b.specie && e.specie?.[b.specie] ? { specie: { [b.specie]: e.specie[b.specie] } } : {}),
+  };
 }
+// Unione di più insiemi di elementi: a parità di id vince l'ultimo
+export const unione = (...tutti: (Partial<Elementi> | undefined)[]): Elementi => ({
+  background: Object.assign({}, ...tutti.map((e) => e?.background ?? {})),
+  specie: Object.assign({}, ...tutti.map((e) => e?.specie ?? {})),
+});
+export const quanti = (e?: Partial<Elementi>) => Object.keys(e?.background ?? {}).length + Object.keys(e?.specie ?? {}).length;
 

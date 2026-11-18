@@ -4,6 +4,7 @@ import { tuttiAssegnati } from './caratteristiche';
 import { scelteDiClasse } from './classe';
 import { calcolaScheda } from '../regole';
 import { DATI, type Dati } from '../regole/dati';
+import { ammesso } from '../regole/tavolo';
 import type { Avviso, Car, Id, Personaggio } from '../regole/tipi';
 
 export type IdPasso =
@@ -43,6 +44,8 @@ const INCOMPLETO = /^(scelta-mancante|preparati-mancanti|libro-incompleto|point-
 // A quale passo appartiene un avviso del motore delle regole.
 function passoDiAvviso(a: Avviso, b: Bozza, d: Dati): IdPasso {
   const id = a.id;
+  if (id.startsWith('tavolo-escluso:')) return ({ classi: 'classe', specie: 'specie', background: 'background' } as const)[id.split(':')[1] as 'classi'] ?? 'riepilogo';
+  if (id === 'tavolo-metodo') return 'caratteristiche';
   if (/^(bonus-background|talento-personalizzato)/.test(id)) return 'background';                      // i bonus si scelgono nel background (come Character Keep)
   if (/^(point-buy|serie-standard|massimo-20)/.test(id)) return 'caratteristiche';
   if (/^(armatura-|scudo-|equipaggiamento-|monete-|focus-|arma-|materiale)/.test(id)) return 'equipaggiamento';   // i materiali si comprano lì
@@ -125,7 +128,8 @@ function conMancanti(r: Record<IdPasso, VocePasso>, b: Bozza, classe: number, ba
     if (v.stato !== 'da-fare' || p.id === 'riepilogo') continue;
     const incompleti = p.id === 'personaggio' ? 0 : v.avvisi.filter((a) => INCOMPLETO.test(a.id) && !a.id.startsWith('scelta-mancante:origine.lingue')).length;
     const base = p.id === 'classe' ? classe : p.id === 'background' ? background
-      : p.id === 'personaggio' ? Number(!b.nome.trim()) + Number(!b.allineamento) : 0;
+      : p.id === 'personaggio' ? Number(!b.nome.trim()) + Number(!b.allineamento)
+      : p.id === 'caratteristiche' && b.punteggi ? Object.values(b.punteggi.base).filter((v) => v === 0).length : 0;   // punteggi ancora vuoti
     v.mancanti = Math.max(1, base + incompleti);
   }
   return r;
@@ -213,3 +217,7 @@ export function cambiaSpecie(b: Bozza, nuova: Id, d: Dati = DATI): { bozza: Bozz
   }
   return { bozza: { ...b, specie: nuova, scelte, avvisiAccettati: [] }, tolte };
 }
+
+// Con il link del tavolo si vedono solo gli elementi ammessi dal master; quello già scelto resta visibile
+// (un personaggio portato al tavolo: lì compare l'avviso, non sparisce la scelta). Senza tavolo, tutto.
+export const visibile = (b: Bozza, id: Id, scelto?: Id): boolean => !b.tavolo || id === scelto || ammesso(b.tavolo, id);

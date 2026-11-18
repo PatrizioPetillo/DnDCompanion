@@ -1,7 +1,7 @@
 // Passo 3: Background (sezione 5.2). Abilità, strumento, talento d'origine, bonus alle caratteristiche (SRD p. 83) e lingue (p. 20).
 // In cima i 4 dell'SRD; sotto quelli inseriti dal proprio manuale (sezione 4): l'app ne conosce solo il nome e il rimando.
 import { useState } from 'react';
-import type { Bozza } from '../creazione/percorso';
+import { visibile, type Bozza } from '../creazione/percorso';
 import { DAL_MANUALE, moduloDa, moduloVuoto, type ModuloBackground as Modulo } from '../creazione/personalizzati';
 import { DATI } from '../regole';
 import { ABILITA, NOME_CAR } from '../regole/dati/base';
@@ -28,7 +28,7 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
   // Lingue che la classe dà già (Druidico, Gergo ladresco): spente nelle tendine
   const lingueDiClasse = (bozza.classe ? DATI.classi[bozza.classe].features : [])
     .flatMap((f) => f.effetti).flatMap((e) => (e.tipo === 'lingua' ? e.ids : []));
-  const tutti = Object.values(DATI.background);
+  const tutti = Object.values(DATI.background).filter((b) => visibile(bozza, b.id, bozza.background));
   const srd = tutti.filter((b) => !b.personalizzato);
   const miei = tutti.filter((b) => b.personalizzato);
   const daInserire = DAL_MANUALE.filter((x) => !miei.some((b) => b.id === `pers-${x.id}`));
@@ -102,6 +102,13 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
       <p className="mb-4 text-sm text-testo-2">Cosa faceva il tuo personaggio prima di partire all'avventura.</p>
       <ul className="space-y-3">{srd.map(scheda)}</ul>
 
+      {bozza.tavolo ? (
+        // Al tavolo i background extra li sceglie il master: qui solo i suoi, niente «Inseriscilo»
+        miei.length > 0 && <>
+          <Separatore titolo={`Dal master: ${bozza.tavolo.nome || 'il tavolo'}`} />
+          <ul className="mb-3 space-y-3">{miei.map(scheda)}</ul>
+        </>
+      ) : <>
       <Separatore titolo="Dal tuo manuale" />
       {avviso && <p role="status" className="mb-3 rounded-xl border border-attenzione/50 bg-superficie p-3 text-sm text-testo">{avviso}</p>}
       {miei.length > 0 && <ul className="mb-3 space-y-3">{miei.map(scheda)}</ul>}
@@ -120,6 +127,7 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
           <button onClick={() => setModulo(moduloVuoto())} className="min-h-11 shrink-0 rounded-lg px-3 text-sm text-accento">Inseriscilo</button>
         </li>
       </ul>
+      </>}
 
       {modulo && (
         <ModuloBackground iniziale={modulo} chiudi={() => setModulo(null)}

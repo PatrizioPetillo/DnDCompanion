@@ -2,7 +2,7 @@
 // I loghi di DomusDraconis e di B20 GDR vanno qui quando arrivano i file (quello di B20 con il permesso degli admin).
 import { CREDITI } from '../licenza';
 
-export function Home({ personaggi, apriPersonaggi, apriInformazioni }: { personaggi: number; apriPersonaggi: () => void; apriInformazioni: () => void }) {
+export function Home({ personaggi, apriPersonaggi, apriTavoli, apriInformazioni }: { personaggi: number; apriPersonaggi: () => void; apriTavoli: () => void; apriInformazioni: () => void }) {
   return (
     <section className="flex min-h-[70dvh] flex-col items-center justify-center text-center">
       <h1 className="font-titolo text-4xl text-accento">Companion B20</h1>
@@ -11,6 +11,7 @@ export function Home({ personaggi, apriPersonaggi, apriInformazioni }: { persona
       <button onClick={apriPersonaggi} className="mt-8 h-12 w-full max-w-80 rounded-xl bg-accento text-base font-medium text-su-accento">
         I miei personaggi{personaggi ? ` (${personaggi})` : ''}
       </button>
+      <button onClick={apriTavoli} className="mt-3 h-12 w-full max-w-80 rounded-xl border border-bordo text-base text-testo">I miei tavoli (per il master)</button>
       <button onClick={apriInformazioni} className="mt-3 h-12 w-full max-w-80 rounded-xl border border-bordo text-base text-testo">Informazioni</button>
       <p className="mt-8 text-xs text-testo-2">{CREDITI}</p>
     </section>

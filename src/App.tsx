@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { aggiorna, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, esportaTutto, importaTutto, nuovo, salvaBackground, unisciElementi, type Archivio } from './archivio/archivio';
-import { elementiUsati, registra, type Elementi } from './creazione/personalizzati';
+import { aggiorna, aggiornaTavolo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio } from './archivio/archivio';
+import { elementiUsati, registra, unione, type Elementi } from './creazione/personalizzati';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, PASSI, prossimoPasso, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
 import { importaJSON } from './creazione/riepilogo';
 import { descriviTolte } from './creazione/testi';
-import { leggiLink } from './esporta/link';
+import { leggiLink, leggiLinkTavolo } from './esporta/link';
 import type { StatoPartita } from './partita/partita';
 import { DATI } from './regole';
+import type { Tavolo } from './regole/tipi';
+import { ElencoTavoli, ModuloTavolo, TavoloRicevuto } from './ui/Tavoli';
 import { Home } from './ui/Home';
 import { Informazioni } from './ui/Informazioni';
 import { PassoBackground } from './ui/PassoBackground';
@@ -21,7 +23,9 @@ import { Personaggi } from './ui/Personaggi';
 import { chiediMemoriaPersistente, useArchivio, useTema } from './ui/salvataggio';
 
 // Home → I miei personaggi → (indice e passi di un personaggio). Informazioni dalla Home.
-type Vista = 'home' | 'personaggi' | 'informazioni' | 'indice' | IdPasso;
+type Vista = 'home' | 'personaggi' | 'informazioni' | 'tavoli' | 'tavolo' | 'indice' | IdPasso;
+// Schermate senza la barra Indietro / Avanti in basso
+const SENZA_BARRA: Vista[] = ['home', 'personaggi', 'informazioni', 'tavoli', 'tavolo'];
 
 // Nomi italiani di classi e background, per i messaggi.
 const NOMI = Object.fromEntries([...Object.values(DATI.classi), ...Object.values(DATI.background), ...Object.values(DATI.specie)].map((x) => [x.id, x.nome]));
@@ -61,7 +65,16 @@ export default function App() {
   // Scheda arrivata con un link (#scheda=…): si guarda; «Aggiungi ai miei personaggi» la mette nella lista
   const [ricevuta, setRicevuta] = useState<Bozza | null>(null);
   const [elementiRicevuti, setElementiRicevuti] = useState<Elementi | undefined>(undefined);
+  // Tavolo arrivato con il link del master (#tavolo=…): «Nuovo personaggio per questo tavolo» o «Usa un mio personaggio»
+  const [tavoloRicevuto, setTavoloRicevuto] = useState<Tavolo | null>(null);
+  const [tavoloAperto, setTavoloAperto] = useState<string | null>(null);   // il tavolo che il master sta preparando
   useEffect(() => {
+    leggiLinkTavolo(location.hash).then((r) => {
+      if (!r) return;
+      history.replaceState(null, '', location.pathname + location.search);
+      if ('errore' in r) setMessaggio(r.errore);
+      else { setTavoloRicevuto(r.tavolo); window.scrollTo(0, 0); }
+    });
     leggiLink(location.hash).then((r) => {
       if (!r) return;
       history.replaceState(null, '', location.pathname + location.search);
@@ -71,7 +84,8 @@ export default function App() {
   }, []);
   // I background inseriti dal proprio manuale entrano nei dati del motore (anche quelli di una scheda ricevuta)
   const mieiElementi = elementi(archivio);
-  registra(elementiRicevuti ? { background: { ...elementiRicevuti.background, ...mieiElementi.background } } : mieiElementi);
+  // e quelli del tavolo (del personaggio aperto o del link appena arrivato), anche se non sono tra i miei
+  registra(unione(elementiRicevuti, tavoloRicevuto?.elementi, bozza.tavolo?.elementi, mieiElementi));
   const stati = useMemo(() => statoPassi(bozza), [bozza]);
   // Con almeno un personaggio salvato si chiede al browser di non cancellarlo da solo
   const haPersonaggi = archivio.personaggi.length > 0;
@@ -101,7 +115,7 @@ export default function App() {
     <div className="mx-auto flex min-h-dvh max-w-120 flex-col font-sans">
       <header ref={testata} className="sticky top-0 z-10 border-b border-bordo bg-sfondo/95 px-4 pb-3 pt-[max(12px,env(safe-area-inset-top))] backdrop-blur">
         <div className="flex items-center gap-2">
-          <button onClick={() => { setRicevuta(null); setVista('home'); }} aria-label="Home"
+          <button onClick={() => { setRicevuta(null); setTavoloRicevuto(null); setVista('home'); }} aria-label="Home"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-bordo text-testo-2">
             <IconaCasa />
           </button>
@@ -126,8 +140,9 @@ export default function App() {
             <div className="fixed inset-0 z-20" onClick={() => setMenu(false)} aria-hidden="true" />
             <div role="menu" className="absolute right-4 top-full z-30 mt-1 w-64 overflow-hidden rounded-xl border border-bordo bg-superficie shadow-lg"
               onKeyDown={(e) => e.key === 'Escape' && setMenu(false)}>
-              <VoceMenu onClick={() => { setRicevuta(null); setVista('home'); }}>Home</VoceMenu>
+              <VoceMenu onClick={() => { setRicevuta(null); setTavoloRicevuto(null); setVista('home'); }}>Home</VoceMenu>
               <VoceMenu onClick={() => { setRicevuta(null); setVista('personaggi'); }}>I miei personaggi</VoceMenu>
+              <VoceMenu onClick={() => { setRicevuta(null); setTavoloRicevuto(null); setVista('tavoli'); }}>I miei tavoli (master)</VoceMenu>
               {corrente && !ricevuta && <VoceMenu onClick={() => setVista('indice')}>Passi di {bozza.nome.trim() || 'questo personaggio'}</VoceMenu>}
               {corrente && !ricevuta && <VoceMenu onClick={() => setVista('riepilogo')}>Scheda (riepilogo)</VoceMenu>}
               <VoceMenu onClick={() => setTema(tema === 'notte' ? 'giorno' : 'notte')}>
@@ -155,11 +170,34 @@ export default function App() {
             <PassoRiepilogo bozza={ricevuta} cambia={() => {}} apri={() => {}} ricevuta />
           </>
         )}
-        {!ricevuta && vistaReale === 'home' && (
-          <Home personaggi={archivio.personaggi.length} apriPersonaggi={() => setVista('personaggi')} apriInformazioni={() => setVista('informazioni')} />
+        {tavoloRicevuto && !ricevuta && (
+          <TavoloRicevuto tavolo={tavoloRicevuto} archivio={archivio}
+            nuovo={() => {
+              const t = tavoloRicevuto;
+              setTavoloRicevuto(null);
+              setArchivio(nuovo(unisciElementi(archivio, t.elementi), { ...bozzaVuota(), tavolo: t }).archivio);
+              setVista('classe');
+            }}
+            usa={(id) => { const t = tavoloRicevuto; setTavoloRicevuto(null); apri(id, portaAlTavolo(archivio, id, t)); }}
+          />
         )}
-        {!ricevuta && vistaReale === 'informazioni' && <Informazioni />}
-        {!ricevuta && vistaReale === 'personaggi' && (
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'home' && (
+          <Home personaggi={archivio.personaggi.length} apriPersonaggi={() => setVista('personaggi')} apriTavoli={() => setVista('tavoli')} apriInformazioni={() => setVista('informazioni')} />
+        )}
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'tavoli' && (
+          <ElencoTavoli archivio={archivio}
+            apri={(id) => { setTavoloAperto(id); setVista('tavolo'); }}
+            crea={() => { const r = nuovoTavolo(archivio); setArchivio(r.archivio); setTavoloAperto(r.id); setVista('tavolo'); }} />
+        )}
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'tavolo' && (() => {
+          const tv = tavoli(archivio).find((x) => x.id === tavoloAperto);
+          if (!tv) return <ElencoTavoli archivio={archivio} apri={(id) => setTavoloAperto(id)} crea={() => { const r = nuovoTavolo(archivio); setArchivio(r.archivio); setTavoloAperto(r.id); }} />;
+          return <ModuloTavolo tavolo={tv.tavolo} mieiElementi={mieiElementi}
+            cambia={(t) => setArchivio((a: Archivio) => aggiornaTavolo(a, tv.id, t))}
+            elimina={() => { setArchivio(eliminaTavolo(archivio, tv.id)); setVista('tavoli'); }} />;
+        })()}
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'informazioni' && <Informazioni />}
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'personaggi' && (
           <Personaggi
             archivio={archivio}
             apri={(id) => apri(id)}
@@ -191,8 +229,12 @@ export default function App() {
             }}
           />
         )}
-        {!ricevuta && vistaReale === 'indice' && <Indice nome={bozza.nome} stati={stati} apri={setVista} />}
-        {!ricevuta && vistaReale === 'classe' && (
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'indice' && (
+          <Indice nome={bozza.nome} stati={stati} apri={setVista} tavolo={bozza.tavolo}
+            togliTavolo={() => corrente && window.confirm(`Togliere ${bozza.nome.trim() || 'il personaggio'} dal tavolo «${bozza.tavolo?.nome}»? Le sue scelte restano, spariscono le regole del master.`)
+              && setArchivio(portaAlTavolo(archivio, corrente.id, undefined))} />
+        )}
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'classe' && (
           <PassoClasse
             bozza={bozza}
             cambia={setBozza}
@@ -203,7 +245,7 @@ export default function App() {
             }}
           />
         )}
-        {!ricevuta && vistaReale === 'background' && (
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'background' && (
           <PassoBackground
             bozza={bozza}
             cambia={setBozza}
@@ -221,10 +263,17 @@ export default function App() {
             }}
           />
         )}
-        {!ricevuta && vistaReale === 'specie' && (
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'specie' && (
           <PassoSpecie
             bozza={bozza}
             cambia={setBozza}
+            salvaSpecie={(sp) => setArchivio((a: Archivio) => salvaSpecie(a, sp))}
+            eliminaSpecie={(id) => {
+              const r = eliminaSpecie(archivio, id);
+              if (r.usatoDa.length) return `Non la elimino: la usa ${r.usatoDa.join(', ')}. Cambia prima la specie di quel personaggio.`;
+              setArchivio(r.archivio);
+              return null;
+            }}
             scegli={(id) => {
               const { bozza: nuova, tolte } = cambiaSpecie(bozza, id);
               setBozza(nuova);
@@ -232,19 +281,19 @@ export default function App() {
             }}
           />
         )}
-        {!ricevuta && vistaReale === 'caratteristiche' && <PassoCaratteristiche bozza={bozza} cambia={setBozza} />}
-        {!ricevuta && vistaReale === 'magia' && <PassoMagia bozza={bozza} cambia={setBozza} />}
-        {!ricevuta && vistaReale === 'equipaggiamento' && <PassoEquipaggiamento bozza={bozza} cambia={setBozza} />}
-        {!ricevuta && vistaReale === 'personaggio' && (
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'caratteristiche' && <PassoCaratteristiche bozza={bozza} cambia={setBozza} />}
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'magia' && <PassoMagia bozza={bozza} cambia={setBozza} />}
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'equipaggiamento' && <PassoEquipaggiamento bozza={bozza} cambia={setBozza} />}
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'personaggio' && (
           <PassoPersonaggio bozza={bozza} cambia={setBozza} ritratto={corrente?.ritratto} cambiaRitratto={(r) => modifica({ ritratto: r })} />
         )}
-        {!ricevuta && vistaReale === 'riepilogo' && partita && (
+        {!ricevuta && !tavoloRicevuto && vistaReale === 'riepilogo' && partita && (
           <PassoRiepilogo bozza={bozza} cambia={setBozza} apri={(p) => setVista(p)} partita={partita}
             cambiaPartita={(s) => modifica({ partita: s })} ritratto={corrente?.ritratto} elementi={elementiUsati(bozza, mieiElementi)} />
         )}
       </main>
 
-      {!(!ricevuta && ['home', 'personaggi', 'informazioni'].includes(vistaReale)) && <nav className="fixed inset-x-0 bottom-0 border-t border-bordo bg-sfondo/95 backdrop-blur">
+      {!tavoloRicevuto && !(!ricevuta && SENZA_BARRA.includes(vistaReale)) && <nav className="fixed inset-x-0 bottom-0 border-t border-bordo bg-sfondo/95 backdrop-blur">
         <div className="mx-auto flex max-w-120 gap-3 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
           {ricevuta ? (
             <>
@@ -261,7 +310,7 @@ export default function App() {
                 Aggiungi ai miei personaggi
               </button>
             </>
-          ) : vistaReale === 'home' || vistaReale === 'personaggi' || vistaReale === 'informazioni' ? null : vistaReale === 'indice' ? (
+          ) : SENZA_BARRA.includes(vistaReale) ? null : vistaReale === 'indice' ? (
             <>
               <button onClick={() => setVista('personaggi')} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">I miei personaggi</button>
               <button onClick={avanti} className="h-12 flex-1 rounded-xl bg-accento text-base font-medium text-su-accento">Continua</button>
@@ -287,10 +336,16 @@ const COLORE: Record<StatoPasso, string> = {
 
 const attivi = (a: { accettato?: boolean; livello: string }[]) => a.filter((x) => !x.accettato && x.livello !== 'info').length;
 
-function Indice({ nome, stati, apri }: { nome: string; stati: ReturnType<typeof statoPassi>; apri: (v: Vista) => void }) {
+function Indice({ nome, stati, apri, tavolo, togliTavolo }: { nome: string; stati: ReturnType<typeof statoPassi>; apri: (v: Vista) => void; tavolo?: Tavolo; togliTavolo: () => void }) {
   return (
     <section>
       <h1 className="mb-1 font-titolo text-2xl text-accento">{nome.trim() || 'Il tuo personaggio'}</h1>
+      {tavolo && (
+        <p className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-bordo bg-superficie px-3 text-sm text-testo">
+          <span className="py-2">Tavolo: <strong>{tavolo.nome || 'senza nome'}</strong></span>
+          <button onClick={togliTavolo} className="min-h-11 shrink-0 px-2 text-sm text-accento">Togli</button>
+        </p>
+      )}
       <p className="mb-4 text-sm text-testo-2">Tocca un passo per aprirlo. Puoi tornarci quando vuoi.</p>
       <ol className="overflow-hidden rounded-xl border border-bordo bg-superficie">
         {PASSI.map((p, i) => {

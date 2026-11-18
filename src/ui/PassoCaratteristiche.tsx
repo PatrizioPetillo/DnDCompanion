@@ -1,11 +1,13 @@
-// Passo 5: Caratteristiche (sezione 5.2). Point buy o serie standard (SRD p. 21); il bonus scelto nel Background
+// Passo 5: Caratteristiche (sezione 5.2). Point buy, serie standard o tiri (SRD p. 21), quelli ammessi dal tavolo; il bonus scelto nel Background
 // è già applicato; sotto ogni caratteristica le abilità che ne dipendono.
 import { useEffect, useState } from 'react';
-import { assegna, contatoreAbilitaClasse, contatoreMaestria, daCompletare, scegliMaestria, NON_ASSEGNATO, opzioniPunteggio, punteggiIniziali, scegliAbilitaClasse, spesaPointBuy, statoAbilita, type StatoAbilita } from '../creazione/caratteristiche';
+import { assegna, metodiAmmessi, metodoIniziale, contatoreAbilitaClasse, contatoreMaestria, daCompletare, scegliMaestria, NON_ASSEGNATO, opzioniPunteggio, punteggiIniziali, scegliAbilitaClasse, spesaPointBuy, statoAbilita, type StatoAbilita } from '../creazione/caratteristiche';
 import { comePersonaggio, type Bozza } from '../creazione/percorso';
 import { DATI, modificatore } from '../regole';
 import { NOME_CAR } from '../regole/dati/base';
-import type { Car } from '../regole/tipi';
+import type { Car, MetodoPunteggi } from '../regole/tipi';
+
+const ETICHETTA_METODO: Record<MetodoPunteggi, string> = { pointBuy27: 'Point buy', serieStandard: 'Serie standard', tiri: 'Tiri' };
 
 const segno = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
 
@@ -18,10 +20,11 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
   const maestria = contatoreMaestria(bozza);
   const [aperti, setAperti] = useState<Partial<Record<Car, boolean>>>({});   // scelta a mano: vince sul default
 
-  const metodo = (m: 'pointBuy27' | 'serieStandard') => cambia({ ...bozza, punteggi: punteggiIniziali(m, bozza.classe) });
-    // Si parte dal point buy (scelta di Patrizio, 18/11): niente schermata vuota. Si cambia con un tocco.
+  const metodo = (m: MetodoPunteggi) => cambia({ ...bozza, punteggi: punteggiIniziali(m, bozza.classe) });
+  const metodi = metodiAmmessi(bozza.tavolo);
+  // Si parte dal point buy (scelta di Patrizio, 18/11), o dal primo metodo del tavolo: niente schermata vuota. Si cambia con un tocco.
   useEffect(() => {
-    if (!bozza.punteggi) cambia({ ...bozza, punteggi: punteggiIniziali('pointBuy27', bozza.classe) });
+    if (!bozza.punteggi) cambia({ ...bozza, punteggi: punteggiIniziali(metodoIniziale(bozza.tavolo), bozza.classe) });
   }, [bozza, cambia]);
 
   return (
@@ -29,8 +32,8 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
       <h1 className="mb-1 font-titolo text-2xl text-accento">Caratteristiche</h1>
       <p className="mb-4 text-sm text-testo-2">Quanto è forte, agile, resistente, sveglio, saggio e affascinante il tuo personaggio.</p>
 
-      <div className="mb-3 grid grid-cols-2 gap-2">
-        {([['pointBuy27', 'Point buy'], ['serieStandard', 'Serie standard']] as const).map(([m, nome]) => (
+      {metodi.length > 1 && <div className={`mb-3 grid gap-2 ${metodi.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {metodi.map((m) => [m, ETICHETTA_METODO[m]] as const).map(([m, nome]) => (
           <button
             key={m}
             onClick={() => metodo(m)}
@@ -40,19 +43,26 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
             {nome}
           </button>
         ))}
-      </div>
+      </div>}
+      {metodi.length === 1 && <p className="mb-3 text-sm text-testo-2">Il tavolo «{bozza.tavolo?.nome || 'del master'}» usa: <strong className="text-testo">{ETICHETTA_METODO[metodi[0]]}</strong>.</p>}
+
 
       {p && (() => {
         const { spesi } = spesaPointBuy(p.base);
         const ok = (p.metodo !== 'pointBuy27' || spesi === 27) && conta.scelte === conta.quante && maestria.scelte === maestria.quante;
         return (
           <p className={`mb-3 flex justify-between gap-2 rounded-lg border bg-superficie px-4 py-3 text-base text-testo ${ok ? 'border-bordo' : 'border-attenzione'}`}>
-            {p.metodo === 'pointBuy27' ? <span>Punti <strong>{spesi}/27</strong></span> : <span>Serie standard</span>}
+            {p.metodo === 'pointBuy27' ? <span>Punti <strong>{spesi}/27</strong></span> : <span>{ETICHETTA_METODO[p.metodo]}</span>}
             {conta.quante > 0 && <span>Abilità <strong>{conta.scelte}/{conta.quante}</strong></span>}
             {maestria.quante > 0 && <span>Maestria <strong>{maestria.scelte}/{maestria.quante}</strong></span>}
           </p>
         );
       })()}
+      {p?.metodo === 'tiri' && (
+        <p className="mb-3 text-sm text-testo-2">
+          Tira 4d6 e tieni i tre dadi più alti: fallo sei volte e scrivi ogni risultato dove vuoi (SRD p. 21). Tira con il master se lo chiede.
+        </p>
+      )}
       {p?.metodo === 'serieStandard' && (
         <p className="mb-3 text-sm text-testo-2">
           {classe ? `Ho messo la serie consigliata per il ${classe.nome.toLowerCase()} (SRD). ` : ''}
@@ -120,7 +130,7 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
                             <span aria-hidden className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${ICONA[a.stato]}`}>
                               {tua ? '✓' : ''}
                             </span>
-                            <span className="min-w-0 flex-1 leading-tight wrap-break-word hyphens-auto">{a.nome}</span>
+                            <span className="min-w-0 flex-1 leading-tight break-words hyphens-auto">{a.nome}</span>
                             <span className="w-7 shrink-0 text-right">{a.totale !== undefined ? segno(a.totale) : ''}</span>
                           </button>
                           {maestria.quante > 0 && tua && (

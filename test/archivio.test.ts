@@ -60,3 +60,18 @@ describe('Lista', () => {
     expect(iniziali('Éowyn di Rohan')).toBe('ÉR');
   });
 });
+
+describe('I miei elementi', () => {
+  const bg = { id: 'pers-prova', nome: 'Prova', nomeEn: 'Prova', personalizzato: true, caratteristiche: ['DES', 'INT', 'SAG'] as ['DES', 'INT', 'SAG'],
+    abilita: ['perception', 'survival'] as [string, string], strumento: 'dice', talento: { talento: 'alert' },
+    equipaggiamento: { A: { oggetti: [], mo: 10 }, B: { oggetti: [], mo: 50 } } };
+  it('salva, non elimina se usato, elimina se libero; nell\'import vince il mio', async () => {
+    const { salvaBackground, eliminaBackground, unisciElementi, elementi } = await import('../src/archivio/archivio');
+    let a = salvaBackground(nuovo(archivioVuoto(), { ...P.TRAVIS, background: 'pers-prova' }).archivio, bg);
+    expect(eliminaBackground(a, 'pers-prova').usatoDa).toEqual(['Travis Whippletorn']);
+    a = unisciElementi(a, { background: { 'pers-prova': { ...bg, nome: 'Altro' }, 'pers-nuovo': { ...bg, id: 'pers-nuovo' } } });
+    expect(elementi(a).background['pers-prova'].nome).toBe('Prova');
+    expect(Object.keys(elementi(a).background).sort()).toEqual(['pers-nuovo', 'pers-prova']);
+    expect(Object.keys(elementi(eliminaBackground(a, 'pers-nuovo').archivio).background)).toEqual(['pers-prova']);
+  });
+});

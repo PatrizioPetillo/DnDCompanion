@@ -2,6 +2,7 @@
 // Niente server: la parte dopo «#» non arriva nemmeno all'hosting. Compressione nativa del browser (deflate).
 import type { Bozza } from '../creazione/percorso';
 import { importaJSON } from '../creazione/riepilogo';
+import type { Elementi } from '../creazione/personalizzati';
 
 const PREFISSO = '#scheda=';
 
@@ -13,14 +14,14 @@ async function trasforma(dati: Uint8Array, flusso: CompressionStream | Decompres
   return new Uint8Array(await risposta.arrayBuffer());
 }
 
-export async function creaLink(b: Bozza, base: string): Promise<string> {
-  const json = JSON.stringify({ formato: 'companion-b20', versione: 1, personaggio: b });
+export async function creaLink(b: Bozza, base: string, elementi?: Elementi): Promise<string> {
+  const json = JSON.stringify({ formato: 'companion-b20', versione: 1, personaggio: b, ...(elementi && Object.keys(elementi.background).length ? { elementi } : {}) });
   const compresso = await trasforma(new TextEncoder().encode(json), new CompressionStream('deflate-raw'));
   return `${base.split('#')[0]}${PREFISSO}${base64url(compresso)}`;
 }
 
 // Dall'indirizzo alla scheda; null se l'indirizzo non contiene una scheda
-export async function leggiLink(hash: string): Promise<{ bozza: Bozza } | { errore: string } | null> {
+export async function leggiLink(hash: string): Promise<ReturnType<typeof importaJSON> | null> {
   if (!hash.startsWith(PREFISSO)) return null;
   try {
     const json = new TextDecoder().decode(await trasforma(daBase64url(hash.slice(PREFISSO.length)), new DecompressionStream('deflate-raw')));

@@ -3,6 +3,8 @@
 import { bozzaVuota, statoPassi, PASSI, type Bozza } from '../creazione/percorso';
 import { statoVuoto, type StatoPartita } from '../partita/partita';
 import { DATI, type Dati } from '../regole/dati';
+import { elementiVuoti, type Elementi } from '../creazione/personalizzati';
+import type { Background } from '../regole/tipi';
 
 export interface PersonaggioSalvato {
   id: string;
@@ -12,7 +14,7 @@ export interface PersonaggioSalvato {
   creato: string;             // ISO
   aggiornato: string;         // ISO
 }
-export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attivo: string | null }
+export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attivo: string | null; elementi?: Elementi }   // elementi: «I miei elementi»
 
 export const archivioVuoto = (): Archivio => ({ versione: 1, personaggi: [], attivo: null });
 
@@ -78,3 +80,19 @@ export function iniziali(nome: string): string {
   if (!parole.length) return '?';
   return (parole.length === 1 ? parole[0].slice(0, 2) : parole[0][0] + parole[parole.length - 1][0]).toUpperCase();
 }
+
+// ───────── «I miei elementi»: background inseriti dal proprio manuale ─────────
+export const elementi = (a: Archivio): Elementi => a.elementi ?? elementiVuoti();
+export const salvaBackground = (a: Archivio, bg: Background): Archivio =>
+  ({ ...a, elementi: { ...elementi(a), background: { ...elementi(a).background, [bg.id]: bg } } });
+// Si toglie solo se nessun personaggio lo usa
+export function eliminaBackground(a: Archivio, id: string): { archivio: Archivio; usatoDa: string[] } {
+  const usatoDa = a.personaggi.filter((p) => p.bozza.background === id).map((p) => p.bozza.nome.trim() || 'Senza nome');
+  if (usatoDa.length) return { archivio: a, usatoDa };
+  const { [id]: _tolto, ...resto } = elementi(a).background;
+  void _tolto;
+  return { archivio: { ...a, elementi: { ...elementi(a), background: resto } }, usatoDa };
+}
+// Importando una scheda (JSON o link) i suoi elementi entrano tra i miei; a parità di id resta il mio
+export const unisciElementi = (a: Archivio, e?: Elementi): Archivio =>
+  e ? { ...a, elementi: { ...elementi(a), background: { ...e.background, ...elementi(a).background } } } : a;

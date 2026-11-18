@@ -42,7 +42,7 @@ const INCOMPLETO = /^(scelta-mancante|preparati-mancanti|libro-incompleto|point-
 // A quale passo appartiene un avviso del motore delle regole.
 function passoDiAvviso(a: Avviso, b: Bozza, d: Dati): IdPasso {
   const id = a.id;
-    if (/^bonus-background/.test(id)) return 'background';                      // i bonus si scelgono nel background (come Character Keep)
+  if (/^(bonus-background|talento-personalizzato)/.test(id)) return 'background';
   if (/^(point-buy|serie-standard|massimo-20)/.test(id)) return 'caratteristiche';
   if (/^(armatura-|scudo-|equipaggiamento-|monete-|focus-|arma-|materiale)/.test(id)) return 'equipaggiamento';   // i materiali si comprano lì
   if (/^(preparati-|libro-|fuori-lista|livello-incantesimo|non-nel-libro|doppione-trucchetto|incantesimo-sconosciuto)/.test(id)) return 'magia';
@@ -60,6 +60,7 @@ function passoDiAvviso(a: Avviso, b: Bozza, d: Dati): IdPasso {
         if (parte === 'equip') return 'equipaggiamento';                            // lo strumento a scelta del bardo
         return 'classe';                                                           // Padronanza d'armi, strumenti, ordini, stile, suppliche, lingua
   }
+  if (prefisso === 'skilled') return 'background';                          // Abile dato da un background personalizzato
   if (prefisso.split('@')[0] === 'skilled') return 'specie';                 // Abile preso con Versatile
   void d;
   return 'riepilogo';

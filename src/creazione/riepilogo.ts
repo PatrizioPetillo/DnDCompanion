@@ -1,6 +1,7 @@
 // Passo 8: Riepilogo (sezione 5.2 e 5.4). La scheda completa divisa in 5 schede (Combattimento, Abilità, Magia,
 // Zaino, Chi è), gli avvisi da accettare e l'esportazione in JSON. TypeScript puro: l'interfaccia lo mostra e basta.
 import { comePersonaggio, PASSI, statoPassi, type Bozza, type IdPasso } from './percorso';
+import type { Elementi } from './personalizzati';
 import { calcolaScheda } from '../regole/motore';
 import { DATI, type Dati } from '../regole/dati';
 import { ABILITA, ALLINEAMENTI, NOME_CAR, NOME_LINGUA } from '../regole/dati/base';
@@ -109,6 +110,7 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
     chiE: {
       righe: [
         ...(pg.idea?.trim() ? [{ etichetta: 'In una frase', valore: pg.idea.trim() }] : []),
+        ...(bg.personalizzato ? [{ etichetta: 'Background', valore: `${bg.nome}: inserito dal giocatore${bg.rimando ? ` (${bg.rimando})` : ''}` }] : []),
         { etichetta: 'Lingue', valore: s.lingue.map((l) => NOME_LINGUA[l] ?? l).join(', ') },
         { etichetta: 'Armi', valore: s.addestramentoArmi.map((a) => ({ semplici: 'semplici', marziali: 'da guerra', marzialiLeggere: 'da guerra leggere', marzialiAccurateOLeggere: 'da guerra accurate o leggere' } as Record<string, string>)[a] ?? a).join(', ') },
         { etichetta: 'Armature', valore: s.addestramentoArmature.length ? s.addestramentoArmature.map((a) => (a === 'scudo' ? 'scudo' : a === 'leggera' ? 'leggere' : a === 'media' ? 'medie' : 'pesanti')).join(', ') : 'nessuna' },
@@ -122,6 +124,7 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
         ...classe.features.filter((f) => f.livello <= pg.livello).map((f) => `${f.nome} (${classe.nome})`),
         ...specie.tratti.map((t) => `${t.nome} (${specie.nome})`),
         ...(lignaggio ? [`${lignaggio.nome} (${specie.nome})`] : []),
+        ...(bg.talentoLibero ? [`Talento: ${bg.talentoLibero.nome} (personalizzato: ${bg.talentoLibero.nota})`] : []),
         // Il talento che dà magia prende il nome della sua fonte: «Iniziato alla magia (Chierico)»
         ...s.talenti.map((t, i) => {
           const volta = s.talenti.slice(0, i).filter((x) => x === t).length;
@@ -157,21 +160,28 @@ export function pronta(b: Bozza, d: Dati = DATI): boolean {
 
 // ───────── Esportazione JSON (sezione 5.4): copia di sicurezza, da reimportare ─────────
 const FORMATO = 'companion-b20';
-export function esportaJSON(b: Bozza, ritratto?: string): string {
-  return JSON.stringify({ formato: FORMATO, versione: 1, personaggio: b, ...(ritratto ? { ritratto } : {}) }, null, 2);
+// Gli elementi personalizzati che la scheda usa (un background dal proprio manuale) viaggiano con lei
+export function esportaJSON(b: Bozza, ritratto?: string, elementi?: Elementi): string {
+  const usati = elementi && Object.keys(elementi.background).length ? { elementi } : {};
+  return JSON.stringify({ formato: FORMATO, versione: 1, personaggio: b, ...(ritratto ? { ritratto } : {}), ...usati }, null, 2);
 }
 
-export function importaJSON(testo: string, d: Dati = DATI): { bozza: Bozza; ritratto?: string } | { errore: string } {
+export function importaJSON(testo: string, d: Dati = DATI): { bozza: Bozza; ritratto?: string; elementi?: Elementi } | { errore: string } {
   let dati: unknown;
   try { dati = JSON.parse(testo); } catch { return { errore: 'Il file non è un JSON valido.' }; }
-  const x = dati as { formato?: string; versione?: number; personaggio?: Bozza; ritratto?: unknown };
+  const x = dati as { formato?: string; versione?: number; personaggio?: Bozza; ritratto?: unknown; elementi?: Elementi };
   if (x?.formato !== FORMATO || !x.personaggio) return { errore: 'Questo file non è una scheda di Companion B20.' };
   if (x.versione !== 1 || x.personaggio.schema !== 1) return { errore: 'La scheda è di una versione dell\'app che questa non conosce.' };
   const p = x.personaggio;
-  for (const [campo, archivio] of [[p.classe, d.classi], [p.specie, d.specie], [p.background, d.background]] as const)
+  // Solo background personalizzati ben formati, e mai sopra uno dell'SRD
+  const elementi: Elementi = { background: Object.fromEntries(Object.entries(x.elementi?.background ?? {})
+    .filter(([id, bg]) => bg && typeof bg === 'object' && bg.personalizzato === true && id.startsWith('pers-') && !d.background[id]?.srd)) };
+  const background = { ...d.background, ...elementi.background };
+  for (const [campo, archivio] of [[p.classe, d.classi], [p.specie, d.specie], [p.background, background]] as const)
     if (campo && !archivio[campo]) return { errore: `La scheda usa «${campo}», che qui non c'è (forse un elemento personalizzato di un altro tavolo).` };
   const ritratto = typeof x.ritratto === 'string' && x.ritratto.startsWith('data:image/') ? x.ritratto : undefined;
-  return { bozza: { ...p, scelte: p.scelte ?? {}, avvisiAccettati: p.avvisiAccettati ?? [], incantesimi: p.incantesimi ?? { preparati: {} } }, ...(ritratto ? { ritratto } : {}) };
+  return { bozza: { ...p, scelte: p.scelte ?? {}, avvisiAccettati: p.avvisiAccettati ?? [], incantesimi: p.incantesimi ?? { preparati: {} } },
+    ...(ritratto ? { ritratto } : {}), ...(Object.keys(elementi.background).length ? { elementi } : {}) };
 }
 
 export const nomeFile = (b: Bozza) => `${(b.nome.trim() || 'personaggio').toLowerCase().replace(/[^a-z0-9àèéìòù]+/g, '-').replace(/^-|-$/g, '')}.json`;

@@ -125,7 +125,9 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   scelte.set('origine.lingue', { id: 'origine.lingue', tipo: 'lingua', quantita: 2, opzioni: Object.keys(LINGUE_STANDARD), srd: { pagina: 20 } });
   scelte.set(classe.abilita.id, classe.abilita);
   // Il talento del background per primo: se lo stesso talento arriva anche da un'altra fonte, quella diventa la seconda istanza.
-  aggiungiTalento(bg.talento.talento, `Background: ${bg.nome}`, bg.talento.parametri);
+  if (bg.talentoLibero) avvisa('talento-personalizzato', 'attenzione',
+    `${bg.talentoLibero.nome} (talento del background ${bg.nome}) non è nell'SRD: l'app non ne calcola gli effetti, controllali tu sul manuale`, bg.srd);
+  else aggiungiTalento(bg.talento.talento, `Background: ${bg.nome}`, bg.talento.parametri);
   for (const f of classe.features.filter((f) => f.livello <= livello)) aggiungi(f.effetti, `Classe: ${classe.nome}`);
   for (const t of specie.tratti) aggiungi(t.effetti, `Specie: ${specie.nome}`);
   if (specie.lignaggi) {

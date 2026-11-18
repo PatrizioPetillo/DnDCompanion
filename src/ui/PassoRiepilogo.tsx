@@ -10,6 +10,7 @@ import { metri } from '../regole/misure';
 import type { Numero, Scheda as SchedaCalcolata } from '../regole/tipi';
 import { calcolaScheda, DATI } from '../regole';
 import type { StatoPartita } from '../partita/partita';
+import type { Elementi } from '../creazione/personalizzati';
 import { Avatar } from './Avatar';
 import { Fascia, immagine } from './Illustrazione';
 import { iniziali } from '../archivio/archivio';
@@ -33,10 +34,11 @@ const somma = (n: Numero, finale: string) =>
   `${n.termini.map((t) => `${t.etichetta} ${t.valore < 0 ? `−${-t.valore}` : t.valore}`).join(' + ')} = ${finale}`;
 const segno = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
 
-export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaPartita, ritratto }: {
+export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaPartita, ritratto, elementi }: {
   bozza: Bozza; cambia: (b: Bozza) => void; apri: (p: IdPasso) => void; ricevuta?: boolean;
   partita?: StatoPartita; cambiaPartita?: (s: StatoPartita) => void;    // uso al tavolo; assenti per una scheda ricevuta
   ritratto?: string;
+  elementi?: Elementi;                                                    // background personalizzati che la scheda usa: viaggiano con lei
 }) {
   const [vistaScheda, setScheda] = useState<Scheda>('combattimento');
   const r = riepilogo(bozza);
@@ -87,7 +89,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         {vistaScheda === 'chi' && <ChiE r={r} />}
       </div>
 
-      {ricevuta ? <EsportaPdf bozza={bozza} /> : <Esporta bozza={bozza} ritratto={ritratto} />}
+      {ricevuta ? <EsportaPdf bozza={bozza} /> : <Esporta bozza={bozza} ritratto={ritratto} elementi={elementi} />}
     </section>
   );
 }
@@ -311,7 +313,7 @@ function ChiE({ r }: { r: Riepilogo }) {
   );
 }
 
-function Esporta({ bozza, ritratto }: { bozza: Bozza; ritratto?: string }) {
+function Esporta({ bozza, ritratto, elementi }: { bozza: Bozza; ritratto?: string; elementi?: Elementi }) {
   const [stato, setStato] = useState<string | null>(null);
   const scarica = (dati: BlobPart, tipo: string, nome: string) => {
     const url = URL.createObjectURL(new Blob([dati], { type: tipo }));
@@ -330,7 +332,7 @@ function Esporta({ bozza, ritratto }: { bozza: Bozza; ritratto?: string }) {
   };
   const link = async () => {
     const { creaLink } = await import('../esporta/link');
-    const url = await creaLink(bozza, location.href);
+    const url = await creaLink(bozza, location.href, elementi);
     try {
       if (navigator.share) await navigator.share({ title: bozza.nome || 'Scheda', url });
       else { await navigator.clipboard.writeText(url); setStato('Link copiato: incollalo nel messaggio al master.'); }
@@ -341,7 +343,7 @@ function Esporta({ bozza, ritratto }: { bozza: Bozza; ritratto?: string }) {
       <h2 className="text-base font-medium text-testo">Esporta</h2>
       <button onClick={pdf} className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Scarica il PDF</button>
       <button onClick={link} className="h-12 w-full rounded-xl border border-accento text-base font-medium text-accento">Manda il link al master</button>
-      <button onClick={() => scarica(esportaJSON(bozza, ritratto), 'application/json', nomeFile(bozza))} className="h-12 w-full rounded-xl border border-bordo text-base text-testo">
+      <button onClick={() => scarica(esportaJSON(bozza, ritratto, elementi), 'application/json', nomeFile(bozza))} className="h-12 w-full rounded-xl border border-bordo text-base text-testo">
         Scarica la copia (JSON)
       </button>
       {stato && <p role="status" className="text-sm text-testo">{stato}</p>}

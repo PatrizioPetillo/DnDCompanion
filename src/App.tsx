@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { aggiorna, apri as apriPersonaggio, attivo, duplica, elimina, nuovo, type Archivio } from './archivio/archivio';
+import { aggiorna, apri as apriPersonaggio, attivo, duplica, elementi, elimina, eliminaBackground, nuovo, salvaBackground, unisciElementi, type Archivio } from './archivio/archivio';
+import { elementiUsati, registra, type Elementi } from './creazione/personalizzati';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, PASSI, prossimoPasso, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
 import { importaJSON } from './creazione/riepilogo';
 import { descriviTolte } from './creazione/testi';
@@ -48,14 +49,18 @@ export default function App() {
 
   // Scheda arrivata con un link (#scheda=…): si guarda; «Aggiungi ai miei personaggi» la mette nella lista
   const [ricevuta, setRicevuta] = useState<Bozza | null>(null);
+  const [elementiRicevuti, setElementiRicevuti] = useState<Elementi | undefined>(undefined);
   useEffect(() => {
     leggiLink(location.hash).then((r) => {
       if (!r) return;
       history.replaceState(null, '', location.pathname + location.search);
       if ('errore' in r) setMessaggio(r.errore);
-      else { setRicevuta(r.bozza); window.scrollTo(0, 0); }
+      else { setRicevuta(r.bozza); setElementiRicevuti(r.elementi); window.scrollTo(0, 0); }
     });
   }, []);
+  // I background inseriti dal proprio manuale entrano nei dati del motore (anche quelli di una scheda ricevuta)
+  const mieiElementi = elementi(archivio);
+  registra(elementiRicevuti ? { background: { ...elementiRicevuti.background, ...mieiElementi.background } } : mieiElementi);
   const stati = useMemo(() => statoPassi(bozza), [bozza]);
   // Altezza della testata in una variabile CSS: le schede del Riepilogo restano fisse appena sotto
   const testata = useRef<HTMLElement>(null);
@@ -129,7 +134,7 @@ export default function App() {
             importa={(testo) => {
               const r = importaJSON(testo);
               if ('errore' in r) { setMessaggio(r.errore); return; }
-              setArchivio(nuovo(archivio, r.bozza, new Date(), r.ritratto).archivio);
+              setArchivio(nuovo(unisciElementi(archivio, r.elementi), r.bozza, new Date(), r.ritratto).archivio);
               setMessaggio(`Scheda importata: ${r.bozza.nome || 'senza nome'}. È in cima alla lista.`);
             }}
           />
@@ -150,6 +155,13 @@ export default function App() {
           <PassoBackground
             bozza={bozza}
             cambia={setBozza}
+            salvaBackground={(bg) => setArchivio((a: Archivio) => salvaBackground(a, bg))}
+            eliminaBackground={(id) => {
+              const r = eliminaBackground(archivio, id);
+              if (r.usatoDa.length) return `Non lo elimino: lo usa ${r.usatoDa.join(', ')}. Cambia prima il background di quel personaggio.`;
+              setArchivio(r.archivio);
+              return null;
+            }}
             scegli={(id) => {
               const { bozza: nuova, tolte } = cambiaBackground(bozza, id);
               setBozza(nuova);
@@ -176,7 +188,7 @@ export default function App() {
         )}
         {!ricevuta && vistaReale === 'riepilogo' && partita && (
           <PassoRiepilogo bozza={bozza} cambia={setBozza} apri={(p) => setVista(p)} partita={partita}
-            cambiaPartita={(s) => modifica({ partita: s })} ritratto={corrente?.ritratto} />
+            cambiaPartita={(s) => modifica({ partita: s })} ritratto={corrente?.ritratto} elementi={elementiUsati(bozza, mieiElementi)} />
         )}
       </main>
 
@@ -184,11 +196,12 @@ export default function App() {
         <div className="mx-auto flex max-w-120 gap-3 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
           {ricevuta ? (
             <>
-              <button onClick={() => setRicevuta(null)} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">Chiudi</button>
+              <button onClick={() => { setRicevuta(null); setElementiRicevuti(undefined); }} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">Chiudi</button>
               <button
                 onClick={() => {
-                  const r = nuovo(archivio, ricevuta);
+                  const r = nuovo(unisciElementi(archivio, elementiRicevuti), ricevuta);
                   setRicevuta(null);
+                  setElementiRicevuti(undefined);
                   apri(r.id, r.archivio);
                 }}
                 className="h-12 flex-2 rounded-xl bg-accento text-base font-medium text-su-accento"

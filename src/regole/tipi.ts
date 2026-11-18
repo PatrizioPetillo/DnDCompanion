@@ -168,6 +168,10 @@ export interface Specie extends Elemento {
 export interface Background extends Elemento {
   caratteristiche: [Car, Car, Car];
   talento: { talento: Id; parametri?: Record<Id, Id> };
+    // Solo per i background personalizzati (inseriti dall'utente dal suo manuale, sezione 4):
+  talentoLibero?: { nome: string; nota: string };          // un talento che non è nell'SRD: nome e una riga, senza calcolo
+  rimando?: string;                                         // «Manuale del Giocatore 2024, p. …»
+  descrizione?: string;                                     // una riga scritta dall'utente
   abilita: [Id, Id];
   strumento: Id | Scelta;
   equipaggiamento: Record<'A' | 'B', Pacchetto>;

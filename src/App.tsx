@@ -179,6 +179,7 @@ export default function App() {
               setVista('classe');
             }}
             usa={(id) => { const t = tavoloRicevuto; setTavoloRicevuto(null); apri(id, portaAlTavolo(archivio, id, t)); }}
+            rifiuta={() => { setTavoloRicevuto(null); setVista('home'); }}
           />
         )}
         {!ricevuta && !tavoloRicevuto && vistaReale === 'home' && (

@@ -1,6 +1,6 @@
 // Il link del tavolo (sezione 5.1). Il master crea un tavolo e manda il link (WhatsApp o altro); il giocatore lo apre
 // e crea il personaggio già con le regole del master. Senza link l'app non ha restrizioni.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { elenco, tavoli, type Archivio } from '../archivio/archivio';
 import type { Elementi } from '../creazione/personalizzati';
 import { creaLinkTavolo } from '../esporta/link';
@@ -186,14 +186,17 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi }: {
 }
 
 // ───────── Il giocatore apre il link ─────────
-export function TavoloRicevuto({ tavolo, archivio, nuovo, usa }: {
+export function TavoloRicevuto({ tavolo, archivio, nuovo, usa, rifiuta }: {
   tavolo: Tavolo;
   archivio: Archivio;
   nuovo: () => void;
   usa: (id: string) => void;
+  rifiuta: () => void;
 }) {
   const [scegli, setScegli] = useState(false);
+  const [accettato, setAccettato] = useState(false);
   const voci = elenco(archivio);
+  if (!accettato) return <Invito tavolo={tavolo} accetta={() => setAccettato(true)} rifiuta={rifiuta} />;
   return (
     <section>
       <p className="text-sm text-testo-2">Ti hanno invitato al tavolo</p>
@@ -228,3 +231,39 @@ export function TavoloRicevuto({ tavolo, archivio, nuovo, usa }: {
     </section>
   );
 }
+
+// L'invito, nello stile DomusDraconis (richiesta di Patrizio, 18/11): pergamena, bordo d'ottone, titolo in Cinzel.
+// Senza server l'app non può contare chi accetta: il limite di giocatori è un'idea per dopo (sezione 8).
+function Invito({ tavolo, accetta, rifiuta }: { tavolo: Tavolo; accetta: () => void; rifiuta: () => void }) {
+  const primo = useRef<HTMLButtonElement>(null);
+  useEffect(() => { primo.current?.focus(); }, []);
+  const regole = descriviTavolo(tavolo, DATI);
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      onKeyDown={(e) => e.key === 'Escape' && rifiuta()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="invito-titolo"
+        className="w-full max-w-sm rounded-2xl border-2 border-oro bg-superficie p-1.5 shadow-2xl">
+        <div className="rounded-xl border border-oro/50 px-5 pb-5 pt-4 text-center">
+          <Sigillo />
+          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-oro">Un invito al tavolo</p>
+          <h2 id="invito-titolo" className="mt-1 font-titolo text-2xl leading-tight text-accento">{tavolo.nome || 'Tavolo senza nome'}</h2>
+          <p className="mt-3 text-base text-testo">Il master ti invita a creare un personaggio per la sua avventura, con le sue regole.</p>
+          {tavolo.note && <p className="mt-3 whitespace-pre-line border-y border-oro/40 py-2 text-sm italic text-testo-2">{tavolo.note}</p>}
+          <ul className="mt-3 space-y-0.5 text-left text-sm text-testo-2">
+            {regole.map((r) => <li key={r}><span aria-hidden className="text-oro">◆</span> {r}</li>)}
+          </ul>
+          <button ref={primo} onClick={accetta} className="mt-5 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Accetta l'invito</button>
+          <button onClick={rifiuta} className="mt-2 h-12 w-full rounded-xl border border-bordo text-base text-testo">No, grazie</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Un d20 d'ottone, lo stesso dell'icona dell'app
+const Sigillo = () => (
+  <svg width="44" height="44" viewBox="0 0 48 48" className="mx-auto text-oro" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+    <path d="M24 3 43 14v20L24 45 5 34V14z" />
+    <path d="M24 3 14 20h20zM14 20 5 34M34 20l9 14M14 20l10 25 10-25M5 14l9 6M43 14l-9 6" />
+  </svg>
+);

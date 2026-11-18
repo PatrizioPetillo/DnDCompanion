@@ -1,7 +1,7 @@
 // Passo 6: Equipaggiamento (SRD p. 23). Pacchetto della classe e del background, monete, CA e attacchi calcolati,
 // un negozio ridotto per spendere le monete (armi, armature, focus, dotazioni, strumenti, munizioni, materiali)
 // e gli oggetti personalizzati con prezzo scritto a mano.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { aggiungiPersonalizzato, compra, negozio, opzioniPacchetto, prezzo, scegliPacchetto, togli, type OpzionePacchetto } from '../creazione/equipaggiamento';
 import { comePersonaggio, statoPassi, type Bozza } from '../creazione/percorso';
 import { calcolaScheda, DATI } from '../regole';
@@ -20,6 +20,11 @@ export function PassoEquipaggiamento({ bozza, cambia }: { bozza: Bozza; cambia: 
   const [negozioAperto, setNegozioAperto] = useState(false);
   const [spiega, setSpiega] = useState<'monete' | 'ca' | null>(null);
   const pg = comePersonaggio(bozza);
+    // Il pacchetto A è già segnato come scelto: entrando nel passo diventa una scelta salvata (si cambia con un tocco)
+  useEffect(() => {
+    if (pg && !bozza.equipaggiamento) cambia({ ...bozza, equipaggiamento: { classe: 'A', background: 'A' } });
+  }, [pg, bozza, cambia]);
+  
   if (!pg) return (
     <section>
       <h1 className="mb-1 font-titolo text-2xl text-accento">Equipaggiamento</h1>

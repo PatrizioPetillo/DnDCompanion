@@ -46,3 +46,20 @@ export function useTema() {
   return [tema, setTema] as const;
 }
 
+
+// Chiede al browser di non cancellare da solo i dati dell'app quando lo spazio scarseggia.
+// Chrome lo concede di solito alle app installate; se dice no, resta la copia di sicurezza.
+export async function chiediMemoriaPersistente(): Promise<boolean> {
+  try {
+    if (!navigator.storage?.persist) return false;
+    return (await navigator.storage.persisted()) || (await navigator.storage.persist());
+  } catch { return false; }
+}
+
+// Safari cancella i dati di un sito non usato per 7 giorni, ma non quelli di un'app aggiunta alla schermata Home
+export function iPhoneNonInstallata(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const installata = (navigator as Navigator & { standalone?: boolean }).standalone === true || matchMedia('(display-mode: standalone)').matches;
+  return ios && !installata;
+}

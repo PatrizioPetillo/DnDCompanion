@@ -4,6 +4,7 @@ import { bozzaVuota, statoPassi, PASSI, type Bozza } from '../creazione/percorso
 import { statoVuoto, type StatoPartita } from '../partita/partita';
 import { DATI, type Dati } from '../regole/dati';
 import { elementiVuoti, type Elementi } from '../creazione/personalizzati';
+import { importaJSON } from '../creazione/riepilogo';
 import type { Background } from '../regole/tipi';
 
 export interface PersonaggioSalvato {
@@ -14,7 +15,7 @@ export interface PersonaggioSalvato {
   creato: string;             // ISO
   aggiornato: string;         // ISO
 }
-export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attivo: string | null; elementi?: Elementi }   // elementi: «I miei elementi»
+export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attivo: string | null; elementi?: Elementi; ultimaCopia?: string }   // elementi: «I miei elementi»; ultimaCopia: ISO
 
 export const archivioVuoto = (): Archivio => ({ versione: 1, personaggi: [], attivo: null });
 
@@ -96,3 +97,51 @@ export function eliminaBackground(a: Archivio, id: string): { archivio: Archivio
 // Importando una scheda (JSON o link) i suoi elementi entrano tra i miei; a parità di id resta il mio
 export const unisciElementi = (a: Archivio, e?: Elementi): Archivio =>
   e ? { ...a, elementi: { ...elementi(a), background: { ...e.background, ...elementi(a).background } } } : a;
+
+// ───────── Copia di sicurezza: tutti i personaggi in un file ─────────
+// Il telefono può cancellare i dati di un sito (Safari, se l'app non è installata): questa copia è l'unico modo di non perderli.
+const FORMATO_COPIA = 'companion-b20-copia';
+
+export function esportaTutto(a: Archivio, ora = new Date()): { testo: string; archivio: Archivio } {
+  const testo = JSON.stringify({ formato: FORMATO_COPIA, versione: 1, data: ora.toISOString(), personaggi: a.personaggi, elementi: elementi(a) });
+  return { testo, archivio: { ...a, ultimaCopia: ora.toISOString() } };
+}
+
+export const eCopiaCompleta = (testo: string): boolean => {
+  try { return (JSON.parse(testo) as { formato?: string })?.formato === FORMATO_COPIA; } catch { return false; }
+};
+
+// Ogni personaggio passa dagli stessi controlli della scheda singola. Uno che c'è già (stesso id) non si duplica.
+export function importaTutto(a: Archivio, testo: string, d: Dati = DATI): { archivio: Archivio; aggiunti: number; gia: number; scartati: number } | { errore: string } {
+  let x: { formato?: string; versione?: number; personaggi?: PersonaggioSalvato[]; elementi?: Elementi };
+  try { x = JSON.parse(testo); } catch { return { errore: 'Il file non è un JSON valido.' }; }
+  if (x?.formato !== FORMATO_COPIA || !Array.isArray(x.personaggi)) return { errore: 'Questo file non è una copia di Companion B20.' };
+  if (x.versione !== 1) return { errore: 'La copia è di una versione dell\'app che questa non conosce.' };
+  let out = a;
+  let aggiunti = 0, gia = 0, scartati = 0;
+  for (const p of x.personaggi) {
+    if (!p?.id || !p.bozza) { scartati++; continue; }
+    if (out.personaggi.some((q) => q.id === p.id)) { gia++; continue; }
+    const r = importaJSON(JSON.stringify({ formato: 'companion-b20', versione: 1, personaggio: p.bozza, ritratto: p.ritratto, elementi: x.elementi }), d);
+    if ('errore' in r) { scartati++; continue; }
+    out = unisciElementi(out, r.elementi);
+    const salvato: PersonaggioSalvato = {
+      id: p.id, bozza: r.bozza, partita: { ...statoVuoto(), ...p.partita },
+      creato: typeof p.creato === 'string' ? p.creato : new Date().toISOString(),
+      aggiornato: typeof p.aggiornato === 'string' ? p.aggiornato : new Date().toISOString(),
+      ...(r.ritratto ? { ritratto: r.ritratto } : {}),
+    };
+    out = { ...out, personaggi: [...out.personaggi, salvato] };
+    aggiunti++;
+  }
+  return { archivio: out, aggiunti, gia, scartati };
+}
+
+// «Ultima copia: mai / oggi / 3 giorni fa»; da rifare dopo 7 giorni o se un personaggio è cambiato dopo la copia
+export function statoCopia(a: Archivio, ora = new Date()): { testo: string; daRifare: boolean } {
+  if (!a.ultimaCopia) return { testo: 'mai', daRifare: a.personaggi.length > 0 };
+  const giorni = Math.floor((ora.getTime() - new Date(a.ultimaCopia).getTime()) / 86_400_000);
+  const cambiati = a.personaggi.some((p) => p.aggiornato > a.ultimaCopia!);
+  const testo = giorni <= 0 ? 'oggi' : giorni === 1 ? 'ieri' : `${giorni} giorni fa`;
+  return { testo, daRifare: a.personaggi.length > 0 && (giorni >= 7 || cambiati) };
+}

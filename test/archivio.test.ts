@@ -1,6 +1,6 @@
 // «I miei personaggi»: lista, nuovo, duplica, elimina, migrazione dalla versione con un solo personaggio.
 import { describe, expect, it } from 'vitest';
-import { aggiorna, apri, archivioVuoto, attivo, duplica, elenco, elimina, iniziali, migra, nuovo } from '../src/archivio/archivio';
+import { aggiorna, apri, archivioVuoto, attivo, duplica, eCopiaCompleta, elenco, elimina, esportaTutto, importaTutto, iniziali, migra, nuovo, statoCopia } from '../src/archivio/archivio';
 import { accettaAvviso } from '../src/creazione/riepilogo';
 import { bozzaVuota } from '../src/creazione/percorso';
 import { danno, statoVuoto } from '../src/partita/partita';
@@ -73,5 +73,47 @@ describe('I miei elementi', () => {
     expect(elementi(a).background['pers-prova'].nome).toBe('Prova');
     expect(Object.keys(elementi(a).background).sort()).toEqual(['pers-nuovo', 'pers-prova']);
     expect(Object.keys(elementi(eliminaBackground(a, 'pers-nuovo').archivio).background)).toEqual(['pers-prova']);
+  });
+});
+
+describe('Copia di sicurezza di tutti i personaggi', () => {
+  const ora = new Date('2026-11-18T20:00:00Z');
+  const conDue = () => {
+    const a = nuovo(archivioVuoto(), P.TRAVIS, ora).archivio;
+    return nuovo(a, P.LADRO, ora).archivio;
+  };
+  it('esporta tutti e segna la data della copia', () => {
+    const { testo, archivio } = esportaTutto(conDue(), ora);
+    expect(eCopiaCompleta(testo)).toBe(true);
+    expect(archivio.ultimaCopia).toBe(ora.toISOString());
+    expect(JSON.parse(testo).personaggi).toHaveLength(2);
+  });
+  it('su un telefono vuoto rimette tutti, con lo stato di partita', () => {
+    const a = conDue();
+    const pieno = { ...a, personaggi: a.personaggi.map((p) => ({ ...p, partita: { ...p.partita, pfPersi: 3 } })) };
+    const r = importaTutto(archivioVuoto(), esportaTutto(pieno, ora).testo);
+    if ('errore' in r) throw new Error(r.errore);
+    expect(r.aggiunti).toBe(2);
+    expect(r.archivio.personaggi.map((p) => p.bozza.nome).sort()).toEqual(a.personaggi.map((p) => p.bozza.nome).sort());
+    expect(r.archivio.personaggi[0].partita.pfPersi).toBe(3);
+  });
+  it('rimportata sullo stesso telefono non duplica', () => {
+    const a = conDue();
+    const r = importaTutto(a, esportaTutto(a, ora).testo);
+    if ('errore' in r) throw new Error(r.errore);
+    expect(r.aggiunti).toBe(0);
+    expect(r.gia).toBe(2);
+    expect(r.archivio.personaggi).toHaveLength(2);
+  });
+  it('una scheda singola non è una copia completa', () => {
+    expect(eCopiaCompleta('{"formato":"companion-b20"}')).toBe(false);
+    expect('errore' in importaTutto(archivioVuoto(), '{"formato":"companion-b20"}')).toBe(true);
+  });
+  it('dice quando rifare la copia', () => {
+    expect(statoCopia(conDue(), ora)).toEqual({ testo: 'mai', daRifare: true });
+    const copiato = esportaTutto(conDue(), ora).archivio;
+    expect(statoCopia(copiato, ora)).toEqual({ testo: 'oggi', daRifare: false });
+    expect(statoCopia(copiato, new Date('2026-11-26T20:00:00Z')).daRifare).toBe(true);
+    expect(statoCopia(archivioVuoto(), ora).daRifare).toBe(false);
   });
 });

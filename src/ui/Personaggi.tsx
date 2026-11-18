@@ -2,12 +2,14 @@
 // ogni riga ha l'avatar a sinistra e accanto Nome · Livello, sotto Specie · Classe, sotto ancora l'origine
 // (il background) piccola, in corsivo e grigia. Il «⋯» apre duplica ed elimina.
 import { useState } from 'react';
-import { elenco, type Archivio, type VoceElenco } from '../archivio/archivio';
+import { elenco, statoCopia, type Archivio, type VoceElenco } from '../archivio/archivio';
+import { iPhoneNonInstallata } from './salvataggio';
 import { Avatar } from './Avatar';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 
-export function Personaggi({ archivio, apri, crea, duplica, elimina, importa }: {
+export function Personaggi({ archivio, apri, crea, duplica, elimina, importa, scaricaCopia }: {
   archivio: Archivio;
+  scaricaCopia: () => void;
   apri: (id: string) => void;
   crea: () => void;
   duplica: (id: string) => void;
@@ -16,8 +18,15 @@ export function Personaggi({ archivio, apri, crea, duplica, elimina, importa }: 
 }) {
   const voci = elenco(archivio);
   const [menu, setMenu] = useState<VoceElenco | null>(null);
+  const copia = statoCopia(archivio);
   return (
     <section>
+      {iPhoneNonInstallata() && (
+        <div className="mb-4 rounded-xl border border-attenzione bg-superficie p-3 text-sm text-testo">
+          <strong>Su iPhone installa l'app</strong>: tocca Condividi e poi «Aggiungi alla schermata Home».
+          Aperta solo in Safari, dopo 7 giorni senza usarla Safari può cancellare i personaggi.
+        </div>
+      )}
       <div className="mb-4 flex items-center gap-3">
         <h1 className="font-titolo text-2xl text-accento">I miei personaggi</h1>
         <button onClick={crea} aria-label="Crea un nuovo personaggio"
@@ -56,12 +65,20 @@ export function Personaggi({ archivio, apri, crea, duplica, elimina, importa }: 
         ))}
       </ul>
 
+      {voci.length > 0 && (
+        <div className={`mt-4 rounded-xl border bg-superficie p-3 ${copia.daRifare ? 'border-attenzione' : 'border-bordo'}`}>
+          <p className="flex justify-between text-sm text-testo"><span>Copia di sicurezza</span><span className={copia.daRifare ? 'text-attenzione' : 'text-testo-2'}>Ultima: {copia.testo}</span></p>
+          <p className="mt-1 text-xs text-testo-2">I personaggi stanno solo in questo telefono. Con la copia li ritrovi se cambi telefono o se il browser li cancella.</p>
+          <button onClick={scaricaCopia} className="mt-2 h-12 w-full rounded-xl border border-accento text-base text-accento">Scarica la copia di tutti i personaggi</button>
+        </div>
+      )}
+
       <label className="mt-4 flex min-h-12 cursor-pointer items-center justify-center rounded-xl border border-bordo text-base text-testo">
-        Importa una scheda (JSON)
+        Importa una scheda o una copia (JSON)
         <input type="file" accept="application/json,.json" className="sr-only"
           onChange={async (e) => { const f = e.target.files?.[0]; if (f) importa(await f.text()); e.target.value = ''; }} />
       </label>
-      <p className="mt-1 text-xs text-testo-2">Si aggiunge alla lista: non sostituisce nessun personaggio.</p>
+      <p className="mt-1 text-xs text-testo-2">Si aggiunge alla lista: non sostituisce nessun personaggio, e chi c'è già non si duplica.</p>
 
       {menu && (
         <FoglioDalBasso chiudi={() => setMenu(null)} titolo={<h2 className="text-lg font-medium text-testo">{menu.nome}</h2>}>

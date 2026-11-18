@@ -13,7 +13,7 @@ describe('Percorso di creazione', () => {
     ]);
   });
 
-    it('una bozza vuota parte dalla classe, e tutto è da fare', () => {
+  it('una bozza vuota parte dalla classe, e tutto è da fare', () => {
     const b = bozzaVuota();
     expect(prossimoPasso(b)).toBe('classe');
     expect(new Set(Object.values(stati(b)))).toEqual(new Set(['da-fare']));
@@ -25,7 +25,7 @@ describe('Percorso di creazione', () => {
     expect(prossimoPasso(b)).toBe('background');
   });
 
-  it('Travis completo: tutto fatto, la magia ha gli avvisi dell\'incenso e della perla', () => {
+  it('Travis completo: tutto fatto, l\'equipaggiamento ha gli avvisi dell\'incenso e della perla (si comprano lì)', () => {
     const s = stati(P.TRAVIS);
     expect(s).toEqual({
       classe: 'fatto', background: 'fatto', specie: 'fatto', caratteristiche: 'fatto',
@@ -67,6 +67,7 @@ describe('Percorso di creazione', () => {
     expect(tolte.sort()).toEqual(['equipaggiamento', 'incantesimi preparati (wizard)', 'libro degli incantesimi', 'wizard.abilita', 'wizard.trucchetti']);
     expect(bozza.scelte['human.abile']).toEqual(['medicine']);                       // la specie resta
     expect(bozza.scelte['magic-initiate.trucchetti']).toEqual(['guidance', 'light']); // il talento resta
+    expect(stati(bozza).classe).toBe('da-fare');                                      // manca lo stile di combattimento
     expect(stati(bozza).caratteristiche).toBe('da-fare');   // le abilità del guerriero
     expect(stati(bozza).classe).toBe('da-fare');            // stile e Padronanza d'armi
   });
@@ -76,9 +77,10 @@ describe('Cambio di background', () => {
   it('Accolito → Saggio: Iniziato passa dalla lista del chierico a quella del mago (p. 83)', () => {
     const { bozza, tolte } = cambiaBackground(P.TRAVIS, 'sage');
     expect(bozza.background).toBe('sage');
+    // trucchetti e incantesimo erano della lista del chierico: non valgono più
     expect(tolte.sort()).toEqual(['magic-initiate.incantesimo1', 'magic-initiate.trucchetti']);
-    expect(bozza.scelte['magic-initiate.caratteristica']).toEqual(['INT']);
-    expect(bozza.bonusBackground).toEqual({ INT: 2, SAG: 1 });
+    expect(bozza.scelte['magic-initiate.caratteristica']).toEqual(['INT']);   // il talento resta, la caratteristica pure
+    expect(bozza.bonusBackground).toEqual({ INT: 2, SAG: 1 });               // INT e SAG ci sono anche nel Saggio
     expect(stati(bozza).magia).toBe('da-fare');
   });
 
@@ -88,7 +90,7 @@ describe('Cambio di background', () => {
       'bonus del background', 'magic-initiate.caratteristica', 'magic-initiate.incantesimo1', 'magic-initiate.trucchetti',
     ]);
     expect(bozza.bonusBackground).toEqual({});
-    expect(stati(bozza).specie).toBe('avviso');
+    expect(stati(bozza).specie).toBe('avviso');            // Versatile ha già preso Allerta (p. 87)
     expect(stati(bozza).background).toBe('da-fare');       // i bonus si scelgono nel background
     expect(stati(bozza).caratteristiche).toBe('fatto');
   });
@@ -109,7 +111,7 @@ describe('Cambio di background', () => {
 });
 
 describe('Specie e lingue', () => {
-    it('senza lingue il passo del background resta da fare (le lingue stanno lì)', () => {
+  it('senza lingue il passo del background resta da fare (le lingue stanno lì)', () => {
     const { 'origine.lingue': _l, ...scelte } = P.TRAVIS.scelte;
     const s = stati({ ...P.TRAVIS, scelte });
     expect(s.background).toBe('da-fare');
@@ -119,7 +121,7 @@ describe('Specie e lingue', () => {
   it('umano → elfo: tolte Abile e Versatile, mancano stirpe, caratteristica e sensi acuti', () => {
     const { bozza, tolte } = cambiaSpecie(P.TRAVIS, 'elf');
     expect(tolte.sort()).toEqual(['human.abile', 'human.versatile']);
-    expect(bozza.scelte['origine.lingue']).toEqual(['undercommon', 'elvish']);
+    expect(bozza.scelte['origine.lingue']).toEqual(['undercommon', 'elvish']);   // le lingue restano
     expect(stati(bozza).specie).toBe('da-fare');
     expect(prossimoPasso(bozza)).toBe('specie');
   });
@@ -186,7 +188,6 @@ describe('Iniziato alla Magia da Versatile', () => {
   });
 });
 
-
 describe('Personaggio (con l\'idea dentro)', () => {
   it('l\'idea è facoltativa: bastano nome e allineamento', () => {
     const { idea: _i, ...b } = P.TRAVIS;
@@ -197,3 +198,22 @@ describe('Personaggio (con l\'idea dentro)', () => {
   });
 });
 
+describe('Avanti (N da fare)', () => {
+  it('classe scelta ma senza le sue scelte: il passo resta da fare, con il conto', () => {
+    const b: Bozza = { ...bozzaVuota(), classe: 'rogue' };
+    const s = statoPassi(b);
+    expect(s.classe.stato).toBe('da-fare');
+    expect(s.classe.mancanti).toBe(3);            // Gergo ladresco + 2 Padronanze d'armi: una per tendina
+  });
+  it('background: mancano bonus e lingue', () => {
+    const b: Bozza = { ...bozzaVuota(), classe: 'wizard', background: 'sage' };
+    expect(statoPassi(b).background.mancanti).toBe(2);
+  });
+  it('personaggio: nome e allineamento contano 2, non 3', () => {
+    expect(statoPassi({ ...P.TRAVIS, nome: '', allineamento: undefined }).personaggio.mancanti).toBe(2);
+  });
+  it('un passo fatto non ha niente da fare', () => {
+    expect(statoPassi(P.TRAVIS).classe.mancanti).toBe(0);
+    expect(statoPassi(P.TRAVIS).equipaggiamento.mancanti).toBe(0);   // ha avvisi, ma non bloccano
+  });
+});

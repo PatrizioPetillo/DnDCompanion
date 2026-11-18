@@ -1,6 +1,6 @@
 // Passo 5: Caratteristiche (sezione 5.2). Point buy o serie standard (SRD p. 21); il bonus scelto nel Background
 // è già applicato; sotto ogni caratteristica le abilità che ne dipendono.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { assegna, contatoreAbilitaClasse, contatoreMaestria, daCompletare, scegliMaestria, NON_ASSEGNATO, opzioniPunteggio, punteggiIniziali, scegliAbilitaClasse, spesaPointBuy, statoAbilita, type StatoAbilita } from '../creazione/caratteristiche';
 import { comePersonaggio, type Bozza } from '../creazione/percorso';
 import { DATI, modificatore } from '../regole';
@@ -19,6 +19,10 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
   const [aperti, setAperti] = useState<Partial<Record<Car, boolean>>>({});   // scelta a mano: vince sul default
 
   const metodo = (m: 'pointBuy27' | 'serieStandard') => cambia({ ...bozza, punteggi: punteggiIniziali(m, bozza.classe) });
+    // Si parte dal point buy (scelta di Patrizio, 18/11): niente schermata vuota. Si cambia con un tocco.
+  useEffect(() => {
+    if (!bozza.punteggi) cambia({ ...bozza, punteggi: punteggiIniziali('pointBuy27', bozza.classe) });
+  }, [bozza, cambia]);
 
   return (
     <section>
@@ -26,7 +30,7 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
       <p className="mb-4 text-sm text-testo-2">Quanto è forte, agile, resistente, sveglio, saggio e affascinante il tuo personaggio.</p>
 
       <div className="mb-3 grid grid-cols-2 gap-2">
-        {([['pointBuy27', 'Point buy (27 punti)'], ['serieStandard', 'Serie standard']] as const).map(([m, nome]) => (
+        {([['pointBuy27', 'Point buy'], ['serieStandard', 'Serie standard']] as const).map(([m, nome]) => (
           <button
             key={m}
             onClick={() => metodo(m)}
@@ -37,8 +41,6 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
           </button>
         ))}
       </div>
-
-      {!p && <p className="text-sm text-testo-2">Scegli il metodo. Se il master non ha detto niente, chiedigli quale usa il tavolo.</p>}
 
       {p && (() => {
         const { spesi } = spesaPointBuy(p.base);

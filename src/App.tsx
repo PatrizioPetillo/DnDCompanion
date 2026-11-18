@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { aggiorna, apri as apriPersonaggio, attivo, duplica, elementi, elimina, eliminaBackground, nuovo, salvaBackground, unisciElementi, type Archivio } from './archivio/archivio';
+import { aggiorna, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, esportaTutto, importaTutto, nuovo, salvaBackground, unisciElementi, type Archivio } from './archivio/archivio';
 import { elementiUsati, registra, type Elementi } from './creazione/personalizzati';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, PASSI, prossimoPasso, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
 import { importaJSON } from './creazione/riepilogo';
@@ -18,7 +18,7 @@ import { PassoPersonaggio } from './ui/PassoPersonaggio';
 import { PassoRiepilogo } from './ui/PassoRiepilogo';
 import { PassoSpecie } from './ui/PassoSpecie';
 import { Personaggi } from './ui/Personaggi';
-import { useArchivio, useTema } from './ui/salvataggio';
+import { chiediMemoriaPersistente, useArchivio, useTema } from './ui/salvataggio';
 
 // Home → I miei personaggi → (indice e passi di un personaggio). Informazioni dalla Home.
 type Vista = 'home' | 'personaggi' | 'informazioni' | 'indice' | IdPasso;
@@ -73,6 +73,9 @@ export default function App() {
   const mieiElementi = elementi(archivio);
   registra(elementiRicevuti ? { background: { ...elementiRicevuti.background, ...mieiElementi.background } } : mieiElementi);
   const stati = useMemo(() => statoPassi(bozza), [bozza]);
+  // Con almeno un personaggio salvato si chiede al browser di non cancellarlo da solo
+  const haPersonaggi = archivio.personaggi.length > 0;
+  useEffect(() => { if (haPersonaggi) void chiediMemoriaPersistente(); }, [haPersonaggi]);
   // Altezza della testata in una variabile CSS: le schede del Riepilogo restano fisse appena sotto
   const testata = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -163,7 +166,24 @@ export default function App() {
             crea={() => { setArchivio(nuovo(archivio).archivio); setVista('classe'); }}
             duplica={(id) => setArchivio(duplica(archivio, id).archivio)}
             elimina={(id) => setArchivio(elimina(archivio, id))}
+            scaricaCopia={() => {
+              const { testo, archivio: conData } = esportaTutto(archivio);
+              const url = URL.createObjectURL(new Blob([testo], { type: 'application/json' }));
+              const a = document.createElement('a');
+              a.href = url; a.download = `companion-b20-personaggi-${new Date().toISOString().slice(0, 10)}.json`;
+              a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+              setArchivio(conData);
+            }}
             importa={(testo) => {
+              if (eCopiaCompleta(testo)) {
+                const c = importaTutto(archivio, testo);
+                if ('errore' in c) { setMessaggio(c.errore); return; }
+                setArchivio(c.archivio);
+                setMessaggio(`Copia ripristinata: ${c.aggiunti} ${c.aggiunti === 1 ? 'personaggio aggiunto' : 'personaggi aggiunti'}`
+                  + (c.gia ? `, ${c.gia} già presenti` : '') + (c.scartati ? `, ${c.scartati} non leggibili` : '') + '.');
+                return;
+              }
               const r = importaJSON(testo);
               if ('errore' in r) { setMessaggio(r.errore); return; }
               setArchivio(nuovo(unisciElementi(archivio, r.elementi), r.bozza, new Date(), r.ritratto).archivio);
@@ -251,7 +271,7 @@ export default function App() {
               <button onClick={indietro} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">Indietro</button>
               {vistaReale === 'riepilogo'
                 ? <button onClick={() => setVista('personaggi')} className="h-12 flex-2 rounded-xl bg-accento text-base font-medium text-su-accento">I miei personaggi</button>
-                : <button onClick={avanti} className="h-12 flex-2 rounded-xl bg-accento text-base font-medium text-su-accento">Avanti</button>}
+                : <BottoneAvanti mancanti={stati[vistaReale as IdPasso]?.mancanti ?? 0} avanti={avanti} />}
             </>
           )}
         </div>
@@ -290,6 +310,17 @@ function Indice({ nome, stati, apri }: { nome: string; stati: ReturnType<typeof 
         })}
       </ol>
     </section>
+  );
+}
+
+// Avanti si tocca solo a passo completo; finché manca qualcosa dice quante cose (scelta di Patrizio, 18/11).
+// Gli avvisi da controllare non bloccano: quelli li decide il master (principio 3, «avvisa, non vieta»).
+function BottoneAvanti({ mancanti, avanti }: { mancanti: number; avanti: () => void }) {
+  return (
+    <button onClick={avanti} disabled={mancanti > 0}
+      className="h-12 flex-2 rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo-2">
+      {mancanti > 0 ? `Avanti (${mancanti} da fare)` : 'Avanti'}
+    </button>
   );
 }
 

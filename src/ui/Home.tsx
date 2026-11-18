@@ -1,10 +1,22 @@
-// Home (sezione 12 ter): nome dell'app, crediti, l'ingresso a «I miei personaggi» e a «Informazioni».
-// I loghi di DomusDraconis e di B20 GDR vanno qui quando arrivano i file (quello di B20 con il permesso degli admin).
+// Home (sezione 12 ter): i loghi, il nome dell'app, crediti, l'ingresso a «I miei personaggi», ai tavoli e a «Informazioni».
+// I loghi stanno solo qui (decisione del 17/11). Quello di B20 GDR solo con il permesso degli admin: senza, LOGO_B20 = false.
+import logoB20 from '../assets/loghi/b20.webp';
+import logoDomus from '../assets/loghi/domusdraconis.webp';
 import { CREDITI } from '../licenza';
+
+const LOGO_B20 = true;   // mettere false finché gli admin di B20 non danno il permesso
+
+function Logo({ src, nome }: { src: string; nome: string }) {
+  return <img src={src} alt={nome} width={80} height={80} className="h-20 w-20 rounded-full border-2 border-oro object-cover shadow-md" />;
+}
 
 export function Home({ personaggi, apriPersonaggi, apriTavoli, apriInformazioni }: { personaggi: number; apriPersonaggi: () => void; apriTavoli: () => void; apriInformazioni: () => void }) {
   return (
     <section className="flex min-h-[70dvh] flex-col items-center justify-center text-center">
+      <div className="mb-5 flex items-center gap-4">
+        <Logo src={logoDomus} nome="DomusDraconis" />
+        {LOGO_B20 && <Logo src={logoB20} nome="B20 GDR" />}
+      </div>
       <h1 className="font-titolo text-4xl text-accento">Companion B20</h1>
       <p className="mt-3 max-w-72 text-base text-testo">Crea il tuo personaggio di livello 1 e usalo al tavolo, con ogni numero spiegato.</p>
       <p className="mt-1 text-sm text-testo-2">Regole SRD 5.2 · compatibile con la quinta edizione</p>

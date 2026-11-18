@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { aggiorna, apri as apriPersonaggio, attivo, duplica, elementi, elimina, eliminaBackground, nuovo, salvaBackground, unisciElementi, type Archivio } from './archivio/archivio';
 import { elementiUsati, registra, type Elementi } from './creazione/personalizzati';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, PASSI, prossimoPasso, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
@@ -35,7 +35,18 @@ export default function App() {
   const bozza = corrente?.bozza ?? bozzaVuota();
   const partita = corrente?.partita;
 
-  const setVista = (v: Vista) => { setVistaGrezza(v); setMessaggio(null); window.scrollTo(0, 0); };
+  const [menu, setMenu] = useState(false);
+  // Ogni cambio di schermata entra nella cronologia: il tasto Indietro del telefono torna alla schermata prima
+  const setVista = (v: Vista) => {
+    setVistaGrezza(v); setMessaggio(null); setMenu(false); window.scrollTo(0, 0);
+    if (history.state?.vista !== v) history.pushState({ vista: v }, '');
+  };
+  useEffect(() => {
+    if (!history.state?.vista) history.replaceState({ vista: 'home' }, '');
+    const indietro = (e: PopStateEvent) => { setVistaGrezza((e.state?.vista as Vista) ?? 'home'); setMenu(false); setMessaggio(null); window.scrollTo(0, 0); };
+    window.addEventListener('popstate', indietro);
+    return () => window.removeEventListener('popstate', indietro);
+  }, []);
   const modifica = (m: Partial<{ bozza: Bozza; partita: StatoPartita; ritratto: string | undefined }>) =>
     setArchivio((a: Archivio) => (a.attivo ? aggiorna(a, a.attivo, m) : a));
   const setBozza = (b: Bozza) => modifica({ bozza: b });
@@ -80,29 +91,50 @@ export default function App() {
     if (vistaReale === 'indice') setVista(prossimoPasso(bozza));
     else setVista(PASSI[numero]?.id ?? 'indice');
   };
+  // Indietro dal passo 1 si torna alla lista dei personaggi
+  const indietro = () => setVista(numero > 1 ? PASSI[numero - 2].id : 'personaggi');
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-120 flex-col font-sans">
       <header ref={testata} className="sticky top-0 z-10 border-b border-bordo bg-sfondo/95 px-4 pb-3 pt-[max(12px,env(safe-area-inset-top))] backdrop-blur">
-        <div className="flex items-center justify-between gap-3">
-          <button onClick={() => { setRicevuta(null); setVista('home'); }} className="font-titolo text-lg text-accento" aria-label="Vai alla Home">
-            Companion B20
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setRicevuta(null); setVista('home'); }} aria-label="Home"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-bordo text-testo-2">
+            <IconaCasa />
           </button>
-          <button
-            onClick={() => setTema(tema === 'notte' ? 'giorno' : 'notte')}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-bordo text-testo-2"
-            aria-label={tema === 'notte' ? 'Passa al tema giorno' : 'Passa al tema notte'}
-          >
-            {tema === 'notte' ? <IconaSole /> : <IconaLuna />}
+          <span className="flex-1 truncate text-center font-titolo text-lg text-accento">
+            {corrente && (inPasso || vistaReale === 'indice') && !ricevuta ? (bozza.nome.trim() || 'Nuovo personaggio') : 'Companion B20'}
+          </span>
+          <button onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu} aria-haspopup="menu"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-bordo text-testo-2">
+            <IconaMenu />
           </button>
         </div>
         {inPasso && vistaReale === vista && !ricevuta && (
-          <div className="mt-2">
-            <div className="mb-1 text-xs text-testo-2">Passo {numero} di {PASSI.length}</div>
-            <div className="h-1 rounded-full bg-bordo">
-              <div className="h-1 rounded-full bg-oro transition-[width]" style={{ width: `${(numero / PASSI.length) * 100}%` }} />
+          <button onClick={() => setVista('indice')} className="mt-2 block w-full text-left" aria-label={`Passo ${numero} di ${PASSI.length}: apri tutti i passi`}>
+            <span className="mb-1 flex justify-between text-xs text-testo-2"><span>Passo {numero} di {PASSI.length}: {PASSI[numero - 1].titolo}</span><span className="text-accento">Tutti i passi</span></span>
+            <span className="block h-1 rounded-full bg-bordo">
+              <span className="block h-1 rounded-full bg-oro transition-[width]" style={{ width: `${(numero / PASSI.length) * 100}%` }} />
+            </span>
+          </button>
+        )}
+        {menu && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setMenu(false)} aria-hidden="true" />
+            <div role="menu" className="absolute right-4 top-full z-30 mt-1 w-64 overflow-hidden rounded-xl border border-bordo bg-superficie shadow-lg"
+              onKeyDown={(e) => e.key === 'Escape' && setMenu(false)}>
+              <VoceMenu onClick={() => { setRicevuta(null); setVista('home'); }}>Home</VoceMenu>
+              <VoceMenu onClick={() => { setRicevuta(null); setVista('personaggi'); }}>I miei personaggi</VoceMenu>
+              {corrente && !ricevuta && <VoceMenu onClick={() => setVista('indice')}>Passi di {bozza.nome.trim() || 'questo personaggio'}</VoceMenu>}
+              {corrente && !ricevuta && <VoceMenu onClick={() => setVista('riepilogo')}>Scheda (riepilogo)</VoceMenu>}
+              <VoceMenu onClick={() => setTema(tema === 'notte' ? 'giorno' : 'notte')}>
+                <span className="flex items-center justify-between">Tema {tema === 'notte' ? 'notte' : 'giorno'}
+                  <span className="flex items-center gap-1 text-sm text-testo-2">{tema === 'notte' ? <IconaSole /> : <IconaLuna />}{tema === 'notte' ? 'Passa a giorno' : 'Passa a notte'}</span>
+                </span>
+              </VoceMenu>
+              <VoceMenu onClick={() => { setRicevuta(null); setVista('informazioni'); }}>Informazioni</VoceMenu>
             </div>
-          </div>
+          </>
         )}
       </header>
 
@@ -192,7 +224,7 @@ export default function App() {
         )}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 border-t border-bordo bg-sfondo/95 backdrop-blur">
+      {!(!ricevuta && ['home', 'personaggi', 'informazioni'].includes(vistaReale)) && <nav className="fixed inset-x-0 bottom-0 border-t border-bordo bg-sfondo/95 backdrop-blur">
         <div className="mx-auto flex max-w-120 gap-3 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
           {ricevuta ? (
             <>
@@ -209,23 +241,21 @@ export default function App() {
                 Aggiungi ai miei personaggi
               </button>
             </>
-          ) : vistaReale === 'home' ? null : vistaReale === 'personaggi' || vistaReale === 'informazioni' ? (
-            <button onClick={() => setVista('home')} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">Home</button>
-          ) : vistaReale === 'indice' ? (
+          ) : vistaReale === 'home' || vistaReale === 'personaggi' || vistaReale === 'informazioni' ? null : vistaReale === 'indice' ? (
             <>
               <button onClick={() => setVista('personaggi')} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">I miei personaggi</button>
               <button onClick={avanti} className="h-12 flex-1 rounded-xl bg-accento text-base font-medium text-su-accento">Continua</button>
             </>
           ) : (
             <>
-              <button onClick={() => setVista('indice')} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">Indice</button>
+              <button onClick={indietro} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">Indietro</button>
               {vistaReale === 'riepilogo'
                 ? <button onClick={() => setVista('personaggi')} className="h-12 flex-2 rounded-xl bg-accento text-base font-medium text-su-accento">I miei personaggi</button>
                 : <button onClick={avanti} className="h-12 flex-2 rounded-xl bg-accento text-base font-medium text-su-accento">Avanti</button>}
             </>
           )}
         </div>
-      </nav>
+      </nav>}
     </div>
   );
 }
@@ -263,6 +293,19 @@ function Indice({ nome, stati, apri }: { nome: string; stati: ReturnType<typeof 
   );
 }
 
+function VoceMenu({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return <button role="menuitem" onClick={onClick} className="block min-h-12 w-full border-b border-bordo px-4 text-left text-base text-testo last:border-b-0">{children}</button>;
+}
+const IconaCasa = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" />
+  </svg>
+);
+const IconaMenu = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
+);
 const IconaLuna = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
     <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />

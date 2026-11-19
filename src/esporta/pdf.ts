@@ -12,7 +12,7 @@ import { metri } from '../regole/misure';
 import { ATTRIBUZIONE_SRD_52, ATTRIBUZIONE_SRD_521_IT, CREDITI } from '../licenza';
 
 // Caratteri che Helvetica (WinAnsi) non ha: sostituiti con un equivalente; il resto fuori codifica diventa «?»
-const SOSTITUZIONI: Record<string, string> = { '−': '-', '★': '*', '☆': '*', '●': '•', '○': 'o', '→': '->', '≥': '>=', '≤': '<=', ' ': ' ', '­': '' };
+const SOSTITUZIONI: Record<string, string> = { '−': '-', '★': '*', '☆': '*', '●': '•', '○': 'o', '→': '->', '≥': '>=', '≤': '<=', ' ': ' ', '­': '', '\n': ' ', '\r': '' };   // a capo della storia: uno spazio (il PDF va a capo da solo)
 const WINANSI_EXTRA = new Set('€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ');
 export function perPdf(testo: string): string {
   return [...testo].map((c) => {

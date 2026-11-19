@@ -226,7 +226,7 @@ export interface Personaggio {
   equipaggiamento: { classe: string; background: 'A' | 'B'; extra?: { oggetto: Id; quantita: number; nome?: string; costoMo?: number }[] };
   avvisiAccettati: Id[];
   allineamento?: Id;
-  ruolo?: { aspetto?: string; trattoVisibile?: string; oggetto?: string; segreto?: string };
+  ruolo?: { aspetto?: string; trattoVisibile?: string; oggetto?: string; segreto?: string; storia?: string };   // storia: 19/11
   // Data in cui il giocatore ha salvato il personaggio (19/11): da lì le scelte della creazione restano bloccate
   conclusoIl?: string;
 }

@@ -119,6 +119,7 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
         ...(pg.ruolo?.trattoVisibile ? [{ etichetta: 'Si nota subito', valore: pg.ruolo.trattoVisibile }] : []),
         ...(pg.ruolo?.oggetto ? [{ etichetta: 'L\'oggetto che lo identifica', valore: pg.ruolo.oggetto }] : []),
         ...(pg.ruolo?.segreto ? [{ etichetta: 'Il segreto', valore: pg.ruolo.segreto }] : []),
+        ...(pg.ruolo?.storia?.trim() ? [{ etichetta: 'La sua storia', valore: pg.ruolo.storia.trim() }] : []),
       ],
       privilegi: [
         ...classe.features.filter((f) => f.livello <= pg.livello).map((f) => `${f.nome} (${classe.nome})`),

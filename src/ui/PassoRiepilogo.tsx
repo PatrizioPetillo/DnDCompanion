@@ -309,7 +309,7 @@ function ChiE({ r, bozza, cambia, ricevuta, salvato }: { r: Riepilogo; bozza: Bo
         {r.chiE.righe.map((x) => (
           <div key={x.etichetta}>
             <dt className="text-xs text-testo-2">{x.etichetta}</dt>
-            <dd className="text-base text-testo">{x.valore}</dd>
+            <dd className="whitespace-pre-line text-base text-testo">{x.valore}</dd>
           </div>
         ))}
       </dl>

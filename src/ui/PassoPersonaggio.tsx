@@ -90,6 +90,18 @@ export function PassoPersonaggio({ bozza, cambia, ritratto, cambiaRitratto }: {
           />
         </label>
       ))}
+
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium text-testo">La sua storia</span>
+        <span className="mb-1 block text-xs text-testo-2">Da dove viene, la famiglia, cosa lo ha portato all'avventura. Facoltativa, lunga quanto vuoi.</span>
+        <textarea
+          value={ruolo.storia ?? ''}
+          onChange={(e) => cambia({ ...bozza, ruolo: { ...ruolo, storia: e.target.value } })}
+          placeholder="Figlio di un rilegatore e di una maga di corte, è stato il primo della famiglia a entrare all'Accademia…"
+          rows={6}
+          className={`${campo} resize-y py-2 leading-relaxed`}
+        />
+      </label>
     </section>
   );
 }

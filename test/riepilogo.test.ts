@@ -109,3 +109,13 @@ describe('Esportazione JSON', () => {
     expect('errore' in importaJSON(altro) && importaJSON(altro)).toMatchObject({ errore: expect.stringMatching(/warforged/) });
   });
 });
+
+describe('La storia del personaggio (19/11)', () => {
+  it('compare in «Chi è» dopo il segreto, solo se scritta, e torna uguale dal JSON', () => {
+    expect(riepilogo(P.TRAVIS)!.chiE.righe.some((r) => r.etichetta === 'La sua storia')).toBe(false);
+    const storia = 'Nato a Vallecupa.\nLa madre è maga di corte.';
+    const b = { ...P.TRAVIS, ruolo: { ...P.TRAVIS.ruolo, storia: `  ${storia}  ` } };
+    const letto = importaJSON(esportaJSON(b));
+    expect('bozza' in letto && letto.bozza.ruolo?.storia).toBe(`  ${storia}  `);
+  });
+});

@@ -19,7 +19,7 @@ const FOCUS: Record<Id, string> = {
 const CAPACITA: Record<Id, string> = {
   'divine-order': 'Protettore (armi da guerra e armature pesanti) oppure Taumaturgo (un trucchetto in più e bonus ad Arcano e Religione pari alla Saggezza, minimo +1).',
   druidic: 'Conosci il Druidico e hai sempre preparato Parlare con gli animali.',
-  'primal-order': 'Mago (un trucchetto in più e bonus ad Arcano e Natura pari alla Saggezza, minimo +1) oppure Guardiano (armi da guerra e armature medie).',
+  'primal-order': 'Mago (un trucchetto in più e bonus ad Arcano e Natura pari alla Saggezza, minimo +1) oppure Custode (armi da guerra e armature medie).',
   'favored-enemy': 'Marchio del cacciatore è sempre preparato e lo lanci 2 volte senza slot per riposo lungo.',
   'innate-sorcery': 'Azione bonus, 1 minuto: +1 alla CD e vantaggio agli attacchi dei tuoi incantesimi da stregone. 2 volte per riposo lungo.',
   'eldritch-invocations': 'Scegli una supplica occulta: alcune danno incantesimi o trucchetti.',
@@ -39,6 +39,7 @@ export interface Blocco {
   id: Id; nome: string; cd: Numero | null; attacco: Numero | null; focus?: string;
   contatori: { tipo: TipoScelta; etichetta: string; scelti: number; attesi: number; voci: Id[] }[];
   semprePreparati: Id[]; lanci?: string; capacita: { nome: string; testo: string }[];
+  caratteristica?: { scelta: Id; valore: string };   // da scegliere qui (talenti e specie: INT, SAG o CAR)
 }
 
 export function blocchiMagia(b: Bozza, d: Dati = DATI): Blocco[] {
@@ -51,7 +52,7 @@ export function blocchiMagia(b: Bozza, d: Dati = DATI): Blocco[] {
       const voci = letti(b, m, tipo);
       contatori.push({ tipo, etichetta, scelti: voci.length, attesi, voci });
     };
-      // Il contatore conta solo quelli da scegliere: i trucchetti dati (una specie con Luce + 1 a scelta) non si scelgono
+    // Il contatore conta solo quelli da scegliere: i trucchetti dati (una specie con Luce + 1 a scelta) non si scelgono
     const daScegliere = m.trucchetti.attesi - (m.trucchetti.fissi?.length ?? 0);
     if (daScegliere > 0 && m.scelte.trucchetti) conta('trucchetti', 'Trucchetti', daScegliere);
     if (m.scelte.incantesimi) conta('incantesimi', m.soloRituali ? 'Rituali di 1°' : m.incantesimiQuanti > 1 ? 'Incantesimi di 1°' : 'Incantesimo di 1°', m.incantesimiQuanti);
@@ -66,6 +67,7 @@ export function blocchiMagia(b: Bozza, d: Dati = DATI): Blocco[] {
       id: m.id, nome: m.nome, cd: m.cd, attacco: m.attacco, ...(classe ? { focus: FOCUS[classe.id] } : {}),
       contatori, semprePreparati: m.semprePreparati.filter((x) => !(b.scelte[m.scelte.incantesimi ?? ''] ?? []).includes(x)),
       ...(lanci ? { lanci } : {}), capacita,
+      ...(m.scelte.caratteristica ? { caratteristica: { scelta: m.scelte.caratteristica, valore: b.scelte[m.scelte.caratteristica]?.[0] ?? '' } } : {}),
     };
   });
 }

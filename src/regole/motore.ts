@@ -28,6 +28,13 @@ export const modificatore = (punteggio: number) => Math.floor((punteggio - 10) /
 
 interface Voce { effetto: Effetto; fonte: string; parametri: Record<Id, Id> }
 
+// Cosa manca, in parole del giocatore (per «Avanti (N da fare)» e il Riepilogo)
+const COSA_SCEGLIERE: Partial<Record<Scelta['tipo'], string>> = {
+  abilita: 'scegli le abilità', strumento: 'scegli lo strumento', talento: 'scegli il talento',
+  caratteristica: 'scegli la caratteristica per gli incantesimi', listaIncantesimi: 'scegli la lista degli incantesimi',
+  opzione: 'fai la scelta', maestriaArma: 'scegli le armi della Padronanza', maestria: 'scegli le abilità della Maestria', lingua: 'scegli le lingue',
+};
+
 export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const avvisi: Avviso[] = [];
   const avvisa = (id: Id, livello: LivelloAvviso, messaggio: string, srd?: RifSRD) => {
@@ -89,6 +96,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   // ───────── Raccolta degli effetti (classe, specie, background, talenti) ─────────
   const voci: Voce[] = [];
   const scelte = new Map<Id, Scelta>();
+  const fonteScelta = new Map<Id, string>();   // da dove viene ogni scelta: per dire al giocatore cosa manca e dove
   const talenti: Id[] = [];
   const parametriFissi: Record<Id, Id> = {};
   const risposta = (id: Id): Id[] => (parametriFissi[id] ? [parametriFissi[id]] : pg.scelte[id] ?? []);
@@ -115,9 +123,10 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
 
   function aggiungi(effetti: Effetto[], fonte: string, parametri: Record<Id, Id> = {}) {
     for (const e of effetti) {
-      if (e.tipo === 'scelta') { scelte.set(e.scelta.id, e.scelta); voci.push({ effetto: e, fonte, parametri }); }
+      if (e.tipo === 'scelta') { scelte.set(e.scelta.id, e.scelta); fonteScelta.set(e.scelta.id, fonte); voci.push({ effetto: e, fonte, parametri }); }
       else if (e.tipo === 'opzioni') {
         scelte.set(e.scelta.id, e.scelta);
+        fonteScelta.set(e.scelta.id, fonte);
         for (const o of risposta(e.scelta.id)) if (e.effetti[o]) aggiungi(e.effetti[o], fonte, parametri);
       } else if (e.tipo === 'talento') {
         const ids = typeof e.talento === 'string' ? [e.talento] : risposta(e.talento.daScelta);
@@ -129,6 +138,8 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   // Lingue: Comune + 2 standard (p. 20)
   scelte.set('origine.lingue', { id: 'origine.lingue', tipo: 'lingua', quantita: 2, opzioni: Object.keys(LINGUE_STANDARD), srd: { pagina: 20 } });
   scelte.set(classe.abilita.id, classe.abilita);
+  fonteScelta.set('origine.lingue', 'Lingue');
+  fonteScelta.set(classe.abilita.id, `Classe: ${classe.nome}`);
   // Il talento del background per primo: se lo stesso talento arriva anche da un'altra fonte, quella diventa la seconda istanza.
   if (bg.talentoLibero) avvisa('talento-personalizzato', 'attenzione',
     `${bg.talentoLibero.nome} (talento del background ${bg.nome}) non è nell'SRD: l'app non ne calcola gli effetti, controllali tu sul manuale`, bg.srd);
@@ -138,17 +149,18 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   if (specie.lignaggi) {
     const L = specie.lignaggi;
     scelte.set(L.scelta, { id: L.scelta, tipo: 'opzione', quantita: 1, opzioni: L.opzioni.map((o) => o.id), srd: L.srd });
+    fonteScelta.set(L.scelta, `Specie: ${specie.nome} (lignaggio)`);
     const scelto = L.opzioni.find((o) => o.id === risposta(L.scelta)[0]);
     if (scelto) aggiungi(scelto.effetti, `Specie: ${scelto.nome}`);
   }
-  if (typeof bg.strumento !== 'string') scelte.set(bg.strumento.id, bg.strumento);
+  if (typeof bg.strumento !== 'string') { scelte.set(bg.strumento.id, bg.strumento); fonteScelta.set(bg.strumento.id, `Background: ${bg.nome}`); }
 
   // Pacchetti di equipaggiamento scelti (p. 23): gli oggetti «a scelta» con opzioni proprie (lo strumento del bardo) sono una scelta
   const pacchettoClasse = classe.equipaggiamento[pg.equipaggiamento.classe];
   const pacchettoBg = bg.equipaggiamento[pg.equipaggiamento.background];
   for (const { oggetto } of [...(pacchettoClasse?.oggetti ?? []), ...(pacchettoBg?.oggetti ?? [])]) {
     const o = d.oggetti[oggetto];
-    if (o?.daScelta && o.opzioni) scelte.set(o.daScelta, { id: o.daScelta, tipo: 'opzione', quantita: 1, opzioni: o.opzioni, srd: classe.srd ?? { pagina: 23 } });
+    if (o?.daScelta && o.opzioni) { scelte.set(o.daScelta, { id: o.daScelta, tipo: 'opzione', quantita: 1, opzioni: o.opzioni, srd: classe.srd ?? { pagina: 23 } }); fonteScelta.set(o.daScelta, `Equipaggiamento: ${o.nome}`); }
   }
 
   const effetti = <T extends Effetto['tipo']>(tipo: T) =>
@@ -158,8 +170,8 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   for (const s of scelte.values()) {
     if (parametriFissi[s.id] || s.tipo === 'trucchetto' || s.tipo === 'incantesimo') continue;
     const r = risposta(s.id);
-    if (r.length < s.quantita) avvisa(`scelta-mancante:${s.id}`, 'info', `Manca una scelta: ${s.id} (${r.length} su ${s.quantita})`, s.srd);
-    if (r.length > s.quantita) avvisa(`scelta-troppe:${s.id}`, 'errore', `Troppe scelte: ${s.id} (${r.length} su ${s.quantita})`, s.srd);
+    if (r.length < s.quantita) avvisa(`scelta-mancante:${s.id}`, 'info', `${fonteScelta.get(s.id) ?? 'Scelta'}: ${COSA_SCEGLIERE[s.tipo] ?? 'fai la scelta'} (${r.length} su ${s.quantita})`, s.srd);
+    if (r.length > s.quantita) avvisa(`scelta-troppe:${s.id}`, 'errore', `${fonteScelta.get(s.id) ?? 'Scelta'}: troppe scelte (${r.length} su ${s.quantita})`, s.srd);
     for (const v of r) {
       if (s.opzioni && !s.opzioni.includes(v)) avvisa(`scelta-non-valida:${s.id}:${v}`, 'errore',
         s.tipo === 'lingua' && LINGUE_RARE[v]
@@ -303,7 +315,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
       slot: c.slot ?? (c.puoUsareSlot ? 'qualsiasi' : null),
       ...(c.cambio ? { cambio: c.cambio } : {}),
       fonte: c.fonte, lista,
-      scelte: { ...(c.trucchetti?.scelta ? { trucchetti: c.trucchetti.scelta } : {}), ...(c.incantesimiScelti ? { incantesimi: c.incantesimiScelti.scelta } : {}) },
+      scelte: { ...(typeof c.caratteristica === 'string' ? {} : { caratteristica: c.caratteristica.daScelta }), ...(c.trucchetti?.scelta ? { trucchetti: c.trucchetti.scelta } : {}), ...(c.incantesimiScelti ? { incantesimi: c.incantesimiScelti.scelta } : {}) },
       libro: c.libro ? { iniziali: c.libro.iniziali, scelti: libro } : null,
       preparatiDa: c.preparati?.da ?? null,
       livelloMax,
@@ -425,7 +437,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
       || (addestramentoArmi.has('marzialiAccurateOLeggere') && (a.proprieta.includes('leggera') || a.proprieta.includes('accurata')));
   };
   const padronanze = new Set([...scelte.values()].filter((x) => x.tipo === 'maestriaArma').flatMap((x) => risposta(x.id)));
-  // Arti marziali (p. 51): senza armatura né scudo, DES al posto di FOR e il dado (1d6) su colpo senz'armi e armi da monaco
+  // Arti marziali (p. 50): senza armatura né scudo, DES al posto di FOR e il dado (1d6) su colpo senz'armi e armi da monaco
   const dadoMarziale = effetti('valoreClasse').find((v) => v.effetto.id === 'martial-arts-die')?.effetto.valore;
   const senzaArmatura = !inventario.some((id) => d.oggetti[id]?.armatura);
   const arti = dadoMarziale && senzaArmatura ? dadoMarziale : null;
@@ -465,11 +477,11 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
       padronanza: padronanze.has(id) ? a.padronanza : null, note,
     }));
   }
-  // Colpo senz'armi (p. 191): FOR + competenza, 1 + FOR contundenti
+  // Colpo senz'armi (p. 190): FOR + competenza, 1 + FOR contundenti
   attacchi.push(attacco('unarmed-strike', 'Colpo senz\'armi', 1, arti ? carMigliore() : 'FOR', true, arti ?? '1', 'contundenti',
     { note: arti ? ['Arti marziali: senza armatura né scudo'] : [] }));
 
-      // ───────── Strumenti (p. 94-95): background, classe, scelte ─────────
+  // ───────── Strumenti (p. 94-95): background, classe, scelte ─────────
   const strumenti = [...new Set([
     ...(typeof bg.strumento === 'string' ? [bg.strumento] : risposta(bg.strumento.id)),
     ...effetti('competenza').filter((v) => v.effetto.categoria === 'strumento').flatMap((v) => v.effetto.ids),
@@ -501,7 +513,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const vel = effetti('velocita');
   const velocita = vel.length ? Math.max(...vel.map((v) => v.effetto.valore)) : specie.velocita;
 
-    // Regole del tavolo (sezione 5.1): i suoi avvisi, e le eccezioni concesse in anticipo dal master
+  // Regole del tavolo (sezione 5.1): i suoi avvisi, e le eccezioni concesse in anticipo dal master
   if (pg.tavolo) avvisi.push(...avvisiTavolo(pg, pg.tavolo, d));
   for (const a of avvisi) if (pg.avvisiAccettati.includes(a.id) || (pg.tavolo && coperto(pg.tavolo, a))) a.accettato = true;
 

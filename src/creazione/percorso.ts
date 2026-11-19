@@ -82,10 +82,11 @@ export function comePersonaggio(b: Bozza): Personaggio | null {
   };
 }
 
-export interface VocePasso { stato: StatoPasso; avvisi: Avviso[]; mancanti: number }   // mancanti: per «Avanti (3 da fare)»
+// mancanti: per «Avanti (3 da fare)»; cosaManca: le stesse cose in parole, per il foglio che si apre toccando Avanti
+export interface VocePasso { stato: StatoPasso; avvisi: Avviso[]; mancanti: number; cosaManca: string[] }
 
 export function statoPassi(b: Bozza, d: Dati = DATI): Record<IdPasso, VocePasso> {
-  const r = Object.fromEntries(PASSI.map((p) => [p.id, { stato: 'da-fare' as StatoPasso, avvisi: [] as Avviso[], mancanti: 0 }])) as
+  const r = Object.fromEntries(PASSI.map((p) => [p.id, { stato: 'da-fare' as StatoPasso, avvisi: [] as Avviso[], mancanti: 0, cosaManca: [] as string[] }])) as
     Record<IdPasso, VocePasso>;
 
   if (b.nome.trim() && b.allineamento) r.personaggio.stato = 'fatto';
@@ -131,8 +132,48 @@ function conMancanti(r: Record<IdPasso, VocePasso>, b: Bozza, classe: number, ba
       : p.id === 'personaggio' ? Number(!b.nome.trim()) + Number(!b.allineamento)
       : p.id === 'caratteristiche' && b.punteggi ? Object.values(b.punteggi.base).filter((v) => v === 0).length : 0;   // punteggi ancora vuoti
     v.mancanti = Math.max(1, base + incompleti);
+    v.cosaManca = cosaManca(p.id, b, v);
   }
   return r;
+}
+
+// Le cose ancora da fare in un passo, in parole del giocatore
+function cosaManca(passo: IdPasso, b: Bozza, v: VocePasso, d: Dati = DATI): string[] {
+  const out: string[] = [];
+  const pg = comePersonaggio(b);
+  if (passo === 'classe') {
+    if (!b.classe) out.push('Scegli la classe');
+    for (const s of scelteDiClasse(b, d)) {
+      const n = s.quantita - (b.scelte[s.id]?.length ?? 0);
+      if (n > 0) out.push(`${s.titolo}: ${n === 1 ? 'manca 1 scelta' : `mancano ${n} scelte`}`);
+    }
+  }
+  if (passo === 'background') {
+    if (!b.background) out.push('Scegli il background');
+    else {
+      if (!Object.keys(b.bonusBackground).length) out.push('Scegli i bonus alle caratteristiche (+2 e +1, oppure +1 a tutte e tre)');
+      const l = (b.scelte['origine.lingue'] ?? []).length;
+      if (l < 2) out.push(`Scegli le lingue: ${l} su 2`);
+    }
+  }
+  if (passo === 'specie' && !b.specie) out.push('Scegli la specie');
+  if (passo === 'caratteristiche') {
+    if (!b.punteggi) out.push('Scegli come generare i punteggi');
+    else {
+      const vuoti = Object.values(b.punteggi.base).filter((x) => x === 0).length;
+      if (vuoti) out.push(`${vuoti === 1 ? 'Manca 1 punteggio' : `Mancano ${vuoti} punteggi`} da assegnare`);
+    }
+  }
+  if (passo === 'personaggio') {
+    if (!b.nome.trim()) out.push('Scrivi il nome');
+    if (!b.allineamento) out.push('Scegli l\'allineamento');
+  }
+  if (passo !== 'personaggio')
+    for (const a of v.avvisi) if (INCOMPLETO.test(a.id) && !a.id.startsWith('scelta-mancante:origine.lingue')) out.push(a.messaggio);
+  if (!out.length && !pg && ['magia', 'equipaggiamento', 'specie', 'caratteristiche'].includes(passo))
+    out.push('Prima scegli classe, background e specie');
+  if (passo === 'equipaggiamento' && pg && !b.equipaggiamento) out.push('Scegli il pacchetto della classe e del background');
+  return out.length ? out : ['Completa le scelte evidenziate in questo passo'];
 }
 
 function conRiepilogo(r: Record<IdPasso, VocePasso>) {

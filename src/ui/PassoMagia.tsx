@@ -1,6 +1,8 @@
 // Passo 7: Magia (sezione 6). Un blocco per fonte, separato da una linea sottile con il nome della fonte al centro.
 // Ogni blocco: CD e attacco con la somma, focus, lanci gratuiti, capacità, contatori che aprono la scelta.
 import { useState } from 'react';
+import { NOME_CAR } from '../regole/dati/base';
+import { Tendina } from './Tendina';
 import { blocchiMagia, type Blocco, type TipoScelta } from '../creazione/magia';
 import type { Bozza } from '../creazione/percorso';
 import { DATI } from '../regole';
@@ -47,6 +49,12 @@ export function BloccoMagia({ blocco: b, bozza, cambia, soloScelte }: {
   const contatore = aperto ? b.contatori.find((c) => c.tipo === aperto) : undefined;
   return (
     <div className="space-y-3">
+      {b.caratteristica && (
+        // La caratteristica di un talento o di una specie si sceglie anche qui: senza, CD e attacco non esistono
+        <Tendina etichetta="Caratteristica per questi incantesimi" valore={b.caratteristica.valore}
+          opzioni={(['INT', 'SAG', 'CAR'] as const).map((c) => ({ id: c, nome: NOME_CAR[c], disattivata: false }))}
+          cambia={(v) => cambia({ ...bozza, scelte: { ...bozza.scelte, [b.caratteristica!.scelta]: v ? [v] : [] } })} />
+      )}
       {!soloScelte && b.cd && b.attacco && (
         <div className="grid grid-cols-2 gap-2">
           {(['cd', 'attacco'] as const).map((k) => (

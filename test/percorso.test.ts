@@ -217,3 +217,28 @@ describe('Avanti (N da fare)', () => {
     expect(statoPassi(P.TRAVIS).equipaggiamento.mancanti).toBe(0);   // ha avvisi, ma non bloccano
   });
 });
+
+describe('Cosa manca, in parole', () => {
+  it('Travis senza la caratteristica di Iniziato: il passo Magia dice cosa scegliere e da quale fonte', () => {
+    const { ['magic-initiate.caratteristica']: _tolta, ...scelte } = P.TRAVIS_SAGGIO.scelte;
+    void _tolta;
+    const v = statoPassi({ ...P.TRAVIS_SAGGIO, scelte }).magia;
+    expect(v.stato).toBe('da-fare');
+    expect(v.cosaManca).toEqual(['Talento: Iniziato alla Magia: scegli la caratteristica per gli incantesimi (0 su 1)']);
+  });
+  it('classe e background: le cose da fare con il loro nome', () => {
+    const b: Bozza = { ...bozzaVuota(), classe: 'rogue', background: 'sage' };
+    const s = statoPassi(b);
+    expect(s.classe.cosaManca.length).toBeGreaterThan(0);
+    expect(s.classe.cosaManca.every((x) => /: manca|: mancano/.test(x))).toBe(true);
+    expect(s.background.cosaManca).toEqual(['Scegli i bonus alle caratteristiche (+2 e +1, oppure +1 a tutte e tre)', 'Scegli le lingue: 0 su 2']);
+  });
+  it('personaggio: nome e allineamento', () => {
+    expect(statoPassi({ ...P.TRAVIS, nome: '', allineamento: undefined }).personaggio.cosaManca).toEqual(['Scrivi il nome', "Scegli l'allineamento"]);
+  });
+  it('la caratteristica di Iniziato si sceglie anche nel passo Magia', async () => {
+    const { blocchiMagia } = await import('../src/creazione/magia');
+    const blocco = blocchiMagia(P.TRAVIS_SAGGIO).find((x) => x.id === 'magic-initiate')!;
+    expect(blocco.caratteristica).toEqual({ scelta: 'magic-initiate.caratteristica', valore: P.TRAVIS_SAGGIO.scelte['magic-initiate.caratteristica'][0] });
+  });
+});

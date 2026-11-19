@@ -9,6 +9,7 @@ import type { StatoPartita } from './partita/partita';
 import { DATI } from './regole';
 import type { Tavolo } from './regole/tipi';
 import { ElencoTavoli, ModuloTavolo, TavoloRicevuto } from './ui/Tavoli';
+import { FoglioDalBasso } from './ui/SchedaIncantesimo';
 import { Home } from './ui/Home';
 import { Informazioni } from './ui/Informazioni';
 import { PassoBackground } from './ui/PassoBackground';
@@ -321,7 +322,7 @@ export default function App() {
               <button onClick={indietro} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">Indietro</button>
               {vistaReale === 'riepilogo'
                 ? <button onClick={() => setVista('personaggi')} className="h-12 flex-2 rounded-xl bg-accento text-base font-medium text-su-accento">I miei personaggi</button>
-                : <BottoneAvanti mancanti={stati[vistaReale as IdPasso]?.mancanti ?? 0} avanti={avanti} />}
+                : <BottoneAvanti mancanti={stati[vistaReale as IdPasso]?.mancanti ?? 0} cosaManca={stati[vistaReale as IdPasso]?.cosaManca ?? []} avanti={avanti} />}
             </>
           )}
         </div>
@@ -369,14 +370,32 @@ function Indice({ nome, stati, apri, tavolo, togliTavolo }: { nome: string; stat
   );
 }
 
-// Avanti si tocca solo a passo completo; finché manca qualcosa dice quante cose (scelta di Patrizio, 18/11).
+// Avanti porta avanti solo a passo completo; finché manca qualcosa dice quante cose (scelta di Patrizio, 18/11)
+// e, toccato, apre l'elenco di cosa manca (richiesta del 19/11: «cosa è ancora incompleto?»).
 // Gli avvisi da controllare non bloccano: quelli li decide il master (principio 3, «avvisa, non vieta»).
-function BottoneAvanti({ mancanti, avanti }: { mancanti: number; avanti: () => void }) {
+function BottoneAvanti({ mancanti, cosaManca, avanti }: { mancanti: number; cosaManca: string[]; avanti: () => void }) {
+  const [aperto, setAperto] = useState(false);
+  const bloccato = mancanti > 0;
   return (
-    <button onClick={avanti} disabled={mancanti > 0}
-      className="h-12 flex-2 rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo-2">
-      {mancanti > 0 ? `Avanti (${mancanti} da fare)` : 'Avanti'}
-    </button>
+    <>
+      <button onClick={() => (bloccato ? setAperto(true) : avanti())} aria-disabled={bloccato}
+        className={`h-12 flex-2 rounded-xl text-base font-medium ${bloccato ? 'bg-bordo text-testo-2' : 'bg-accento text-su-accento'}`}>
+        {bloccato ? `Avanti (${mancanti} da fare)` : 'Avanti'}
+      </button>
+      {aperto && bloccato && (
+        <FoglioDalBasso chiudi={() => setAperto(false)} titolo={<h2 className="text-lg font-medium text-testo">Prima di andare avanti</h2>}>
+          <ul className="space-y-2">
+            {cosaManca.map((c) => (
+              <li key={c} className="flex gap-2 rounded-xl border border-attenzione/50 bg-superficie p-3 text-base text-testo">
+                <span aria-hidden className="text-attenzione">●</span>{c}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-sm text-testo-2">Le scelte da fare sono evidenziate nel passo.</p>
+          <button onClick={() => setAperto(false)} className="mt-4 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Ho capito</button>
+        </FoglioDalBasso>
+      )}
+    </>
   );
 }
 

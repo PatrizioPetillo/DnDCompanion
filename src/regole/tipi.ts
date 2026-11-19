@@ -163,7 +163,7 @@ export interface Specie extends Elemento {
   velocita: number;
   tratti: Feature[];
   lignaggi?: { scelta: Id; opzioni: Lignaggio[]; srd: RifSRD };
-    // Solo per le specie personalizzate (inserite dall'utente dal suo manuale, sezione 4):
+  // Solo per le specie personalizzate (inserite dall'utente dal suo manuale, sezione 4):
   rimando?: string;
   descrizione?: string;
   modulo?: unknown;                                         // il modulo com'è stato compilato, per riaprirlo
@@ -171,8 +171,8 @@ export interface Specie extends Elemento {
 
 export interface Background extends Elemento {
   caratteristiche: [Car, Car, Car];
-  talento: { talento: Id; parametri?: Record<Id, Id> };
-    // Solo per i background personalizzati (inseriti dall'utente dal suo manuale, sezione 4):
+  talento: { talento: Id; parametri?: Record<Id, Id> };   // talento vuoto ('') quando c'è talentoLibero
+  // Solo per i background personalizzati (inseriti dall'utente dal suo manuale, sezione 4):
   talentoLibero?: { nome: string; nota: string };          // un talento che non è nell'SRD: nome e una riga, senza calcolo
   rimando?: string;                                         // «Manuale del Giocatore 2024, p. …»
   descrizione?: string;                                     // una riga scritta dall'utente
@@ -249,7 +249,7 @@ export interface MagiaCalcolata {
   // Per la schermata della magia: da dove si sceglie e dove si salva
   fonte: ConcessioneMagia['fonte'];
   lista: Id | null;
-  scelte: { trucchetti?: Id; incantesimi?: Id };   // id delle Scelte (in Personaggio.scelte)
+  scelte: { trucchetti?: Id; incantesimi?: Id; caratteristica?: Id };   // id delle Scelte (in Personaggio.scelte)
   libro: { iniziali: number; scelti: Id[] } | null;
   preparatiDa: 'lista' | 'libro' | null;
   livelloMax: number;                               // livello più alto lanciabile (1 al livello 1)

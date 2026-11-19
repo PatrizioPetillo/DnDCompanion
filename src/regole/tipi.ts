@@ -246,6 +246,7 @@ export interface MagiaCalcolata {
   lanciGratuiti: { incantesimi: Id[]; usi: number; recupero: Riposo } | null;
   slot: 'normali' | 'patto' | 'qualsiasi' | null;
   cambio?: CambioIncantesimi;
+  cambioTrucchetti?: CambioIncantesimi;
   // Per la schermata della magia: da dove si sceglie e dove si salva
   fonte: ConcessioneMagia['fonte'];
   lista: Id | null;

@@ -5,10 +5,17 @@ import { azzeraMorte, cura, danno, fineConcentrazione, tiroMorte, lancia, modiDi
   spendiDadoVita, temporanei, vista, type StatoPartita, type VistaPartita } from '../partita/partita';
 import { DATI } from '../regole';
 import type { Id, MagiaCalcolata, Scheda } from '../regole/tipi';
+import type { Bozza } from '../creazione/percorso';
+import { dopoIlLancio, mancaComponente } from '../partita/componenti';
+import { cambia as cambiaIncantesimo, cambiati, cambiDopoRiposoLungo, sostituti, type CambioPossibile } from '../partita/riposo-incantesimi';
+import { Tendina } from './Tendina';
 import { FoglioDalBasso, SchedaIncantesimo } from './SchedaIncantesimo';
 import { testoDadi } from '../regole/dati/dadi-incantesimi';
 
-export interface PropsTavolo { scheda: Scheda; partita: StatoPartita; cambia: (s: StatoPartita) => void; dado: number }
+export interface PropsTavolo {
+  scheda: Scheda; partita: StatoPartita; cambia: (s: StatoPartita) => void; dado: number;
+  bozza?: Bozza; cambiaBozza?: (b: Bozza) => void;      // per cambiare gli incantesimi dopo il riposo lungo
+}
 const nome = (id: Id) => DATI.incantesimi[id]?.nome ?? id;
 
 // Pallini: pieno = disponibile. Toccare un pieno lo usa, toccare un vuoto lo restituisce.
@@ -28,8 +35,9 @@ export function Pallini({ etichetta, totale, rimasti, cambia }: { etichetta: str
   );
 }
 
-export function Riposi({ scheda, partita, cambia, dado }: PropsTavolo) {
+export function Riposi({ scheda, partita, cambia, dado, bozza, cambiaBozza }: PropsTavolo) {
   const [breve, setBreve] = useState(false);
+  const [dopoLungo, setDopoLungo] = useState<Bozza | null>(null);   // la scheda com'era prima del riposo: i cambi si contano da lì
   const [tiro, setTiro] = useState('');
   const v = vista(scheda, partita, dado);
   return (
@@ -37,7 +45,11 @@ export function Riposi({ scheda, partita, cambia, dado }: PropsTavolo) {
       <div className="mb-3 grid grid-cols-2 gap-2">
         <button onClick={() => setBreve(true)} className="h-11 rounded-xl border border-bordo text-sm text-testo">Riposo breve</button>
         <button
-          onClick={() => window.confirm('Riposo lungo: tornano tutti i PF, gli slot e le risorse. Confermi?') && cambia(riposoLungo(partita))}
+          onClick={() => {
+            if (!window.confirm('Riposo lungo: tornano tutti i PF, gli slot e le risorse. Confermi?')) return;
+            cambia(riposoLungo(partita));
+            if (bozza && cambiaBozza && scheda.magia.length) setDopoLungo(bozza);   // poi, a chi usa la magia, i cambi permessi
+          }}
           className="h-11 rounded-xl border border-bordo text-sm text-testo"
         >Riposo lungo</button>
       </div>
@@ -61,7 +73,54 @@ export function Riposi({ scheda, partita, cambia, dado }: PropsTavolo) {
           <p className="mt-2 text-xs text-testo-2">Tornano lo slot del patto del warlock e le capacità che lo dicono (per esempio 1 uso dell'Ira).</p>
         </FoglioDalBasso>
       )}
+      {dopoLungo && bozza && cambiaBozza && <CambiDopoRiposo prima={dopoLungo} bozza={bozza} cambia={cambiaBozza} chiudi={() => setDopoLungo(null)} />}
     </>
+  );
+}
+
+// Dopo il riposo lungo: i cambi di incantesimi che la classe permette (SRD p. 104). Il conto parte da prima del riposo.
+function CambiDopoRiposo({ prima, bozza, cambia, chiudi }: { prima: Bozza; bozza: Bozza; cambia: (b: Bozza) => void; chiudi: () => void }) {
+  const { possibili, no } = cambiDopoRiposoLungo(bozza);
+  const iniziali = cambiDopoRiposoLungo(prima).possibili;
+  return (
+    <FoglioDalBasso chiudi={chiudi} titolo={<>
+      <h2 className="text-lg font-medium text-testo">Riposo lungo fatto</h2>
+      <p className="text-sm text-testo-2">PF, slot e risorse sono tornati. Ora puoi cambiare gli incantesimi che le regole permettono.</p>
+    </>}>
+      <div className="space-y-4">
+        {possibili.map((c) => {
+          const prima0 = iniziali.find((x) => x.magia === c.magia && x.tipo === c.tipo)?.attuali ?? c.attuali;
+          return <BloccoCambio key={`${c.magia}-${c.tipo}`} c={c} prima={prima0} bozza={bozza} cambia={cambia} />;
+        })}
+        {no.map((x) => <p key={x} className="text-sm text-testo-2">{x}</p>)}
+        {possibili.length === 0 && no.length === 0 && <p className="text-sm text-testo-2">Nessun incantesimo da cambiare.</p>}
+      </div>
+      <button onClick={chiudi} className="mt-4 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Fatto</button>
+    </FoglioDalBasso>
+  );
+}
+
+function BloccoCambio({ c, prima, bozza, cambia }: { c: CambioPossibile; prima: Id[]; bozza: Bozza; cambia: (b: Bozza) => void }) {
+  const usati = cambiati(prima, c.attuali);
+  const esaurito = c.quanti !== 'tutti' && usati >= c.quanti;
+  const opz = sostituti(bozza, c);
+  return (
+    <div className="rounded-xl border border-bordo bg-superficie p-3">
+      <p className="text-base font-medium text-testo">{c.nome} · {c.tipo === 'trucchetti' ? 'trucchetti' : 'preparati'}</p>
+      <p className="mb-2 text-sm text-testo-2">{c.regola} <span className="whitespace-nowrap">SRD p. {c.pagina}</span></p>
+      <div className="space-y-2">
+        {c.attuali.map((id) => {
+          const cambiato = !prima.includes(id);
+          return (
+            <Tendina key={id} etichetta={cambiato ? 'Cambiato' : c.tipo === 'trucchetti' ? 'Trucchetto' : 'Preparato'} valore={id}
+              opzioni={[{ id, nome: DATI.incantesimi[id]?.nome ?? id, disattivata: false },
+                ...opz.map((o) => ({ id: o.id, nome: o.nome, disattivata: esaurito && !cambiato, ...(esaurito && !cambiato ? { motivo: 'hai già fatto il tuo cambio' } : {}) }))]}
+              cambia={(v) => v && v !== id && cambia(cambiaIncantesimo(bozza, c, id, v, prima))} />
+          );
+        })}
+      </div>
+      {c.quanti !== 'tutti' && <p className="mt-2 text-xs text-testo-2">Cambi fatti: {usati} su {c.quanti}</p>}
+    </div>
   );
 }
 
@@ -240,11 +299,13 @@ export function MagiaTavolo({ scheda, partita, cambia }: PropsTavolo) {
                 const tag = [i.livello === 0 ? 'trucchetto' : `${i.livello}°`, i.concentrazione ? 'C' : '', soloRituale ? 'solo rituale (dal libro)' : i.rituale ? 'R' : '',
                   i.tiro ? (i.tiro.tipo === 'attacco' ? `attacco +${m.attacco?.totale}` : `TS ${i.tiro.car} CD ${m.cd?.totale}`) : '',
                   testoDadi(id, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0) ?? ''].filter(Boolean).join(' · ');
+                const manca = mancaComponente(scheda, partita, id);   // componente con costo finita: si lancia lo stesso, segnato in rosso
                 return (
-                  <li key={id} className="flex items-center gap-2 border-t border-bordo py-1 first:border-t-0">
+                  <li key={id} className={`flex items-center gap-2 border-t border-bordo py-1 first:border-t-0 ${manca ? '-mx-1 rounded-lg border-2 !border-attenzione px-1' : ''}`}>
                     <button onClick={() => setLeggi(id)} className="min-h-11 flex-1 text-left">
                       <span className="block text-base text-testo">{i.nome}</span>
                       <span className="block text-xs text-testo-2">{tag}</span>
+                      {manca && <span className="block text-xs text-attenzione">Manca la componente con costo: aggiungila dalla borsa nello Zaino</span>}
                     </button>
                     {i.livello > 0 && (
                       <button onClick={() => setLancio({ magia: m, id })} className="min-h-11 shrink-0 rounded-lg border border-accento px-3 text-sm text-accento">Lancia</button>
@@ -263,7 +324,7 @@ export function MagiaTavolo({ scheda, partita, cambia }: PropsTavolo) {
 
       {lancio && (
         <SceltaLancio v={v} m={lancio.magia} id={lancio.id} partita={partita} chiudi={() => setLancio(null)}
-          fatto={(s, interrotto) => { cambia(s); setLancio(null); setAvviso(interrotto ? `Hai interrotto ${nome(interrotto)}: ora sei concentrato su ${nome(lancio.id)}.` : null); }} />
+          fatto={(s, interrotto) => { cambia(dopoIlLancio(scheda, s, lancio.id)); setLancio(null); setAvviso(interrotto ? `Hai interrotto ${nome(interrotto)}: ora sei concentrato su ${nome(lancio.id)}.` : null); }} />
       )}
       {leggi && <SchedaIncantesimo id={leggi} chiudi={() => setLeggi(null)} />}
     </div>

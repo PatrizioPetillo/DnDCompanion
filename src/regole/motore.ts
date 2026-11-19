@@ -313,7 +313,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
       trucchetti: { attesi: fissi.length + daScegliere, scelti: trucchetti, ...(fissi.length ? { fissi } : {}) },
       semprePreparati, preparati, lanciGratuiti: lanci,
       slot: c.slot ?? (c.puoUsareSlot ? 'qualsiasi' : null),
-      ...(c.cambio ? { cambio: c.cambio } : {}),
+      ...(c.cambio ? { cambio: c.cambio } : {}), ...(c.cambioTrucchetti ? { cambioTrucchetti: c.cambioTrucchetti } : {}),
       fonte: c.fonte, lista,
       scelte: { ...(typeof c.caratteristica === 'string' ? {} : { caratteristica: c.caratteristica.daScelta }), ...(c.trucchetti?.scelta ? { trucchetti: c.trucchetti.scelta } : {}), ...(c.incantesimiScelti ? { incantesimi: c.incantesimiScelti.scelta } : {}) },
       libro: c.libro ? { iniziali: c.libro.iniziali, scelti: libro } : null,

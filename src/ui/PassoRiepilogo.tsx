@@ -15,6 +15,7 @@ import { Avatar } from './Avatar';
 import { Fascia, immagine } from './Illustrazione';
 import { iniziali } from '../archivio/archivio';
 import { MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
+import { Borsa, Libro } from './Zaino';
 
 type Scheda = 'combattimento' | 'abilita' | 'magia' | 'zaino' | 'chi';
 // Icone disegnate a mano (tratto semplice), per riconoscere la scheda al volo
@@ -52,7 +53,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
   const pg = comePersonaggio(bozza)!;
   const scheda: SchedaCalcolata = calcolaScheda(pg);
   const tavolo: PropsTavolo | null = partita && cambiaPartita && !ricevuta
-    ? { scheda, partita, cambia: cambiaPartita, dado: DATI.classi[pg.classe].dadoVita } : null;
+    ? { scheda, partita, cambia: cambiaPartita, dado: DATI.classi[pg.classe].dadoVita, bozza, cambiaBozza: cambia } : null;
 
   return (
     <section>
@@ -85,8 +86,8 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         {vistaScheda === 'combattimento' && <Combattimento r={r} tavolo={tavolo} />}
         {vistaScheda === 'abilita' && <Abilita r={r} />}
         {vistaScheda === 'magia' && (tavolo ? <MagiaTavolo {...tavolo} /> : <Magia r={r} />)}
-        {vistaScheda === 'zaino' && <Zaino r={r} />}
-        {vistaScheda === 'chi' && <ChiE r={r} />}
+        {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} />}
+        {vistaScheda === 'chi' && <ChiE r={r} bozza={bozza} cambia={cambia} ricevuta={ricevuta} />}
       </div>
 
       {ricevuta ? <EsportaPdf bozza={bozza} /> : <Esporta bozza={bozza} ritratto={ritratto} elementi={elementi} />}
@@ -98,12 +99,13 @@ function Avvisi({ bozza, cambia, apri, ricevuta }: { bozza: Bozza; cambia: (b: B
   const tutti = avvisiRiepilogo(bozza);
   const aperti = tutti.filter((a) => !a.accettato);
   const accettati = tutti.filter((a) => a.accettato);
-  if (aperti.length === 0 && accettati.length === 0) return <p className="mb-3 rounded-xl border border-ok/50 bg-superficie p-3 text-sm text-testo">Scheda completa e senza avvisi.</p>;
+  // Niente da controllare: l'etichetta sparisce (richiesta del 19/11). Le eccezioni accettate stanno in «Chi è».
+  if (aperti.length === 0) return null;
   // Richiuso: la scheda resta in vista; il numero dice quanti avvisi restano
   return (
-    <details className={`mb-3 rounded-xl border bg-superficie ${aperti.length ? 'border-attenzione' : 'border-ok/50'}`}>
+    <details className="mb-3 rounded-xl border border-attenzione bg-superficie">
       <summary className="flex min-h-12 cursor-pointer items-center px-3 text-sm text-testo">
-        {aperti.length ? `Da controllare: ${aperti.length} ${aperti.length === 1 ? 'avviso' : 'avvisi'}` : 'Scheda completa'}
+        {`Da controllare: ${aperti.length} ${aperti.length === 1 ? 'avviso' : 'avvisi'}`}
         {accettati.length > 0 && <span className="ml-1 text-testo-2">· {accettati.length} {accettati.length === 1 ? 'eccezione accettata' : 'eccezioni accettate'}</span>}
       </summary>
     <div className="space-y-2 px-3 pb-3">
@@ -120,19 +122,6 @@ function Avvisi({ bozza, cambia, apri, ricevuta }: { bozza: Bozza; cambia: (b: B
           </div>}
         </div>
       ))}
-      {accettati.length > 0 && (
-        <div className="rounded-xl border border-bordo p-3">
-          <p className="text-sm text-testo-2">Eccezioni accettate</p>
-          <ul className="mt-2 space-y-2">
-            {accettati.map((a) => (
-              <li key={a.id} className="flex items-start gap-2 text-sm text-testo">
-                <span className="flex-1">{a.messaggio}</span>
-                {!ricevuta && <button onClick={() => cambia(accettaAvviso(bozza, a.id, false))} className="min-h-11 shrink-0 rounded-lg px-2 text-accento">Annulla</button>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
     </details>
   );
@@ -226,30 +215,29 @@ function Combattimento({ r, tavolo }: { r: Riepilogo; tavolo: PropsTavolo | null
 }
 
 function Abilita({ r }: { r: Riepilogo }) {
-  return (
-    <div className="space-y-3">
-      {r.abilita.map((c) => (
-        <div key={c.car} className="rounded-xl border border-bordo bg-superficie p-3">
-          <div className="flex items-baseline justify-between">
-            <span className="text-base font-medium text-testo">{c.nome}</span>
-            <span className="text-base text-testo">{c.punteggio} <span className="text-testo-2">({c.mod})</span></span>
-          </div>
-          {c.voci.length > 0 && (
-            <ul className="mt-2 space-y-1">
-              {c.voci.map((v) => (
-                <li key={v.id} className="flex items-center gap-2 text-sm">
-                  <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${v.maestria ? 'bg-oro ring-2 ring-accento' : v.competente ? 'bg-accento' : 'border border-bordo'}`} />
-                  <span className={`flex-1 ${v.competente ? 'text-testo' : 'text-testo-2'}`}>{v.nome}{v.maestria ? ' (maestria)' : ''}</span>
-                  <span className="text-testo">{v.valore}</span>
-                  {v.competente && !v.maestria && <span className="sr-only">con competenza</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ))}
+  // Come nella creazione: FOR DES COS a sinistra, INT SAG CAR a destra, colonne indipendenti
+  const riquadro = (c: Riepilogo['abilita'][number]) => (
+    <div key={c.car} className="rounded-xl border border-bordo bg-superficie p-2.5">
+      <div className="flex items-baseline justify-between gap-1">
+        <span className="text-sm font-medium text-testo">{c.nome}</span>
+        <span className="text-sm text-testo">{c.punteggio} <span className="text-testo-2">({c.mod})</span></span>
+      </div>
+      {c.voci.length > 0 && (
+        <ul className="mt-1.5 space-y-1">
+          {c.voci.map((v) => (
+            <li key={v.id} className="flex items-center gap-1.5 text-xs">
+              <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${v.maestria ? 'bg-oro ring-2 ring-accento' : v.competente ? 'bg-accento' : 'border border-bordo'}`} />
+              <span className={`min-w-0 flex-1 ${v.competente ? 'text-testo' : 'text-testo-2'}`}>{v.nome}{v.maestria ? ' (maestria)' : ''}</span>
+              <span className="text-testo">{v.valore}</span>
+              {v.competente && !v.maestria && <span className="sr-only">con competenza</span>}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
+  const colonna = (cs: string[]) => <div className="space-y-2">{r.abilita.filter((c) => cs.includes(c.car)).map(riquadro)}</div>;
+  return <div className="grid grid-cols-2 items-start gap-2">{colonna(['FOR', 'DES', 'COS'])}{colonna(['INT', 'SAG', 'CAR'])}</div>;
 }
 
 function Magia({ r }: { r: Riepilogo }) {
@@ -272,29 +260,46 @@ function Magia({ r }: { r: Riepilogo }) {
   );
 }
 
-function Zaino({ r }: { r: Riepilogo }) {
+// Zaino: il libro degli incantesimi e la borsa per componenti si aprono (richiesta del 19/11)
+function Zaino({ r, scheda, tavolo }: { r: Riepilogo; scheda: SchedaCalcolata; tavolo: PropsTavolo | null }) {
+  const [aperto, setAperto] = useState<'libro' | { borsa: string } | null>(null);
   const m = r.zaino.monete.totale;
+  const libro = scheda.magia.find((x) => x.libro);
+  // Il libro del mago; la borsa per componenti e i focus (sostituiscono le componenti senza costo, SRD p. 105-106)
+  const apribile = (id: string, nome: string) => (id === 'spellbook' && libro ? 'libro' as const
+    : DATI.oggetti[id]?.focus && scheda.magia.length ? { borsa: nome } : null);
   return (
     <div className="space-y-3">
       <p className="text-base text-testo">Monete: <span className="font-medium">{m < 0 ? `−${prezzo(-m)}` : prezzo(m)}</span></p>
       <ul className="overflow-hidden rounded-xl border border-bordo bg-superficie">
-        {r.zaino.inventario.map((v) => (
-          <li key={v.oggetto} className="border-b border-bordo px-3 py-2 last:border-b-0">
-            {v.contenuto ? (
-              <details>
-                <summary className="min-h-8 cursor-pointer text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</summary>
-                <p className="mt-1 text-sm text-testo-2">{v.contenuto.map((c) => `${c.quantita > 1 ? `${c.quantita} × ` : ''}${c.nome}`).join(', ')}</p>
-              </details>
-            ) : <span className="text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</span>}
-          </li>
-        ))}
+        {r.zaino.inventario.map((v) => {
+          const a = apribile(v.oggetto, v.nome);
+          return (
+            <li key={v.oggetto} className="border-b border-bordo px-3 py-2 last:border-b-0">
+              {a ? (
+                <button onClick={() => setAperto(a)} className="flex min-h-8 w-full items-center justify-between text-left text-base text-testo">
+                  <span>{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</span>
+                  <span className="text-sm text-accento">Apri ›</span>
+                </button>
+              ) : v.contenuto ? (
+                <details>
+                  <summary className="min-h-8 cursor-pointer text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</summary>
+                  <p className="mt-1 text-sm text-testo-2">{v.contenuto.map((c) => `${c.quantita > 1 ? `${c.quantita} × ` : ''}${c.nome}`).join(', ')}</p>
+                </details>
+              ) : <span className="text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</span>}
+            </li>
+          );
+        })}
         {r.zaino.inventario.length === 0 && <li className="px-3 py-3 text-sm text-testo-2">Lo zaino è vuoto.</li>}
       </ul>
+      {aperto === 'libro' && libro && <Libro magia={libro} chiudi={() => setAperto(null)} />}
+      {aperto && aperto !== 'libro' && <Borsa nome={aperto.borsa} scheda={scheda} tavolo={tavolo} chiudi={() => setAperto(null)} />}
     </div>
   );
 }
 
-function ChiE({ r }: { r: Riepilogo }) {
+function ChiE({ r, bozza, cambia, ricevuta }: { r: Riepilogo; bozza: Bozza; cambia: (b: Bozza) => void; ricevuta?: boolean }) {
+  const accettati = avvisiRiepilogo(bozza).filter((a) => a.accettato);
   return (
     <div className="space-y-4">
       <dl className="space-y-2">
@@ -309,6 +314,19 @@ function ChiE({ r }: { r: Riepilogo }) {
         <h2 className="mb-2 text-base font-medium text-testo">Privilegi e talenti</h2>
         <ul className="space-y-1 text-sm text-testo">{r.chiE.privilegi.map((p) => <li key={p}>{p}</li>)}</ul>
       </div>
+      {accettati.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-base font-medium text-testo">Eccezioni accettate dal master</h2>
+          <ul className="space-y-2">
+            {accettati.map((a) => (
+              <li key={a.id} className="flex items-start gap-2 text-sm text-testo">
+                <span className="flex-1">{a.messaggio}</span>
+                {!ricevuta && <button onClick={() => cambia(accettaAvviso(bozza, a.id, false))} className="min-h-11 shrink-0 rounded-lg px-2 text-accento">Annulla</button>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -325,8 +343,8 @@ function Esporta({ bozza, ritratto, elementi }: { bozza: Bozza; ritratto?: strin
   const pdf = async () => {
     setStato('Preparo il PDF…');
     try {
-      const { creaPdf } = await import('../esporta/pdf');       // pdf-lib si carica solo adesso
-      scarica(await creaPdf(bozza) as BlobPart, 'application/pdf', nomeFile(bozza).replace(/\.json$/, '.pdf'));
+      const { pdfDellaScheda } = await import('../esporta/prepara-pdf');       // pdf-lib si carica solo adesso
+      scarica(await pdfDellaScheda(bozza, ritratto) as BlobPart, 'application/pdf', nomeFile(bozza).replace(/\.json$/, '.pdf'));
       setStato(null);
     } catch { setStato('Non sono riuscito a creare il PDF. Riprova.'); }
   };
@@ -343,11 +361,11 @@ function Esporta({ bozza, ritratto, elementi }: { bozza: Bozza; ritratto?: strin
       <h2 className="text-base font-medium text-testo">Esporta</h2>
       <button onClick={pdf} className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Scarica il PDF</button>
       <button onClick={link} className="h-12 w-full rounded-xl border border-accento text-base font-medium text-accento">Manda il link al master</button>
-      <button onClick={() => scarica(esportaJSON(bozza, ritratto, elementi), 'application/json', nomeFile(bozza))} className="h-12 w-full rounded-xl border border-bordo text-base text-testo">
-        Scarica la copia (JSON)
-      </button>
       {stato && <p role="status" className="text-sm text-testo">{stato}</p>}
-      <p className="text-xs text-testo-2">Il link contiene tutta la scheda: chi lo apre la vede, senza toccare il suo personaggio. Il JSON è una copia di sicurezza, con il ritratto: si reimporta da «I miei personaggi».</p>
+      <p className="text-xs text-testo-2">Il PDF è la scheda come la vedi qui. Il link contiene tutta la scheda: chi lo apre la vede, senza toccare il suo personaggio.</p>
+      <button onClick={() => scarica(esportaJSON(bozza, ritratto, elementi), 'application/json', nomeFile(bozza))} className="min-h-11 text-sm text-testo-2 underline underline-offset-4">
+        Copia di sicurezza di questo personaggio (JSON, si reimporta)
+      </button>
     </div>
   );
 }
@@ -355,8 +373,8 @@ function Esporta({ bozza, ritratto, elementi }: { bozza: Bozza; ritratto?: strin
 // Scheda ricevuta da un link: il master può solo leggerla o stamparla
 function EsportaPdf({ bozza }: { bozza: Bozza }) {
   const scarica = async () => {
-    const { creaPdf } = await import('../esporta/pdf');
-    const url = URL.createObjectURL(new Blob([await creaPdf(bozza) as BlobPart], { type: 'application/pdf' }));
+    const { pdfDellaScheda } = await import('../esporta/prepara-pdf');
+    const url = URL.createObjectURL(new Blob([await pdfDellaScheda(bozza) as BlobPart], { type: 'application/pdf' }));
     const a = document.createElement('a');
     a.href = url; a.download = nomeFile(bozza).replace(/\.json$/, '.pdf'); a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);

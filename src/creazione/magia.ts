@@ -129,6 +129,16 @@ export function scegliIncantesimo(b: Bozza, magiaId: Id, tipo: TipoScelta, id: I
   return b;
 }
 
+// Sostituisce un incantesimo con un altro nella stessa lista (per i cambi dopo il riposo lungo)
+export function sostituisci(b: Bozza, magiaId: Id, tipo: TipoScelta, vecchio: Id, nuovo: Id, d: Dati = DATI): Bozza {
+  const s = scheda(b, d);
+  const m = s?.magia.find((x) => x.id === magiaId);
+  if (!m) return b;
+  const presi = letti(b, m, tipo);
+  if (!presi.includes(vecchio) || presi.includes(nuovo)) return b;
+  return scrivi(b, m, tipo, presi.map((x) => (x === vecchio ? nuovo : x)));
+}
+
 export interface Filtri {
   livello?: number; scuola?: string; cerca?: string;
   concentrazione?: 'si' | 'no'; rituale?: 'si' | 'no'; tempo?: Incantesimo['tempo']['tipo']; materialeConCosto?: 'si' | 'no';

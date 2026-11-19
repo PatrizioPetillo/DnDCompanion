@@ -14,6 +14,7 @@ export interface StatoPartita {
   gratuitiUsati: Record<Id, number>;     // per fonte di magia (Iniziato alla magia, Nemico prescelto…)
   concentrazione: Id | null;             // incantesimo a concentrazione attivo
   morte: { successi: number; fallimenti: number; stabile: boolean; morto: boolean };   // tiri salvezza contro la morte (p. 17-18)
+  componenti?: Record<Id, number>;       // componenti con costo aggiunte (+) o usate (−) durante il gioco
 }
 
 export const statoVuoto = (): StatoPartita => ({

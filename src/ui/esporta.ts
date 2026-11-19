@@ -1,5 +1,6 @@
 // Esportazione della scheda, dal menu (spostata lì dal fondo del Riepilogo il 19/11, richiesta di Patrizio).
 import { esportaJSON, nomeFile } from '../creazione/riepilogo';
+import { creaLink } from '../esporta/link';   // già nel pezzo principale (lo usano App e Tavoli): import normale
 import type { Bozza } from '../creazione/percorso';
 import type { Elementi } from '../creazione/personalizzati';
 
@@ -22,7 +23,6 @@ export async function scaricaPdf(bozza: Bozza, ritratto?: string): Promise<strin
 
 // Il link contiene tutta la scheda: chi lo apre la vede, senza toccare il suo personaggio
 export async function mandaLink(bozza: Bozza, elementi?: Elementi): Promise<string | null> {
-  const { creaLink } = await import('../esporta/link');
   const url = await creaLink(bozza, location.href, elementi);
   try {
     if (navigator.share) { await navigator.share({ title: bozza.nome || 'Scheda', url }); return null; }

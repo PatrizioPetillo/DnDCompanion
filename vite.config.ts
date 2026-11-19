@@ -19,7 +19,7 @@ export default defineConfig({
         orientation: 'portrait',
         background_color: '#F3E9D2',
         theme_color: '#6E1A1A',
-        // Icona provvisoria (un d20 in ottone sul rosso DomusDraconis): si cambia quando arriva il logo
+        // Icona: pergamena, piuma e d20 (19/11)
         icons: [
           { src: 'icona-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icona-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -29,4 +29,7 @@ export default defineConfig({
       workbox: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,woff,woff2}'], maximumFileSizeToCacheInBytes: 5_000_000 },
     }),
   ],
+  // I pezzi grandi si scaricano solo quando servono: pdf (pdf-lib + fontkit, solo all'esportazione)
+  // e incantesimi-testi (solo aprendo la scheda di un incantesimo). Il principale sta sotto i 200 kB compressi.
+  build: { chunkSizeWarningLimit: 1200 },
 })

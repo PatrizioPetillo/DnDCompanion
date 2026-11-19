@@ -150,7 +150,7 @@ export default function App() {
                   <span className="flex items-center gap-1 text-sm text-testo-2">{tema === 'notte' ? <IconaSole /> : <IconaLuna />}{tema === 'notte' ? 'Passa a giorno' : 'Passa a notte'}</span>
                 </span>
               </VoceMenu>
-              <VoceMenu onClick={() => { setRicevuta(null); setVista('informazioni'); }}>Informazioni</VoceMenu>
+              <VoceMenu onClick={() => { setRicevuta(null); setVista('informazioni'); }}>Informazioni e crediti</VoceMenu>
             </div>
           </>
         )}

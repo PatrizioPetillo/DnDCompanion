@@ -2,6 +2,7 @@
 // (Padronanza d'armi, strumenti, ordini, stile, supplica, lingua del ladro), come in Character Keep.
 import { scelteDiClasse } from '../creazione/classe';
 import { visibile, type Bozza } from '../creazione/percorso';
+import { cosaOttieni, type Privilegio } from '../creazione/cosa-ottieni';
 import { SCHEDE_CLASSE } from '../creazione/testi';
 import { DATI } from '../regole';
 import { Tendina } from './Tendina';
@@ -42,8 +43,11 @@ export function PassoClasse({ bozza, scegli, cambia }: { bozza: Bozza; scegli: (
                 <p className="mt-2 text-xs text-testo-2">Per chi inizia: {DIFFICOLTA[t.difficolta]}</p>
               </button>
 
+              {scelta && <CosaOttieni classeId={c.id} />}
+
               {scelta && scelte.length > 0 && (
                 <div className="space-y-3 border-t border-bordo px-4 pb-4 pt-3">
+                  <h3 className="text-sm font-medium text-testo">Le tue scelte</h3>
                   {scelte.map((s) => Array.from({ length: s.quantita }, (_, i) => {
                     const presi = bozza.scelte[s.id] ?? [];
                     const valore = presi[i] ?? '';
@@ -65,5 +69,31 @@ export function PassoClasse({ bozza, scegli, cambia }: { bozza: Bozza; scegli: (
         })}
       </ul>
     </section>
+  );
+}
+
+// Cosa dà la classe al livello 1: si apre sotto la scheda scelta (richiesta di Patrizio, 19/11)
+function CosaOttieni({ classeId }: { classeId: string }) {
+  const c = cosaOttieni(classeId);
+  const voce = (p: Privilegio) => (
+    <li key={p.nome}>
+      <span className="font-medium text-testo">{p.nome}.</span> <span className="text-testo-2">{p.riga}</span>
+      <span className="ml-1 whitespace-nowrap text-xs text-testo-2/80">SRD p. {p.pagina}</span>
+    </li>
+  );
+  return (
+    <div className="border-t border-bordo px-4 pb-4 pt-3">
+      <h3 className="mb-2 text-sm font-medium text-testo">Cosa ottieni al livello 1</h3>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+        <dt className="text-testo-2">Tiri salvezza</dt><dd className="text-testo">{c.tiriSalvezza}</dd>
+        <dt className="text-testo-2">Armature</dt><dd className="text-testo">{c.armature}</dd>
+        <dt className="text-testo-2">Armi</dt><dd className="text-testo">{c.armi}</dd>
+        <dt className="text-testo-2">Abilità</dt><dd className="text-testo">{c.abilita}</dd>
+      </dl>
+      <ul className="mt-3 space-y-2 text-sm leading-relaxed">
+        {c.magia && voce(c.magia)}
+        {c.privilegi.map(voce)}
+      </ul>
+    </div>
   );
 }

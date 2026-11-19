@@ -1,8 +1,7 @@
-// Home (sezione 12 ter): i loghi, il nome dell'app, crediti, l'ingresso a «I miei personaggi», ai tavoli e a «Informazioni».
+// Home (sezione 12 ter): i loghi, il nome dell'app, crediti (ora in Informazioni, dal menu e dal link in fondo), l'ingresso a «I miei personaggi», ai tavoli e a «Informazioni».
 // I loghi stanno solo qui (decisione del 17/11). Quello di B20 GDR solo con il permesso degli admin: senza, LOGO_B20 = false.
 import logoB20 from '../assets/loghi/b20.webp';
 import logoDomus from '../assets/loghi/domusdraconis.webp';
-import { CREDITI } from '../licenza';
 
 const LOGO_B20 = true;   // mettere false finché gli admin di B20 non danno il permesso
 
@@ -24,8 +23,7 @@ export function Home({ personaggi, apriPersonaggi, apriTavoli, apriInformazioni 
         I miei personaggi{personaggi ? ` (${personaggi})` : ''}
       </button>
       <button onClick={apriTavoli} className="mt-3 h-12 w-full max-w-80 rounded-xl border border-bordo text-base text-testo">I miei tavoli (per il master)</button>
-      <button onClick={apriInformazioni} className="mt-3 h-12 w-full max-w-80 rounded-xl border border-bordo text-base text-testo">Informazioni</button>
-      <p className="mt-8 text-xs text-testo-2">{CREDITI}</p>
+      <button onClick={apriInformazioni} className="mt-8 min-h-11 px-4 text-sm text-testo-2 underline underline-offset-4">Informazioni, crediti e note legali</button>
     </section>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { aggiorna, aggiornaTavolo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio } from './archivio/archivio';
 import { elementiUsati, registra, unione, type Elementi } from './creazione/personalizzati';
-import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, PASSI, prossimoPasso, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
+import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, concludi, concluso, daCompletarePrimaDiSalvare, PASSI, prossimoPasso, riapri, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
 import { importaJSON } from './creazione/riepilogo';
 import { descriviTolte } from './creazione/testi';
 import { leggiLink, leggiLinkTavolo } from './esporta/link';
@@ -10,6 +10,7 @@ import { DATI } from './regole';
 import type { Tavolo } from './regole/tipi';
 import { ElencoTavoli, ModuloTavolo, TavoloRicevuto } from './ui/Tavoli';
 import { FoglioDalBasso } from './ui/SchedaIncantesimo';
+import { mandaLink, scaricaCopia, scaricaPdf } from './ui/esporta';
 import { Home } from './ui/Home';
 import { Informazioni } from './ui/Informazioni';
 import { PassoBackground } from './ui/PassoBackground';
@@ -60,7 +61,7 @@ export default function App() {
   const apri = (id: string, a: Archivio = archivio) => {
     const p = a.personaggi.find((x) => x.id === id);
     setArchivio(apriPersonaggio(a, id));
-    setVista(p && prossimoPasso(p.bozza) === 'riepilogo' ? 'riepilogo' : p?.bozza.classe ? 'indice' : 'classe');
+    setVista(p && (concluso(p.bozza) || prossimoPasso(p.bozza) === 'riepilogo') ? 'riepilogo' : p?.bozza.classe ? 'indice' : 'classe');
   };
 
   // Scheda arrivata con un link (#scheda=…): si guarda; «Aggiungi ai miei personaggi» la mette nella lista
@@ -104,7 +105,13 @@ export default function App() {
   const inPasso = PASSI.some((p) => p.id === vista);
   const numero = inPasso ? PASSI.findIndex((p) => p.id === vista) + 1 : 0;
   // Senza un personaggio aperto i passi non hanno senso: si torna alla lista
-  const vistaReale: Vista = (inPasso || vista === 'indice') && !corrente ? 'personaggi' : vista;
+  // Un personaggio salvato non riapre i passi: si vede solo la scheda (finché non si riapre la creazione)
+  const bloccato = !!corrente && concluso(bozza);
+  const vistaReale: Vista = (inPasso || vista === 'indice') && !corrente ? 'personaggi'
+    : bloccato && (inPasso || vista === 'indice') ? 'riepilogo' : vista;
+  const daFare = daCompletarePrimaDiSalvare(stati);
+  const [appenaSalvato, setAppenaSalvato] = useState(false);
+  const salva = () => { setBozza(concludi(bozza)); setVista('riepilogo'); setAppenaSalvato(true); window.scrollTo(0, 0); };
   const avanti = () => {
     if (vistaReale === 'indice') setVista(prossimoPasso(bozza));
     else setVista(PASSI[numero]?.id ?? 'indice');
@@ -128,7 +135,7 @@ export default function App() {
             <IconaMenu />
           </button>
         </div>
-        {inPasso && vistaReale === vista && !ricevuta && (
+        {inPasso && vistaReale === vista && !ricevuta && !bloccato && (
           <button onClick={() => setVista('indice')} className="mt-2 block w-full text-left" aria-label={`Passo ${numero} di ${PASSI.length}: apri tutti i passi`}>
             <span className="mb-1 flex justify-between text-xs text-testo-2"><span>Passo {numero} di {PASSI.length}: {PASSI[numero - 1].titolo}</span><span className="text-accento">Tutti i passi</span></span>
             <span className="block h-1 rounded-full bg-bordo">
@@ -144,8 +151,17 @@ export default function App() {
               <VoceMenu onClick={() => { setRicevuta(null); setTavoloRicevuto(null); setVista('home'); }}>Home</VoceMenu>
               <VoceMenu onClick={() => { setRicevuta(null); setVista('personaggi'); }}>I miei personaggi</VoceMenu>
               <VoceMenu onClick={() => { setRicevuta(null); setTavoloRicevuto(null); setVista('tavoli'); }}>I miei tavoli (master)</VoceMenu>
-              {corrente && !ricevuta && <VoceMenu onClick={() => setVista('indice')}>Passi di {bozza.nome.trim() || 'questo personaggio'}</VoceMenu>}
+              {corrente && !ricevuta && !bloccato && <VoceMenu onClick={() => setVista('indice')}>Passi di {bozza.nome.trim() || 'questo personaggio'}</VoceMenu>}
               {corrente && !ricevuta && <VoceMenu onClick={() => setVista('riepilogo')}>Scheda (riepilogo)</VoceMenu>}
+              {(ricevuta || (corrente && (inPasso || vistaReale === 'indice'))) && <>
+                <p className="border-b border-bordo bg-sfondo px-4 pb-1 pt-3 text-xs uppercase tracking-widest text-testo-2">Esporta {(ricevuta ?? bozza).nome.trim() || 'la scheda'}</p>
+                <VoceMenu onClick={async () => { setMenu(false); setMessaggio('Preparo il PDF…'); setMessaggio(await scaricaPdf(ricevuta ?? bozza, ricevuta ? undefined : corrente?.ritratto)); }}>Scarica il PDF</VoceMenu>
+                {!ricevuta && <>
+                  <VoceMenu onClick={async () => { setMenu(false); setMessaggio(await mandaLink(bozza, elementiUsati(bozza, mieiElementi))); }}>Manda il link al master</VoceMenu>
+                  <VoceMenu onClick={() => { setMenu(false); scaricaCopia(bozza, corrente?.ritratto, elementiUsati(bozza, mieiElementi)); }}>Copia di sicurezza (JSON)</VoceMenu>
+                </>}
+                <p className="border-b border-bordo bg-sfondo px-4 pb-1 pt-3 text-xs uppercase tracking-widest text-testo-2">App</p>
+              </>}
               <VoceMenu onClick={() => setTema(tema === 'notte' ? 'giorno' : 'notte')}>
                 <span className="flex items-center justify-between">Tema {tema === 'notte' ? 'notte' : 'giorno'}
                   <span className="flex items-center gap-1 text-sm text-testo-2">{tema === 'notte' ? <IconaSole /> : <IconaLuna />}{tema === 'notte' ? 'Passa a giorno' : 'Passa a notte'}</span>
@@ -291,7 +307,20 @@ export default function App() {
         )}
         {!ricevuta && !tavoloRicevuto && vistaReale === 'riepilogo' && partita && (
           <PassoRiepilogo bozza={bozza} cambia={setBozza} apri={(p) => setVista(p)} partita={partita}
-            cambiaPartita={(s) => modifica({ partita: s })} ritratto={corrente?.ritratto} elementi={elementiUsati(bozza, mieiElementi)} />
+            cambiaPartita={(s) => modifica({ partita: s })} ritratto={corrente?.ritratto}
+            bloccata={bloccato} cambiaRitratto={(r) => modifica({ ritratto: r })}
+            riapri={() => {
+              if (!window.confirm(`Riaprire la creazione di ${bozza.nome.trim() || 'questo personaggio'}? Potrai cambiare classe, specie, incantesimi e il resto; poi andrà salvato di nuovo.`)) return;
+              setBozza(riapri(bozza));
+              setVista('indice');
+            }} />
+        )}
+        {appenaSalvato && vistaReale === 'riepilogo' && (
+          <FoglioDalBasso chiudi={() => setAppenaSalvato(false)} titolo={<h2 className="font-titolo text-lg text-accento">Personaggio salvato</h2>}>
+            <p className="text-base text-testo">{bozza.nome.trim() || 'Il tuo personaggio'} è pronto per il tavolo.</p>
+            <p className="mt-2 text-sm text-testo-2">Le scelte della creazione ora sono bloccate. Restano modificabili i dati di gioco (punti ferita, slot, monete, componenti) e il ritratto. Per cambiare altro: «Riapri la creazione», in fondo alla sezione «Chi è».</p>
+            <button onClick={() => setAppenaSalvato(false)} className="mt-4 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Apri la scheda</button>
+          </FoglioDalBasso>
         )}
       </main>
 
@@ -317,11 +346,13 @@ export default function App() {
               <button onClick={() => setVista('personaggi')} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">I miei personaggi</button>
               <button onClick={avanti} className="h-12 flex-1 rounded-xl bg-accento text-base font-medium text-su-accento">Continua</button>
             </>
+          ) : bloccato ? (
+            <button onClick={() => setVista('personaggi')} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">I miei personaggi</button>
           ) : (
             <>
               <button onClick={indietro} className="h-12 flex-1 rounded-xl border border-bordo text-base text-testo">Indietro</button>
-              {vistaReale === 'riepilogo'
-                ? <button onClick={() => setVista('personaggi')} className="h-12 flex-2 rounded-xl bg-accento text-base font-medium text-su-accento">I miei personaggi</button>
+              {vistaReale === 'personaggio' || vistaReale === 'riepilogo'
+                ? <BottoneAvanti mancanti={daFare.length} cosaManca={daFare} avanti={salva} etichetta="Salva il personaggio" titolo="Prima di salvare" />
                 : <BottoneAvanti mancanti={stati[vistaReale as IdPasso]?.mancanti ?? 0} cosaManca={stati[vistaReale as IdPasso]?.cosaManca ?? []} avanti={avanti} />}
             </>
           )}
@@ -373,17 +404,19 @@ function Indice({ nome, stati, apri, tavolo, togliTavolo }: { nome: string; stat
 // Avanti porta avanti solo a passo completo; finché manca qualcosa dice quante cose (scelta di Patrizio, 18/11)
 // e, toccato, apre l'elenco di cosa manca (richiesta del 19/11: «cosa è ancora incompleto?»).
 // Gli avvisi da controllare non bloccano: quelli li decide il master (principio 3, «avvisa, non vieta»).
-function BottoneAvanti({ mancanti, cosaManca, avanti }: { mancanti: number; cosaManca: string[]; avanti: () => void }) {
+function BottoneAvanti({ mancanti, cosaManca, avanti, etichetta = 'Avanti', titolo = 'Prima di andare avanti' }: {
+  mancanti: number; cosaManca: string[]; avanti: () => void; etichetta?: string; titolo?: string;
+}) {
   const [aperto, setAperto] = useState(false);
   const bloccato = mancanti > 0;
   return (
     <>
       <button onClick={() => (bloccato ? setAperto(true) : avanti())} aria-disabled={bloccato}
         className={`h-12 flex-2 rounded-xl text-base font-medium ${bloccato ? 'bg-bordo text-testo-2' : 'bg-accento text-su-accento'}`}>
-        {bloccato ? `Avanti (${mancanti} da fare)` : 'Avanti'}
+        {bloccato ? `${etichetta} (${mancanti} da fare)` : etichetta}
       </button>
       {aperto && bloccato && (
-        <FoglioDalBasso chiudi={() => setAperto(false)} titolo={<h2 className="text-lg font-medium text-testo">Prima di andare avanti</h2>}>
+        <FoglioDalBasso chiudi={() => setAperto(false)} titolo={<h2 className="text-lg font-medium text-testo">{titolo}</h2>}>
           <ul className="space-y-2">
             {cosaManca.map((c) => (
               <li key={c} className="flex gap-2 rounded-xl border border-attenzione/50 bg-superficie p-3 text-base text-testo">

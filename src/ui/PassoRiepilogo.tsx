@@ -3,7 +3,7 @@
 // La stessa scheda diventerà quella da usare al tavolo (slot, riposi, risorse).
 import { useState } from 'react';
 import { comePersonaggio, type IdPasso } from '../creazione/percorso';
-import { accettaAvviso, avvisiRiepilogo, esportaJSON, nomeFile, riepilogo, type Riepilogo } from '../creazione/riepilogo';
+import { accettaAvviso, avvisiRiepilogo, riepilogo, type Riepilogo } from '../creazione/riepilogo';
 import { prezzo } from '../creazione/equipaggiamento';
 import type { Bozza } from '../creazione/percorso';
 import { metri } from '../regole/misure';
@@ -11,7 +11,7 @@ import type { Numero, Scheda as SchedaCalcolata } from '../regole/tipi';
 import { calcolaScheda, DATI } from '../regole';
 import type { StatoPartita } from '../partita/partita';
 import type { Elementi } from '../creazione/personalizzati';
-import { Avatar } from './Avatar';
+import { Avatar, riduciRitratto } from './Avatar';
 import { Fascia, immagine } from './Illustrazione';
 import { iniziali } from '../archivio/archivio';
 import { MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
@@ -35,8 +35,9 @@ const somma = (n: Numero, finale: string) =>
   `${n.termini.map((t) => `${t.etichetta} ${t.valore < 0 ? `−${-t.valore}` : t.valore}`).join(' + ')} = ${finale}`;
 const segno = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
 
-export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaPartita, ritratto, elementi }: {
+export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaPartita, ritratto, bloccata, riapri, cambiaRitratto }: {
   bozza: Bozza; cambia: (b: Bozza) => void; apri: (p: IdPasso) => void; ricevuta?: boolean;
+  bloccata?: boolean; riapri?: () => void; cambiaRitratto?: (r: string | undefined) => void;   // personaggio salvato (19/11)
   partita?: StatoPartita; cambiaPartita?: (s: StatoPartita) => void;    // uso al tavolo; assenti per una scheda ricevuta
   ritratto?: string;
   elementi?: Elementi;                                                    // background personalizzati che la scheda usa: viaggiano con lei
@@ -66,7 +67,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         </div>
       </div>
 
-      <Avvisi bozza={bozza} cambia={cambia} apri={apri} ricevuta={ricevuta} />
+      <Avvisi bozza={bozza} cambia={cambia} apri={apri} ricevuta={ricevuta || bloccata} />
 
       {tavolo && <Riposi {...tavolo} />}
 
@@ -87,10 +88,10 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         {vistaScheda === 'abilita' && <Abilita r={r} />}
         {vistaScheda === 'magia' && (tavolo ? <MagiaTavolo {...tavolo} /> : <Magia r={r} />)}
         {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} />}
-        {vistaScheda === 'chi' && <ChiE r={r} bozza={bozza} cambia={cambia} ricevuta={ricevuta} />}
+        {vistaScheda === 'chi' && <ChiE r={r} bozza={bozza} cambia={cambia} ricevuta={ricevuta || bloccata}
+          salvato={bloccata ? { il: bozza.conclusoIl!, riapri, ritratto, cambiaRitratto } : undefined} />}
       </div>
 
-      {ricevuta ? <EsportaPdf bozza={bozza} /> : <Esporta bozza={bozza} ritratto={ritratto} elementi={elementi} />}
     </section>
   );
 }
@@ -298,7 +299,9 @@ function Zaino({ r, scheda, tavolo }: { r: Riepilogo; scheda: SchedaCalcolata; t
   );
 }
 
-function ChiE({ r, bozza, cambia, ricevuta }: { r: Riepilogo; bozza: Bozza; cambia: (b: Bozza) => void; ricevuta?: boolean }) {
+interface Salvato { il: string; riapri?: () => void; ritratto?: string; cambiaRitratto?: (r: string | undefined) => void }
+
+function ChiE({ r, bozza, cambia, ricevuta, salvato }: { r: Riepilogo; bozza: Bozza; cambia: (b: Bozza) => void; ricevuta?: boolean; salvato?: Salvato }) {
   const accettati = avvisiRiepilogo(bozza).filter((a) => a.accettato);
   return (
     <div className="space-y-4">
@@ -327,57 +330,34 @@ function ChiE({ r, bozza, cambia, ricevuta }: { r: Riepilogo; bozza: Bozza; camb
           </ul>
         </div>
       )}
+      {salvato && <Creazione {...salvato} />}
     </div>
   );
 }
 
-function Esporta({ bozza, ritratto, elementi }: { bozza: Bozza; ritratto?: string; elementi?: Elementi }) {
-  const [stato, setStato] = useState<string | null>(null);
-  const scarica = (dati: BlobPart, tipo: string, nome: string) => {
-    const url = URL.createObjectURL(new Blob([dati], { type: tipo }));
-    const a = document.createElement('a');
-    a.href = url; a.download = nome;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-  const pdf = async () => {
-    setStato('Preparo il PDF…');
-    try {
-      const { pdfDellaScheda } = await import('../esporta/prepara-pdf');       // pdf-lib si carica solo adesso
-      scarica(await pdfDellaScheda(bozza, ritratto) as BlobPart, 'application/pdf', nomeFile(bozza).replace(/\.json$/, '.pdf'));
-      setStato(null);
-    } catch { setStato('Non sono riuscito a creare il PDF. Riprova.'); }
-  };
-  const link = async () => {
-    const { creaLink } = await import('../esporta/link');
-    const url = await creaLink(bozza, location.href, elementi);
-    try {
-      if (navigator.share) await navigator.share({ title: bozza.nome || 'Scheda', url });
-      else { await navigator.clipboard.writeText(url); setStato('Link copiato: incollalo nel messaggio al master.'); }
-    } catch { /* condivisione annullata */ }
-  };
+// Dopo il salvataggio la creazione è chiusa: qui il ritratto (si può sempre cambiare) e l'uscita di sicurezza
+function Creazione({ il, riapri, ritratto, cambiaRitratto }: Salvato) {
+  const [errore, setErrore] = useState(false);
   return (
-    <div className="mt-6 space-y-2 border-t border-bordo pt-4">
-      <h2 className="text-base font-medium text-testo">Esporta</h2>
-      <button onClick={pdf} className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Scarica il PDF</button>
-      <button onClick={link} className="h-12 w-full rounded-xl border border-accento text-base font-medium text-accento">Manda il link al master</button>
-      {stato && <p role="status" className="text-sm text-testo">{stato}</p>}
-      <p className="text-xs text-testo-2">Il PDF è la scheda come la vedi qui. Il link contiene tutta la scheda: chi lo apre la vede, senza toccare il suo personaggio.</p>
-      <button onClick={() => scarica(esportaJSON(bozza, ritratto, elementi), 'application/json', nomeFile(bozza))} className="min-h-11 text-sm text-testo-2 underline underline-offset-4">
-        Copia di sicurezza di questo personaggio (JSON, si reimporta)
-      </button>
+    <div className="rounded-xl border border-bordo bg-superficie p-3">
+      <h2 className="text-base font-medium text-testo">Creazione</h2>
+      <p className="mt-1 text-sm text-testo-2">Salvato il {new Date(il).toLocaleDateString('it-IT')}. Le scelte della creazione sono bloccate.</p>
+      {cambiaRitratto && (
+        <div className="mt-3 flex gap-2">
+          <label className="flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-lg border border-bordo px-3 text-sm text-testo">
+            {ritratto ? 'Cambia il ritratto' : 'Scegli un ritratto'}
+            <input type="file" accept="image/*" className="sr-only" onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              try { cambiaRitratto(await riduciRitratto(f)); setErrore(false); } catch { setErrore(true); }
+            }} />
+          </label>
+          {ritratto && <button onClick={() => cambiaRitratto(undefined)} className="min-h-11 rounded-lg px-3 text-sm text-accento">Togli</button>}
+        </div>
+      )}
+      {errore && <p className="mt-2 text-sm text-attenzione">Non riesco a leggere questa immagine: prova con un'altra foto.</p>}
+      {riapri && <button onClick={riapri} className="mt-3 min-h-11 w-full rounded-lg border border-attenzione/60 px-3 text-sm text-attenzione">Riapri la creazione</button>}
     </div>
   );
-}
-
-// Scheda ricevuta da un link: il master può solo leggerla o stamparla
-function EsportaPdf({ bozza }: { bozza: Bozza }) {
-  const scarica = async () => {
-    const { pdfDellaScheda } = await import('../esporta/prepara-pdf');
-    const url = URL.createObjectURL(new Blob([await pdfDellaScheda(bozza) as BlobPart], { type: 'application/pdf' }));
-    const a = document.createElement('a');
-    a.href = url; a.download = nomeFile(bozza).replace(/\.json$/, '.pdf'); a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-  return <button onClick={scarica} className="mt-6 h-12 w-full rounded-xl border border-accento text-base font-medium text-accento">Scarica il PDF</button>;
 }

@@ -34,6 +34,19 @@ export type Bozza = Omit<Personaggio, 'classe' | 'specie' | 'background' | 'punt
   ideaSaltata?: boolean;   // non più usato: l'idea ora sta nel passo Personaggio (resta per le bozze salvate)
 };
 
+// Salvataggio finale (richiesta del 19/11). Si salva solo con tutti i passi completi; gli avvisi «da controllare»
+// non bloccano (principio 3). Dopo, restano modificabili solo i dati di gioco; «Riapri la creazione» toglie il blocco.
+export const concluso = (b: Bozza): boolean => !!b.conclusoIl;
+export function daCompletarePrimaDiSalvare(s: ReturnType<typeof statoPassi>): string[] {
+  return PASSI.filter((p) => p.id !== 'riepilogo' && s[p.id].stato === 'da-fare')
+    .flatMap((p) => (s[p.id].cosaManca.length ? s[p.id].cosaManca : ['da completare']).map((c) => `${p.titolo}: ${c}`));
+}
+export const concludi = (b: Bozza, ora = new Date()): Bozza => ({ ...b, conclusoIl: ora.toISOString() });
+export function riapri(b: Bozza): Bozza {
+  const { conclusoIl: _, ...resto } = b;
+  return resto;
+}
+
 export const bozzaVuota = (): Bozza => ({
   schema: 1, nome: '', livello: 1, bonusBackground: {}, scelte: {}, incantesimi: { preparati: {} }, avvisiAccettati: [],
 });

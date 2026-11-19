@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { aggiorna, apri, archivioVuoto, attivo, duplica, eCopiaCompleta, elenco, elimina, esportaTutto, importaTutto, iniziali, migra, nuovo, statoCopia } from '../src/archivio/archivio';
 import { accettaAvviso } from '../src/creazione/riepilogo';
-import { bozzaVuota } from '../src/creazione/percorso';
+import { bozzaVuota, concludi, concluso, daCompletarePrimaDiSalvare, riapri, statoPassi } from '../src/creazione/percorso';
 import { danno, statoVuoto } from '../src/partita/partita';
 import * as P from './personaggi';
 
@@ -33,7 +33,9 @@ describe('Lista', () => {
     expect(attivo(a)!.id).toBe(travis);
   });
   it('la riga: nome e livello, specie e classe, origine (il background); pronto o in creazione', () => {
-    const { archivio: a } = nuovo(archivioVuoto(), accettaAvviso(accettaAvviso(P.TRAVIS, 'materiale:find-familiar'), 'materiale:identify'), t(0));
+    const completo = accettaAvviso(accettaAvviso(P.TRAVIS, 'materiale:find-familiar'), 'materiale:identify');
+    expect(elenco(nuovo(archivioVuoto(), completo, t(0)).archivio)[0].pronto).toBe(false);   // completo ma non ancora salvato
+    const { archivio: a } = nuovo(archivioVuoto(), concludi(completo, t(1)), t(0));
     expect(elenco(a)[0]).toMatchObject({ nome: 'Travis Whippletorn', livello: 1, specie: 'Umano', classe: 'Mago', origine: 'Accolito', iniziali: 'TW', pronto: true });
     const druido = elenco(nuovo(archivioVuoto(), P.DRUIDO).archivio)[0];
     expect(druido.specie).toBe('Elfo dei boschi');                    // il lignaggio, se c'è
@@ -115,5 +117,23 @@ describe('Copia di sicurezza di tutti i personaggi', () => {
     expect(statoCopia(copiato, ora)).toEqual({ testo: 'oggi', daRifare: false });
     expect(statoCopia(copiato, new Date('2026-11-26T20:00:00Z')).daRifare).toBe(true);
     expect(statoCopia(archivioVuoto(), ora).daRifare).toBe(false);
+  });
+});
+
+describe('Salvataggio finale del personaggio (19/11)', () => {
+  it('si salva solo a passi completi: altrimenti dice cosa manca, passo per passo', () => {
+    expect(daCompletarePrimaDiSalvare(statoPassi(P.TRAVIS))).toEqual([]);
+    const manca = daCompletarePrimaDiSalvare(statoPassi({ ...P.TRAVIS, nome: '' }));
+    expect(manca.length).toBeGreaterThan(0);
+    expect(manca.every((m) => m.startsWith('Personaggio: '))).toBe(true);
+  });
+  it('concludi blocca, riapri sblocca; la copia riparte aperta', () => {
+    const salvato = concludi(P.TRAVIS, t(5));
+    expect(concluso(salvato)).toBe(true);
+    expect(salvato.conclusoIl).toBe(t(5).toISOString());
+    expect(concluso(riapri(salvato))).toBe(false);
+    const a = nuovo(archivioVuoto(), salvato, t(0)).archivio;
+    const copia = duplica(a, a.attivo!, t(6));
+    expect(concluso(copia.archivio.personaggi.find((p) => p.id === copia.id)!.bozza)).toBe(false);
   });
 });

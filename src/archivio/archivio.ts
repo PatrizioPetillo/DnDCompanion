@@ -1,6 +1,6 @@
 // «I miei personaggi»: più personaggi salvati nel telefono, ognuno con il suo stato di partita e il ritratto.
 // TypeScript puro: il salvataggio nel browser sta in ui/salvataggio.ts.
-import { bozzaVuota, statoPassi, PASSI, type Bozza } from '../creazione/percorso';
+import { bozzaVuota, type Bozza } from '../creazione/percorso';
 import { statoVuoto, type StatoPartita } from '../partita/partita';
 import { DATI, type Dati } from '../regole/dati';
 import { elementiVuoti, unione, type Elementi } from '../creazione/personalizzati';
@@ -47,7 +47,9 @@ export function aggiorna(a: Archivio, id: string, modifica: Partial<Omit<Persona
 export function duplica(a: Archivio, id: string, ora = new Date()): { archivio: Archivio; id: string } {
   const o = a.personaggi.find((p) => p.id === id);
   if (!o) return { archivio: a, id };
-  const copia = { ...structuredClone(o.bozza), nome: `${o.bozza.nome.trim() || 'Senza nome'} (copia)` };
+  // La copia è una variante da rifinire: riparte aperta, non salvata
+  const { conclusoIl: _, ...bozza } = structuredClone(o.bozza);
+  const copia = { ...bozza, nome: `${o.bozza.nome.trim() || 'Senza nome'} (copia)` };
   return nuovo(a, copia, ora, o.ritratto);
 }
 
@@ -66,7 +68,6 @@ export function elenco(a: Archivio, d: Dati = DATI): VoceElenco[] {
     const specie = b.specie ? d.specie[b.specie] : undefined;
     const lignaggio = specie?.lignaggi?.opzioni.find((o) => o.id === b.scelte[specie.lignaggi!.scelta]?.[0]);
     const nome = b.nome.trim() || 'Senza nome';
-    const stati = statoPassi(b, d);
     return {
       id: p.id, nome, livello: b.livello,
       specie: lignaggio?.nome ?? specie?.nome ?? 'Specie da scegliere',
@@ -74,7 +75,7 @@ export function elenco(a: Archivio, d: Dati = DATI): VoceElenco[] {
       ...(b.classe ? { classeId: b.classe } : {}),
       origine: b.background ? d.background[b.background]?.nome ?? b.background : 'Background da scegliere',
       iniziali: iniziali(nome),
-      pronto: PASSI.every((x) => x.id === 'riepilogo' || stati[x.id].stato === 'fatto' || stati[x.id].stato === 'non-serve'),
+      pronto: !!b.conclusoIl,   // «In creazione» finché il giocatore non lo salva (19/11)
       ...(p.ritratto ? { ritratto: p.ritratto } : {}),
     };
   });

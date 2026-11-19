@@ -227,6 +227,8 @@ export interface Personaggio {
   avvisiAccettati: Id[];
   allineamento?: Id;
   ruolo?: { aspetto?: string; trattoVisibile?: string; oggetto?: string; segreto?: string };
+  // Data in cui il giocatore ha salvato il personaggio (19/11): da lì le scelte della creazione restano bloccate
+  conclusoIl?: string;
 }
 
 // ───────────── Risultato del motore ─────────────

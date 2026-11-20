@@ -8,13 +8,18 @@ export const immagine = (gruppo: Gruppo, id: string | undefined): string | undef
   id ? FILE[`../assets/immagini/${gruppo}/${id}.webp`] : undefined;
 
 // Fascia in cima a una scheda: l'immagine sfuma verso il colore della scheda, il testo resta su fondo pieno
-export function Fascia({ gruppo, id, alto = 88, arrotonda = true, suSfondo = false }: { gruppo: Gruppo; id: string; alto?: number; arrotonda?: boolean; suSfondo?: boolean }) {
+// sfuma: da che altezza (%) parte la sfumatura; children: etichette sopra l'immagine (es. la difficoltà, 20/11)
+export function Fascia({ gruppo, id, alto = 88, arrotonda = true, suSfondo = false, sfuma = 40, children }: {
+  gruppo: Gruppo; id: string; alto?: number; arrotonda?: boolean; suSfondo?: boolean; sfuma?: number; children?: React.ReactNode;
+}) {
   const src = immagine(gruppo, id);
   if (!src) return null;
   return (
-    <div aria-hidden="true" className={`relative overflow-hidden ${arrotonda ? 'rounded-t-[11px]' : 'rounded-xl'}`} style={{ height: alto }}>
-      <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" style={{ objectPosition: '50% 30%' }} />
-      <div className={`absolute inset-0 bg-gradient-to-b from-transparent from-40% ${suSfondo ? 'to-sfondo' : 'to-superficie'}`} />
+    <div className={`relative overflow-hidden ${arrotonda ? 'rounded-t-[11px]' : 'rounded-xl'}`} style={{ height: alto }}>
+      <img src={src} alt="" aria-hidden="true" loading="lazy" decoding="async" className="h-full w-full object-cover" style={{ objectPosition: '50% 30%' }} />
+      <div aria-hidden="true" className="absolute inset-0"
+        style={{ background: `linear-gradient(to bottom, transparent ${sfuma}%, var(--color-${suSfondo ? 'sfondo' : 'superficie'}))` }} />
+      {children}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { Fascia, immagine } from './Illustrazione';
 import { iniziali } from '../archivio/archivio';
 import { MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
 import { Borsa, Libro } from './Zaino';
+import { FoglioDalBasso } from './SchedaIncantesimo';
 
 type Scheda = 'combattimento' | 'abilita' | 'magia' | 'zaino' | 'chi';
 // Icone disegnate a mano (tratto semplice), per riconoscere la scheda al volo
@@ -43,6 +44,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
   elementi?: Elementi;                                                    // background personalizzati che la scheda usa: viaggiano con lei
 }) {
   const [vistaScheda, setScheda] = useState<Scheda>('combattimento');
+  const [ritrattoAperto, setRitrattoAperto] = useState(false);
   const r = riepilogo(bozza);
   if (!r) return (
     <section>
@@ -58,14 +60,20 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
 
   return (
     <section>
-      {pg && <Fascia gruppo="classi" id={pg.classe} alto={120} arrotonda={false} suSfondo />}
-      <div className={`mb-3 flex items-center gap-3 ${pg && immagine('classi', pg.classe) ? 'relative -mt-10' : ''}`}>
-        <Avatar ritratto={ritratto} classe={pg?.classe} iniziali={iniziali(r.testata.nome)} />
+      {/* Testata (20/11): il ritratto se c'è, altrimenti l'immagine della classe; toccando l'avatar si apre in grande */}
+      {ritratto ? <FasciaRitratto src={ritratto} /> : pg && <Fascia gruppo="classi" id={pg.classe} alto={120} arrotonda={false} suSfondo />}
+      <div className={`mb-3 flex items-center gap-3 ${ritratto || (pg && immagine('classi', pg.classe)) ? 'relative -mt-10' : ''}`}>
+        <button onClick={() => setRitrattoAperto(true)} aria-label={ritratto ? 'Apri il ritratto' : 'Scegli un ritratto'} className="relative shrink-0 rounded-full">
+          <Avatar ritratto={ritratto} classe={pg?.classe} iniziali={iniziali(r.testata.nome)} />
+          {cambiaRitratto && <span aria-hidden className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border border-bordo bg-superficie text-xs text-accento">✎</span>}
+        </button>
         <div className="min-w-0">
           <h1 className="font-titolo text-2xl text-accento">{r.testata.nome}</h1>
           <p className="text-sm text-testo-2">{r.testata.descrizione}</p>
         </div>
       </div>
+
+      {ritrattoAperto && <FoglioRitratto ritratto={ritratto} nome={r.testata.nome} cambia={cambiaRitratto} chiudi={() => setRitrattoAperto(false)} />}
 
       <Avvisi bozza={bozza} cambia={cambia} apri={apri} ricevuta={ricevuta || bloccata} />
 
@@ -89,7 +97,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         {vistaScheda === 'magia' && (tavolo ? <MagiaTavolo {...tavolo} /> : <Magia r={r} />)}
         {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} />}
         {vistaScheda === 'chi' && <ChiE r={r} bozza={bozza} cambia={cambia} ricevuta={ricevuta || bloccata}
-          salvato={bloccata ? { il: bozza.conclusoIl!, riapri, ritratto, cambiaRitratto } : undefined} />}
+          salvato={bloccata ? { il: bozza.conclusoIl!, riapri } : undefined} />}
       </div>
 
     </section>
@@ -299,7 +307,7 @@ function Zaino({ r, scheda, tavolo }: { r: Riepilogo; scheda: SchedaCalcolata; t
   );
 }
 
-interface Salvato { il: string; riapri?: () => void; ritratto?: string; cambiaRitratto?: (r: string | undefined) => void }
+interface Salvato { il: string; riapri?: () => void }
 
 function ChiE({ r, bozza, cambia, ricevuta, salvato }: { r: Riepilogo; bozza: Bozza; cambia: (b: Bozza) => void; ricevuta?: boolean; salvato?: Salvato }) {
   const accettati = avvisiRiepilogo(bozza).filter((a) => a.accettato);
@@ -335,29 +343,50 @@ function ChiE({ r, bozza, cambia, ricevuta, salvato }: { r: Riepilogo; bozza: Bo
   );
 }
 
-// Dopo il salvataggio la creazione è chiusa: qui il ritratto (si può sempre cambiare) e l'uscita di sicurezza
-function Creazione({ il, riapri, ritratto, cambiaRitratto }: Salvato) {
-  const [errore, setErrore] = useState(false);
+// Dopo il salvataggio la creazione è chiusa: qui l'uscita di sicurezza (il ritratto si cambia toccandolo in cima)
+function Creazione({ il, riapri }: Salvato) {
   return (
     <div className="rounded-xl border border-bordo bg-superficie p-3">
       <h2 className="text-base font-medium text-testo">Creazione</h2>
-      <p className="mt-1 text-sm text-testo-2">Salvato il {new Date(il).toLocaleDateString('it-IT')}. Le scelte della creazione sono bloccate.</p>
-      {cambiaRitratto && (
-        <div className="mt-3 flex gap-2">
-          <label className="flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-lg border border-bordo px-3 text-sm text-testo">
+      <p className="mt-1 text-sm text-testo-2">Salvato il {new Date(il).toLocaleDateString('it-IT')}. Le scelte della creazione sono bloccate; il ritratto si cambia toccandolo in cima alla scheda.</p>
+      {riapri && <button onClick={riapri} className="mt-3 min-h-11 w-full rounded-lg border border-attenzione/60 px-3 text-sm text-attenzione">Riapri la creazione</button>}
+    </div>
+  );
+}
+
+// Il ritratto nella testata: largo come lo schermo, centrato sul viso, sfuma nello sfondo come le illustrazioni
+function FasciaRitratto({ src }: { src: string }) {
+  return (
+    <div aria-hidden="true" className="relative overflow-hidden rounded-xl" style={{ height: 180 }}>
+      <img src={src} alt="" className="h-full w-full object-cover" style={{ objectPosition: '50% 30%' }} />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 55%, var(--color-sfondo))' }} />
+    </div>
+  );
+}
+
+// Toccando l'avatar: il ritratto in grande, e (se la scheda è tua) Cambia / Togli. Si può cambiare anche a scheda salvata.
+function FoglioRitratto({ ritratto, nome, cambia, chiudi }: { ritratto?: string; nome: string; cambia?: (r: string | undefined) => void; chiudi: () => void }) {
+  const [errore, setErrore] = useState(false);
+  return (
+    <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="font-titolo text-lg text-accento">{nome || 'Ritratto'}</h2>}>
+      {ritratto
+        ? <img src={ritratto} alt={`Ritratto di ${nome}`} className="mx-auto aspect-square w-full max-w-96 rounded-xl border border-bordo object-cover" />
+        : <p className="text-sm text-testo-2">Nessun ritratto: per ora si vede l'immagine della classe.</p>}
+      {cambia && (
+        <div className="mt-4 flex gap-2">
+          <label className="flex min-h-12 flex-1 cursor-pointer items-center justify-center rounded-xl bg-accento px-3 text-base font-medium text-su-accento">
             {ritratto ? 'Cambia il ritratto' : 'Scegli un ritratto'}
             <input type="file" accept="image/*" className="sr-only" onChange={async (e) => {
               const f = e.target.files?.[0];
               e.target.value = '';
               if (!f) return;
-              try { cambiaRitratto(await riduciRitratto(f)); setErrore(false); } catch { setErrore(true); }
+              try { cambia(await riduciRitratto(f)); setErrore(false); } catch { setErrore(true); }
             }} />
           </label>
-          {ritratto && <button onClick={() => cambiaRitratto(undefined)} className="min-h-11 rounded-lg px-3 text-sm text-accento">Togli</button>}
+          {ritratto && <button onClick={() => { cambia(undefined); chiudi(); }} className="min-h-12 rounded-xl border border-bordo px-4 text-base text-testo">Togli</button>}
         </div>
       )}
       {errore && <p className="mt-2 text-sm text-attenzione">Non riesco a leggere questa immagine: prova con un'altra foto.</p>}
-      {riapri && <button onClick={riapri} className="mt-3 min-h-11 w-full rounded-lg border border-attenzione/60 px-3 text-sm text-attenzione">Riapri la creazione</button>}
-    </div>
+    </FoglioDalBasso>
   );
 }

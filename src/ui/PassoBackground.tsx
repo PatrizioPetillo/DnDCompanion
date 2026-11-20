@@ -46,7 +46,7 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
           aria-pressed={scelto}
           className={`w-full rounded-xl bg-superficie p-4 text-left ${scelto ? 'border-2 border-accento' : 'border border-bordo'}`}
         >
-          <span className="-mx-4 -mt-4 mb-2 block"><Fascia gruppo="background" id={bg.id} /></span>
+          <span className="-mx-4 -mt-4 mb-2 block"><Fascia gruppo="background" id={bg.id} alto={120} sfuma={60} /></span>
           <span className="text-lg font-medium text-testo">{bg.nome}</span>
           {bg.personalizzato && <span className="block text-xs italic text-testo-2">{bg.rimando ?? 'Inserito da te'}</span>}
           {bg.descrizione && <span className="mt-1 block text-sm text-testo-2">{bg.descrizione}</span>}

@@ -38,7 +38,10 @@ export function scelteDiClasse(b: Bozza, d: Dati = DATI): SceltaDiClasse[] {
     const ids = s.opzioni ?? (s.filtro && 'categoriaTalento' in s.filtro
       ? Object.values(d.talenti).filter((t) => t.categoria === (s.filtro as { categoriaTalento: string }).categoriaTalento).map((t) => t.id) : []);
     out.push({
-      id: s.id, titolo: f.nome, quantita: s.quantita,
+      // Il titolo è il nome del privilegio, tranne quando la scelta non è il privilegio stesso: gli strumenti del bardo
+      // stanno dentro «Incantesimi» (SRD p. 31-32) e non vanno chiamati così (segnalato da Patrizio il 20/11)
+      id: s.id, titolo: s.tipo === 'strumento' ? (ids.every((o) => o in STRUMENTI_MUSICALI) ? 'Strumento musicale' : 'Strumento') : f.nome,
+      quantita: s.quantita,
       opzioni: ids.map((o) => {
         const motivo = s.tipo === 'lingua' && origine.includes(o) ? 'la conosci già' : undefined;
         return { id: o, nome: nome(s, o, d), disattivata: !!motivo, ...(motivo ? { motivo } : {}) };

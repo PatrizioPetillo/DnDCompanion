@@ -6,7 +6,7 @@ import { cosaOttieni, type Privilegio } from '../creazione/cosa-ottieni';
 import { SCHEDE_CLASSE } from '../creazione/testi';
 import { DATI } from '../regole';
 import { Tendina } from './Tendina';
-import { Fascia } from './Illustrazione';
+import { Fascia, immagine } from './Illustrazione';
 
 const DIFFICOLTA = { facile: 'facile', media: 'media', impegnativa: 'impegnativa' };
 
@@ -33,14 +33,19 @@ export function PassoClasse({ bozza, scegli, cambia }: { bozza: Bozza; scegli: (
               ref={scelta ? (el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) : undefined}
               className={`rounded-xl bg-superficie ${scelta ? 'border-2 border-accento' : 'border border-bordo'}`}
             >
-              <Fascia gruppo="classi" id={c.id} />
+              {/* Più immagine e la difficoltà come etichetta sopra (20/11): la scheda resta compatta */}
+              <Fascia gruppo="classi" id={c.id} alto={120} sfuma={60}>
+                <span className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white backdrop-blur-sm">
+                  Per chi inizia: {DIFFICOLTA[t.difficolta]}
+                </span>
+              </Fascia>
               <button onClick={() => scegli(c.id)} aria-pressed={scelta} aria-expanded={scelta} className="w-full p-4 text-left">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-lg font-medium text-testo">{c.nome}</span>
                   <span className="text-xs text-testo-2">d{c.dadoVita} · {t.principali}</span>
                 </div>
                 <p className="mt-1 text-sm leading-relaxed text-testo-2">{t.alTavolo}</p>
-                <p className="mt-2 text-xs text-testo-2">Per chi inizia: {DIFFICOLTA[t.difficolta]}</p>
+                {!immagine('classi', c.id) && <p className="mt-2 text-xs text-testo-2">Per chi inizia: {DIFFICOLTA[t.difficolta]}</p>}
               </button>
 
               {scelta && <CosaOttieni classeId={c.id} />}

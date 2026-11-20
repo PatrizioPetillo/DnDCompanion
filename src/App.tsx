@@ -11,6 +11,7 @@ import type { Tavolo } from './regole/tipi';
 import { ElencoTavoli, ModuloTavolo, TavoloRicevuto } from './ui/Tavoli';
 import { FoglioDalBasso } from './ui/SchedaIncantesimo';
 import { mandaLink, scaricaCopia, scaricaPdf } from './ui/esporta';
+import { Compendio } from './ui/Compendio';
 import { Home } from './ui/Home';
 import { Informazioni } from './ui/Informazioni';
 import { PassoBackground } from './ui/PassoBackground';
@@ -111,6 +112,7 @@ export default function App() {
     : bloccato && (inPasso || vista === 'indice') ? 'riepilogo' : vista;
   const daFare = daCompletarePrimaDiSalvare(stati);
   const [appenaSalvato, setAppenaSalvato] = useState(false);
+  const [compendio, setCompendio] = useState(false);   // elenco degli incantesimi dal menu (20/11)
   const salva = () => { setBozza(concludi(bozza)); setVista('riepilogo'); setAppenaSalvato(true); window.scrollTo(0, 0); };
   const avanti = () => {
     if (vistaReale === 'indice') setVista(prossimoPasso(bozza));
@@ -167,6 +169,7 @@ export default function App() {
                   <span className="flex items-center gap-1 text-sm text-testo-2">{tema === 'notte' ? <IconaSole /> : <IconaLuna />}{tema === 'notte' ? 'Passa a giorno' : 'Passa a notte'}</span>
                 </span>
               </VoceMenu>
+              <VoceMenu onClick={() => { setMenu(false); setCompendio(true); }}>Elenco degli incantesimi</VoceMenu>
               <VoceMenu onClick={() => { setRicevuta(null); setVista('informazioni'); }}>Informazioni e crediti</VoceMenu>
             </div>
           </>
@@ -315,10 +318,11 @@ export default function App() {
               setVista('indice');
             }} />
         )}
+        {compendio && <Compendio chiudi={() => setCompendio(false)} />}
         {appenaSalvato && vistaReale === 'riepilogo' && (
           <FoglioDalBasso chiudi={() => setAppenaSalvato(false)} titolo={<h2 className="font-titolo text-lg text-accento">Personaggio salvato</h2>}>
             <p className="text-base text-testo">{bozza.nome.trim() || 'Il tuo personaggio'} è pronto per il tavolo.</p>
-            <p className="mt-2 text-sm text-testo-2">Le scelte della creazione ora sono bloccate. Restano modificabili i dati di gioco (punti ferita, slot, monete, componenti) e il ritratto. Per cambiare altro: «Riapri la creazione», in fondo alla sezione «Chi è».</p>
+            <p className="mt-2 text-sm text-testo-2">Le scelte della creazione ora sono bloccate. Restano modificabili i dati di gioco (punti ferita, slot, monete, componenti) e il ritratto (toccalo in cima alla scheda). Per cambiare altro: «Riapri la creazione», in fondo alla sezione «Chi è».</p>
             <button onClick={() => setAppenaSalvato(false)} className="mt-4 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Apri la scheda</button>
           </FoglioDalBasso>
         )}

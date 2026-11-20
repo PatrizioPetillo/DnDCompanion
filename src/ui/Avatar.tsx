@@ -13,8 +13,9 @@ export function Avatar({ ritratto, classe, iniziali, dim = 56 }: { ritratto?: st
     );
 }
 
-// Riduce la foto scelta a un quadrato piccolo (JPEG): pochi kB, così nel telefono ci stanno centinaia di personaggi
-export async function riduciRitratto(file: File, lato = 160): Promise<string> {
+// Riduce la foto scelta a un quadrato JPEG. 512 px (20/11, prima 160): il ritratto ora sta anche in grande nella testata
+// del Riepilogo e si apre a schermo pieno; ~40-70 kB, nel telefono ci stanno comunque decine di personaggi
+export async function riduciRitratto(file: File, lato = 512): Promise<string> {
   const img = await createImageBitmap(file);
   const c = document.createElement('canvas');
   c.width = lato; c.height = lato;

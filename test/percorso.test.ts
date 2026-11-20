@@ -242,3 +242,14 @@ describe('Cosa manca, in parole', () => {
     expect(blocco.caratteristica).toEqual({ scelta: 'magic-initiate.caratteristica', valore: P.TRAVIS_SAGGIO.scelte['magic-initiate.caratteristica'][0] });
   });
 });
+
+describe('Titoli delle scelte di classe (20/11)', () => {
+  it('gli strumenti del bardo e del monaco non si chiamano «Incantesimi»', async () => {
+    const { scelteDiClasse } = await import('../src/creazione/classe');
+    const { bozzaVuota, cambiaClasse } = await import('../src/creazione/percorso');
+    const bardo = scelteDiClasse(cambiaClasse(bozzaVuota(), 'bard').bozza).find((s) => s.id === 'bard.strumenti');
+    expect(bardo?.titolo).toBe('Strumento musicale');
+    const monaco = scelteDiClasse(cambiaClasse(bozzaVuota(), 'monk').bozza).find((s) => s.id === 'monk.strumento');
+    expect(monaco?.titolo).toBe('Strumento');
+  });
+});

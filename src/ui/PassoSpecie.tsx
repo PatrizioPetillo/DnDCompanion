@@ -73,7 +73,7 @@ export function PassoSpecie({ bozza, scegli, cambia, salvaSpecie, eliminaSpecie 
               ref={scelta ? (el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) : undefined}
               className={`rounded-xl bg-superficie ${scelta ? 'border-2 border-accento' : 'border border-bordo'}`}
             >
-              <Fascia gruppo="specie" id={sp.id} />
+              <Fascia gruppo="specie" id={sp.id} alto={120} sfuma={60} />
               <button onClick={() => scegli(sp.id)} aria-pressed={scelta} aria-expanded={scelta} className="w-full p-4 text-left">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-lg font-medium text-testo">{sp.nome}

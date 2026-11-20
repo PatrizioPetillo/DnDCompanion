@@ -10,6 +10,7 @@ import type { Numero } from '../regole/tipi';
 import { Separatore } from './PassoMagia';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 import { Tendina } from './Tendina';
+import { STRUMENTI_MUSICALI } from '../regole/dati/base';
 
 // «Forza −1 + Competenza 2 = +1»: il segno sta sul valore, così una caratteristica negativa si legge bene
 const somma = (n: Numero, finale: string) =>
@@ -20,11 +21,10 @@ export function PassoEquipaggiamento({ bozza, cambia }: { bozza: Bozza; cambia: 
   const [negozioAperto, setNegozioAperto] = useState(false);
   const [spiega, setSpiega] = useState<'monete' | 'ca' | null>(null);
   const pg = comePersonaggio(bozza);
-    // Il pacchetto A è già segnato come scelto: entrando nel passo diventa una scelta salvata (si cambia con un tocco)
+  // Il pacchetto A è già segnato come scelto: entrando nel passo diventa una scelta salvata (si cambia con un tocco)
   useEffect(() => {
     if (pg && !bozza.equipaggiamento) cambia({ ...bozza, equipaggiamento: { classe: 'A', background: 'A' } });
   }, [pg, bozza, cambia]);
-  
   if (!pg) return (
     <section>
       <h1 className="mb-1 font-titolo text-2xl text-accento">Equipaggiamento</h1>
@@ -41,6 +41,8 @@ export function PassoEquipaggiamento({ bozza, cambia }: { bozza: Bozza; cambia: 
   const daScegliere = [...(classe.equipaggiamento[pg.equipaggiamento.classe]?.oggetti ?? []), ...(bg.equipaggiamento[pg.equipaggiamento.background]?.oggetti ?? [])]
     .map((x) => DATI.oggetti[x.oggetto]).filter((o) => o?.daScelta && o.opzioni);
 
+  const competenti = Object.entries(bozza.scelte).filter(([k]) => !k.includes('.equip.') && (k.endsWith('.strumenti') || k.endsWith('.strumento'))).flatMap(([, v]) => v);
+
   return (
     <section>
       <h1 className="mb-1 font-titolo text-2xl text-accento">Equipaggiamento</h1>
@@ -54,7 +56,9 @@ export function PassoEquipaggiamento({ bozza, cambia }: { bozza: Bozza; cambia: 
           <Tendina
             etichetta={o!.nome}
             valore={bozza.scelte[o!.daScelta!]?.[0] ?? ''}
-            opzioni={o!.opzioni!.map((id) => ({ id, nome: DATI.oggetti[id]?.nome ?? id, disattivata: false }))}
+            // In cima quelli che sa suonare (competenze scelte nella classe), così lo strumento serve anche come focus
+            opzioni={[...o!.opzioni!].sort((a, b) => Number(competenti.includes(b)) - Number(competenti.includes(a)))
+              .map((id) => ({ id, nome: `${DATI.oggetti[id]?.nome ?? STRUMENTI_MUSICALI[id] ?? id}${competenti.includes(id) ? ' · lo sai suonare' : ''}`, disattivata: false }))}
             cambia={(v) => cambia({ ...bozza, scelte: { ...bozza.scelte, [o!.daScelta!]: v ? [v] : [] } })}
           />
         </div>

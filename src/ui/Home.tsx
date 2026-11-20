@@ -5,6 +5,7 @@ import logoDomus from '../assets/loghi/domusdraconis.webp';
 import { useState } from 'react';
 import { GUIDE, type Guida } from '../guide/guide';
 import { FoglioGuida, IconaGuida } from './Guida';
+import { Compendio, IconaCompendio } from './Compendio';
 
 const LOGO_B20 = true;   // mettere false finché gli admin di B20 non danno il permesso
 
@@ -27,9 +28,11 @@ function VoceGuida({ guida, apri }: { guida: Guida; apri: () => void }) {
 
 export function Home({ personaggi, apriPersonaggi, apriTavoli, apriInformazioni }: { personaggi: number; apriPersonaggi: () => void; apriTavoli: () => void; apriInformazioni: () => void }) {
   const [guida, setGuida] = useState<Guida | null>(null);
+  const [compendio, setCompendio] = useState(false);
   return (
     <>
     {guida && <FoglioGuida guida={guida} chiudi={() => setGuida(null)} />}
+    {compendio && <Compendio chiudi={() => setCompendio(false)} />}
     <section className="flex min-h-[70dvh] flex-col items-center justify-center text-center">
       <div className="mb-5 flex items-center gap-4">
         <Logo src={logoDomus} nome="DomusDraconis" />
@@ -44,6 +47,13 @@ export function Home({ personaggi, apriPersonaggi, apriTavoli, apriInformazioni 
       <button onClick={apriTavoli} className="mt-3 h-12 w-full max-w-80 rounded-xl border border-bordo text-base text-testo">I miei tavoli (per il master)</button>
       <div className="mt-8 w-full max-w-80 space-y-3">
         {GUIDE.map((g) => <VoceGuida key={g.id} guida={g} apri={() => setGuida(g)} />)}
+        <button onClick={() => setCompendio(true)} className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-oro/60 bg-superficie px-4 py-3 text-left">
+          <span className="text-oro"><IconaCompendio /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-titolo text-base text-accento">Incantesimi</span>
+            <span className="block text-xs text-testo-2">Tutti quelli dell'SRD, per classe, livello e scuola, con la ricerca.</span>
+          </span>
+        </button>
       </div>
       <button onClick={apriInformazioni} className="mt-8 min-h-11 px-4 text-sm text-testo-2 underline underline-offset-4">Informazioni, crediti e note legali</button>
     </section>

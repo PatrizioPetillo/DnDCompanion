@@ -1,7 +1,7 @@
 // Modulo guidato per inserire un background dal proprio manuale (sezione 4): l'app non contiene i dati,
 // li scrive chi ha il libro. Tendine per tutto, tranne nome, pagina e le righe libere.
 import { useState } from 'react';
-import { controllaModulo, creaBackground, GIOCHI, type ModuloBackground as Modulo, type StrumentoModulo } from '../creazione/personalizzati';
+import { controllaModulo, creaBackground, regolaSrd, GIOCHI, type ModuloBackground as Modulo, type StrumentoModulo } from '../creazione/personalizzati';
 import { DATI } from '../regole';
 import { ABILITA, NOME_CAR, STRUMENTI_ARTIGIANO, STRUMENTI_MUSICALI } from '../regole/dati/base';
 import { CARATTERISTICHE, type Background, type Car } from '../regole/tipi';
@@ -32,10 +32,21 @@ export function ModuloBackground({ iniziale, chiudi, salva }: { iniziale: Modulo
 
   return (
     <FoglioDalBasso chiudi={chiudi} titolo={<>
-      <h2 className="text-lg font-medium text-testo">{m.id ? 'Modifica il background' : 'Inserisci un background'}</h2>
-      <p className="text-sm text-testo-2">Copia i dati dal tuo manuale: restano nel tuo telefono e nelle tue schede.</p>
+      <h2 className="text-lg font-medium text-testo">{m.id ? 'Modifica il background' : m.daManuale ? 'Inserisci un background' : 'Crea un background'}</h2>
+      <p className="text-sm text-testo-2">{m.daManuale ? 'Copia i dati dal tuo manuale: restano nel tuo telefono e nelle tue schede.' : 'Da un altro manuale o inventato da te, con la regola dell\'SRD.'}</p>
     </>}>
       <div className="space-y-4">
+        {/* La regola ufficiale per creare un background (SRD p. 192-193, 21/11) */}
+        <details className="rounded-xl border border-bordo bg-superficie p-3 text-sm text-testo" open={!m.daManuale && !m.id}>
+          <summary className="cursor-pointer font-medium">La regola dell'SRD (p. 192-193)</summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-testo-2">
+            <li>Tre caratteristiche adatte al passato del personaggio (Forza o Destrezza per i lavori fisici, Costituzione per la resistenza, Intelligenza o Saggezza per lo studio e lo spirito, Carisma per il pubblico e la società).</li>
+            <li>Un talento della categoria Origini.</li>
+            <li>Due abilità: non serve che siano legate alle caratteristiche.</li>
+            <li>Uno strumento usato in quel mestiere.</li>
+            <li>Un equipaggiamento che vale 50 mo in tutto, monete comprese, senza armi da guerra né armature (arrivano dalla classe).</li>
+          </ol>
+        </details>
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-testo">Nome</span>
           <input value={m.nome} onChange={(e) => setM({ ...m, nome: e.target.value })} autoComplete="off" className={`${campo} h-12`} />
@@ -167,6 +178,12 @@ export function ModuloBackground({ iniziale, chiudi, salva }: { iniziale: Modulo
         <button onClick={() => { setProvato(true); if (!errori.length) salva(creaBackground(m)); }}
           className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Salva il background</button>
         {provato && errori.length > 0 && <p className="text-sm text-attenzione">Manca ancora qualcosa: lo trovi segnato sopra.</p>}
+        {regolaSrd(m).length > 0 && (
+          <ul className="space-y-1 rounded-xl border border-attenzione/50 p-3 text-sm text-testo">
+            {regolaSrd(m).map((a) => <li key={a}><span aria-hidden className="text-attenzione">● </span>{a}</li>)}
+            <li className="text-xs text-testo-2">Sono avvisi: puoi salvare lo stesso, se il tuo manuale o il master dicono diversamente.</li>
+          </ul>
+        )}
       </div>
     </FoglioDalBasso>
   );

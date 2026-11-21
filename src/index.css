@@ -10,7 +10,8 @@
   --testo-2: #6B5434;
   --accento: #6E1A1A;     /* rosso */
   --su-accento: #FAF4E6;
-  --oro: #B08A3E;         /* ottone */
+  --oro: #806226;         /* ottone, scurito il 21/11: testo e icone leggibili (contrasto 4,7:1, WCAG 2.2 AA) */
+  --campo: #8F7A50;       /* bordo di campi e tendine: 3,4:1 (WCAG 1.4.11) */
   --attenzione: #A8481E;  /* ruggine */
   --ok: #4F6B2E;
   color-scheme: light;
@@ -24,6 +25,7 @@
   --accento: #C9A253;
   --su-accento: #1A1512;
   --oro: #C9A253;
+  --campo: #86735F;
   --attenzione: #E08A55;
   --ok: #9DBB6E;
   color-scheme: dark;
@@ -45,6 +47,10 @@
 }
 
 html, body { background: var(--sfondo); color: var(--testo); }
+/* Campi e tendine (21/11): il bordo chiaro dei riquadri è troppo tenue per un controllo; quelli evidenziati restano come sono */
+select.border-bordo, input.border-bordo, textarea.border-bordo { border-color: var(--campo); }
+/* Il fuoco della tastiera non finisce sotto la barra in alto o i pulsanti in basso (WCAG 2.2, 2.4.11) */
+html { scroll-padding-top: 7rem; scroll-padding-bottom: 6rem; }
 body { margin: 0; -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--oro); outline-offset: 2px; }

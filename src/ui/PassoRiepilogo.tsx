@@ -16,6 +16,8 @@ import { Fascia, immagine } from './Illustrazione';
 import { iniziali } from '../archivio/archivio';
 import { MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
 import { Borsa, Libro } from './Zaino';
+import { Indossato } from './Indossato';
+import { OggettiMagici } from './OggettiMagici';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 
 type Scheda = 'combattimento' | 'abilita' | 'magia' | 'zaino' | 'chi';
@@ -95,7 +97,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         {vistaScheda === 'combattimento' && <Combattimento r={r} tavolo={tavolo} />}
         {vistaScheda === 'abilita' && <Abilita r={r} />}
         {vistaScheda === 'magia' && (tavolo ? <MagiaTavolo {...tavolo} /> : <Magia r={r} />)}
-        {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} />}
+        {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} bozza={bozza} cambia={ricevuta ? undefined : cambia} />}
         {vistaScheda === 'chi' && <ChiE r={r} bozza={bozza} cambia={cambia} ricevuta={ricevuta || bloccata}
           salvato={bloccata ? { il: bozza.conclusoIl!, riapri } : undefined} />}
       </div>
@@ -236,7 +238,8 @@ function Abilita({ r }: { r: Riepilogo }) {
           {c.voci.map((v) => (
             <li key={v.id} className="flex items-center gap-1.5 text-xs">
               <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${v.maestria ? 'bg-oro ring-2 ring-accento' : v.competente ? 'bg-accento' : 'border border-bordo'}`} />
-              <span className={`min-w-0 flex-1 ${v.competente ? 'text-testo' : 'text-testo-2'}`}>{v.nome}{v.maestria ? ' (maestria)' : ''}</span>
+              <span className={`min-w-0 flex-1 ${v.competente ? 'text-testo' : 'text-testo-2'}`}>{v.nome}{v.maestria ? ' (maestria)' : ''}
+                {v.svantaggio && <span className="block text-xs text-attenzione">{v.svantaggio}</span>}</span>
               <span className="text-testo">{v.valore}</span>
               {v.competente && !v.maestria && <span className="sr-only">con competenza</span>}
             </li>
@@ -270,7 +273,7 @@ function Magia({ r }: { r: Riepilogo }) {
 }
 
 // Zaino: il libro degli incantesimi e la borsa per componenti si aprono (richiesta del 19/11)
-function Zaino({ r, scheda, tavolo }: { r: Riepilogo; scheda: SchedaCalcolata; tavolo: PropsTavolo | null }) {
+function Zaino({ r, scheda, tavolo, bozza, cambia }: { r: Riepilogo; scheda: SchedaCalcolata; tavolo: PropsTavolo | null; bozza: Bozza; cambia?: (b: Bozza) => void }) {
   const [aperto, setAperto] = useState<'libro' | { borsa: string } | null>(null);
   const m = r.zaino.monete.totale;
   const libro = scheda.magia.find((x) => x.libro);
@@ -280,6 +283,8 @@ function Zaino({ r, scheda, tavolo }: { r: Riepilogo; scheda: SchedaCalcolata; t
   return (
     <div className="space-y-3">
       <p className="text-base text-testo">Monete: <span className="font-medium">{m < 0 ? `−${prezzo(-m)}` : prezzo(m)}</span></p>
+      <Indossato bozza={bozza} scheda={scheda} cambia={cambia} />
+      <OggettiMagici bozza={bozza} cambia={cambia} />
       <ul className="overflow-hidden rounded-xl border border-bordo bg-superficie">
         {r.zaino.inventario.map((v) => {
           const a = apribile(v.oggetto, v.nome);

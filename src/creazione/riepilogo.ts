@@ -1,5 +1,6 @@
 // Passo 8: Riepilogo (sezione 5.2 e 5.4). La scheda completa divisa in 5 schede (Combattimento, Abilità, Magia,
 // Zaino, Chi è), gli avvisi da accettare e l'esportazione in JSON. TypeScript puro: l'interfaccia lo mostra e basta.
+import { nomeOggetto, richiedeSintonia } from '../regole/oggetti-magici';
 import { comePersonaggio, PASSI, statoPassi, type Bozza, type IdPasso } from './percorso';
 import { quanti, type Elementi } from './personalizzati';
 import { calcolaScheda } from '../regole/motore';
@@ -28,12 +29,12 @@ export interface Riepilogo {
     risorse: { nome: string; usi: number; recupero: string; dettaglio?: string }[];
     altro: string[];                                               // resistenze, valori di classe, CD speciali
   };
-  abilita: { car: Car; nome: string; punteggio: number; mod: string; voci: { id: Id; nome: string; valore: string; competente: boolean; maestria: boolean }[] }[];
+  abilita: { car: Car; nome: string; punteggio: number; mod: string; voci: { id: Id; nome: string; valore: string; competente: boolean; maestria: boolean; svantaggio?: string }[] }[];
   magia: {
     fonti: { id: Id; nome: string; cd: number | null; attacco: string | null; trucchetti: string[]; incantesimi: string[]; lanciGratuiti?: string; note: string[] }[];
     slot: string[];
   };
-  zaino: { monete: Numero; inventario: Scheda['inventario'] };
+  zaino: { monete: Numero; inventario: Scheda['inventario']; magici: string[] };   // magici: 21/11
   chiE: { righe: { etichetta: string; valore: string }[]; privilegi: string[] };
 }
 
@@ -45,7 +46,7 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
   const lignaggio = specie.lignaggi?.opzioni.find((o) => o.id === pg.scelte[specie.lignaggi!.scelta]?.[0]);
   const nomeSpecie = lignaggio ? lignaggio.nome : specie.nome;
   const nomeInc = (id: Id) => d.incantesimi[id]?.nome ?? id;
-  const ca = s.ca.formule.find((f) => f.id === s.ca.migliore)!;
+  const ca = s.ca.formule.find((f) => f.id === s.ca.attuale)!;   // quella con ciò che indossi (21/11)
 
   const altro: string[] = [
     ...s.resistenze.map((r) => `Resistenza: ${r}`),
@@ -83,6 +84,7 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
       car: c, nome: NOME_CAR[c], punteggio: s.punteggi[c].totale, mod: segno(s.modificatori[c]),
       voci: Object.entries(ABILITA).filter(([, a]) => a.car === c).map(([id, a]) => ({
         id, nome: a.nome, valore: segno(s.abilita[id].totale), competente: s.abilita[id].competente, maestria: s.abilita[id].maestria,
+        ...(s.abilita[id].svantaggio ? { svantaggio: s.abilita[id].svantaggio } : {}),
       })),
     })),
     magia: {
@@ -106,7 +108,8 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
         ...(s.slot.patto ? [`${s.slot.patto.numero} slot del patto di ${ORDINALE[s.slot.patto.livello - 1]} livello (tornano con il riposo breve)`] : []),
       ],
     },
-    zaino: { monete: s.monete, inventario: s.inventario },
+    zaino: { monete: s.monete, inventario: s.inventario,
+      magici: (pg.oggettiMagici ?? []).map((o) => `${(o.quantita ?? 1) > 1 ? `${o.quantita} × ` : ''}${nomeOggetto(o, d)}${richiedeSintonia(o) ? (o.sintonizzato ? ' (sintonizzato)' : ' (non sintonizzato)') : ''}${o.cariche !== undefined ? ` · ${o.cariche} cariche` : ''}`) },
     chiE: {
       righe: [
         ...(pg.idea?.trim() ? [{ etichetta: 'In una frase', valore: pg.idea.trim() }] : []),

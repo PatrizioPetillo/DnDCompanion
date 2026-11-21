@@ -3,7 +3,8 @@
 // Le specie personalizzate mostrano i loro tratti con la nota che l'utente ha scritto.
 import { DATI } from '../regole';
 import type { Dati } from '../regole/dati';
-import type { Id } from '../regole/tipi';
+import type { Effetto, Id } from '../regole/tipi';
+import { ABILITA } from '../regole/dati/base';
 
 export interface RigaTratto { nome: string; testo: string; pagina?: number }
 
@@ -50,14 +51,35 @@ const EXTRA: Record<Id, RigaTratto[]> = {
   tiefling: [{ nome: 'Presenza ultraterrena', pagina: 86, testo: 'Conosci il trucchetto Taumaturgia, con la stessa caratteristica del Retaggio immondo.' }],
 };
 
+// Specie inserite dall'utente (21/11): la riga si costruisce da quello che ha compilato nel modulo
+function descriviEffetti(effetti: Effetto[], d: Dati): string {
+  const parti: string[] = [];
+  const resistenze: string[] = [];
+  for (const e of effetti as any[]) {
+    if (e.tipo === 'nota') parti.push(e.testo);
+    else if (e.tipo === 'resistenza') resistenze.push(e.danno);
+    else if (e.tipo === 'competenza' && e.categoria === 'abilita') parti.push(`Competenza in ${e.ids.map((a: Id) => ABILITA[a]?.nome ?? a).join(', ')}.`);
+    else if (e.tipo === 'scelta' && e.scelta.tipo === 'abilita') parti.push(`${e.scelta.quantita === 1 ? 'Un\'abilità' : `${e.scelta.quantita} abilità`} a scelta.`);
+    else if (e.tipo === 'scelta' && e.scelta.tipo === 'talento') parti.push('Un talento Origini a tua scelta.');
+    else if (e.tipo === 'talento' && typeof e.talento === 'string') parti.push(`Ottieni il talento ${d.talenti[e.talento]?.nome ?? e.talento}.`);
+    else if (e.tipo === 'pfMassimi') parti.push('+1 ai PF massimi, e un altro +1 a ogni livello.');
+    else if (e.tipo === 'magia') parti.push('Incantesimi della specie: si scelgono e si usano nel passo Magia.');
+    else if (e.tipo === 'risorsa') {
+      const u = e.risorsa.usi;
+      parti.push(`Usi: ${u?.competenza ? 'pari alla competenza' : u}, ${e.risorsa.recupero?.some((r: { riposo: string }) => r.riposo === 'breve') ? 'tornano con un riposo breve o lungo' : 'tornano con un riposo lungo'}.`);
+    }
+  }
+  if (resistenze.length) parti.unshift(`Resistenza ai danni da ${resistenze.join(', ')}.`);
+  return parti.join(' ');
+}
+
 export function cosaOttieniSpecie(specieId: Id, d: Dati = DATI): RigaTratto[] {
   const sp = d.specie[specieId];
   if (!sp) return [];
   const righe: RigaTratto[] = [];
   if (LIGNAGGI[specieId]) righe.push(LIGNAGGI[specieId]);
   for (const t of sp.tratti) {
-    const nota = t.effetti?.find((e) => e.tipo === 'nota') as { testo?: string } | undefined;
-    const testo = TRATTI[t.id] ?? nota?.testo;
+    const testo = TRATTI[t.id] ?? descriviEffetti(t.effetti ?? [], d);
     if (testo) righe.push({ nome: t.nome, testo, pagina: sp.personalizzato ? undefined : t.srd?.pagina });
   }
   righe.push(...(EXTRA[specieId] ?? []));

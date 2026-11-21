@@ -123,8 +123,8 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
           </li>
         ))}
         <li className="flex items-center justify-between gap-2 px-3">
-          <span className="py-2 text-base text-testo">Un altro background<span className="block text-xs text-testo-2">da un altro manuale, o inventato</span></span>
-          <button onClick={() => setModulo(moduloVuoto())} className="min-h-11 shrink-0 rounded-lg px-3 text-sm text-accento">Inseriscilo</button>
+          <span className="py-2 text-base text-testo">Crea il tuo background<span className="block text-xs text-testo-2">inventato o da un altro manuale, con la regola dell'SRD</span></span>
+          <button onClick={() => setModulo(moduloVuoto())} className="min-h-11 shrink-0 rounded-lg px-3 text-sm text-accento">Crealo</button>
         </li>
       </ul>
       </>}

@@ -22,3 +22,25 @@ describe('Cosa ottieni: specie', () => {
     expect(cosaOttieniSpecie('tiefling').at(-1)?.nome).toBe('Presenza ultraterrena');
   });
 });
+
+describe('Cosa ottieni: specie inserite dall\'utente', () => {
+  it('ogni tratto ha una riga, costruita dal modulo', async () => {
+    const { creaSpecie, moduloSpecieVuoto: moduloVuoto } = await import('../src/creazione/specie-personalizzate');
+    const { registra } = await import('../src/creazione/personalizzati');
+    const sp = creaSpecie({
+      ...moduloVuoto(), nome: 'Warforged prova', fonte: 'Eberron', pagina: '20', scurovisione: 0,
+      resistenze: ['veleno'], abilitaFisse: ['perception'], pfExtra: true,
+      tratti: [{ nome: 'Corazza integrata', testo: 'Ottieni +1 alla CA.', usi: 'sempre', riposo: 'lungo' }],
+    } as never);
+    registra({ background: {}, specie: { [sp.id]: sp } });
+    const righe = cosaOttieniSpecie(sp.id);
+    expect(righe.map((r) => r.testo)).toEqual([
+      'Resistenza ai danni da veleno.',
+      'Competenza in Percezione.',
+      '+1 ai PF massimi, e un altro +1 a ogni livello.',
+      'Ottieni +1 alla CA.',
+    ]);
+    expect(righe.every((r) => r.pagina === undefined)).toBe(true);
+    registra({ background: {}, specie: {} });
+  });
+});

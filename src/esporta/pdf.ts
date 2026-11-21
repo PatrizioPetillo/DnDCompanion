@@ -289,6 +289,7 @@ export async function creaPdf(b: Bozza, oggi = new Date(), immagini: ImmaginiPdf
       ...(r.zaino.inventario.length ? r.zaino.inventario.map((v): Riga => ({
         testo: `${v.quantita > 1 ? `${v.quantita} × ` : ''}${v.nome}${v.contenuto ? `: ${v.contenuto.map((x) => `${x.quantita > 1 ? `${x.quantita} ` : ''}${x.nome}`).join(', ')}` : ''}`,
       })) : [{ testo: 'Lo zaino è vuoto.', colore: C.testo2 }]),
+      ...(r.zaino.magici.length ? [{ testo: 'Oggetti magici', grassetto: true, dopo: 2 } as Riga, ...r.zaino.magici.map((t): Riga => ({ testo: t }))] : []),
     ],
   });
 

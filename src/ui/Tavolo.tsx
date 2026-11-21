@@ -48,7 +48,10 @@ export function Riposi({ scheda, partita, cambia, dado, bozza, cambiaBozza }: Pr
           onClick={() => {
             if (!window.confirm('Riposo lungo: tornano tutti i PF, gli slot e le risorse. Confermi?')) return;
             cambia(riposoLungo(partita));
-            if (bozza && cambiaBozza && scheda.magia.length) setDopoLungo(bozza);   // poi, a chi usa la magia, i cambi permessi
+            // Gli incantesimi che cambiano la CA (Armatura magica, 8 ore) sono finiti (21/11)
+            const b = bozza?.equip?.attivi?.length ? { ...bozza, equip: { ...bozza.equip, attivi: [] } } : bozza;
+            if (b && b !== bozza) cambiaBozza?.(b);
+            if (b && cambiaBozza && scheda.magia.length) setDopoLungo(b);   // poi, a chi usa la magia, i cambi permessi
           }}
           className="h-11 rounded-xl border border-bordo text-sm text-testo"
         >Riposo lungo</button>

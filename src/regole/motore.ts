@@ -1,5 +1,8 @@
 // Motore delle regole: dal Personaggio (solo scelte) alla Scheda (tutti i valori, ognuno con la sua somma).
 // TypeScript puro, nessuna dipendenza dall'interfaccia. Ogni regola cita la pagina dell'SRD 5.2.
+import { nomeOggetto, oggettiAttivi, sintonizzati, MAX_SINTONIA } from './oggetti-magici';
+import { OGGETTI_MAGICI } from './dati/oggetti-magici';
+import type { EffettoMagico } from './dati/oggetti-magici';
 import { ABILITA, ALLINEAMENTI, ARMI, COSTO_POINT_BUY, LINGUE_RARE, LINGUE_STANDARD, NOME_LINGUA, MATERIALE_DA_OGGETTO, NOME_CAR, PUNTI_POINT_BUY, SERIE_STANDARD, TUTTE_LE_ABILITA } from './dati/base';
 import { DATI, NOME_LISTA, type Dati } from './dati';
 import { DUE_MANI_ARMI, GITTATA_ARMI } from './dati/oggetti';
@@ -82,6 +85,14 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     if (punteggi[c].totale > 20) avvisa(`massimo-20:${c}`, 'errore', `${NOME_CAR[c]} non può superare 20 con il bonus del background`, { pagina: 83 });
     mod[c] = modificatore(punteggi[c].totale);
   }
+  // Oggetti magici attivi (21/11): caratteristiche fissate (Amuleto della salute: COS 19, se era più bassa)
+  const magici = oggettiAttivi(pg.oggettiMagici, d);
+  const effettoMagico = <T extends EffettoMagico['tipo']>(tipo: T) =>
+    magici.flatMap((o) => o.effetti.filter((e): e is Extract<EffettoMagico, { tipo: T }> => e.tipo === tipo).map((e) => ({ o, e })));
+  for (const { o, e } of effettoMagico('punteggio'))
+    if (punteggi[e.car].totale < e.valore) { punteggi[e.car] = numero([{ etichetta: `${o.nome} (la porta a ${e.valore})`, valore: e.valore }]); mod[e.car] = modificatore(e.valore); }
+  if (sintonizzati(pg.oggettiMagici) > MAX_SINTONIA)
+    avvisa('sintonia-troppi', 'errore', `Sei sintonizzato con ${sintonizzati(pg.oggettiMagici)} oggetti: il massimo è ${MAX_SINTONIA}`, { pagina: 102 });
 
   const valore = (v: Valore, min?: number): number => {
     let r: number;
@@ -205,7 +216,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   for (const a of TUTTE_LE_ABILITA) {
     const comp = fontiAbilita.has(a);
     const ma = comp && maestria.has(a);
-    const extra = bonusAb.get(a) ?? [];
+    const extra = [...(bonusAb.get(a) ?? []), ...effettoMagico('prove').map(({ o, e }) => ({ etichetta: o.nome, valore: e.bonus }))];
     abilita[a] = {
       totale: mod[ABILITA[a].car] + (comp ? PB * (ma ? 2 : 1) : 0) + extra.reduce((s, t) => s + t.valore, 0),
       competente: comp, maestria: ma, fonti: [...(fontiAbilita.get(a) ?? []), ...extra.map((t) => t.etichetta)],
@@ -214,7 +225,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
 
   const tiriSalvezza = Object.fromEntries(CARATTERISTICHE.map((c) => {
     const comp = classe.tiriSalvezza.includes(c);
-    return [c, { totale: mod[c] + (comp ? PB : 0), competente: comp }];
+    return [c, { totale: mod[c] + (comp ? PB : 0) + effettoMagico('ts').reduce((s, x) => s + x.e.bonus, 0), competente: comp }];
   })) as Scheda['tiriSalvezza'];
 
   // ───────── PF (p. 22) e iniziativa (p. 22, Allerta p. 87) ─────────
@@ -226,6 +237,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const iniziativa = numero([
     { etichetta: 'Destrezza', valore: mod.DES },
     ...effetti('iniziativa').map((v) => ({ etichetta: `${v.effetto.etichetta} (competenza)`, valore: PB })),
+    ...effettoMagico('prove').map(({ o, e }) => ({ etichetta: o.nome, valore: e.bonus })),   // l'iniziativa è una prova di Destrezza
   ]);
 
   // ───────── Magia (p. 23, 104-106) ─────────
@@ -398,23 +410,28 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   // ───────── CA (p. 22, armature p. 92) ─────────
   const addestramento = new Set<string>([...classe.addestramentoArmature,
     ...effetti('competenza').filter((v) => v.effetto.categoria === 'armature').flatMap((v) => v.effetto.ids)]);
-  const haScudo = inventario.includes('shield') && addestramento.has('scudo');
-  if (inventario.includes('shield') && !addestramento.has('scudo'))
+  // Scudo imbracciato (21/11): conta solo se è nello zaino, sei addestrato e non l'hai tolto
+  // Armature e scudi magici (21/11): contano come l'armatura o lo scudo che sono, con il loro +N
+  const armatureMagiche = effettoMagico('armatura').filter((x) => x.o.base && d.oggetti[x.o.base]?.armatura);
+  const scudiMagici = effettoMagico('scudo');
+  const armatureTutte = [...new Set([...inventario, ...armatureMagiche.map((x) => x.o.base!)])];
+  const haScudoInv = inventario.includes('shield') || scudiMagici.length > 0;
+  const haScudo = haScudoInv && addestramento.has('scudo') && pg.equip?.scudo !== false;
+  if (haScudoInv && !addestramento.has('scudo'))
     avvisa('scudo-non-addestrato', 'attenzione', 'Senza addestramento con lo scudo non ottieni il suo bonus alla CA', { pagina: 92 });
-  const scudo: Termine[] = haScudo ? [{ etichetta: 'Scudo', valore: 2 }] : [];
+  const scudo: Termine[] = haScudo ? [{ etichetta: 'Scudo', valore: 2 }, ...scudiMagici.map(({ o, e }) => ({ etichetta: o.nome, valore: e.bonus }))] : [];
   const conArmatura = effetti('bonusCA').map((v) => ({ etichetta: v.effetto.etichetta, valore: v.effetto.valore }));
 
   const formule: Scheda['ca']['formule'] = [{ id: 'senza-armatura', nome: 'Senza armatura', valore: numero([{ etichetta: 'Base', valore: 10 }, { etichetta: 'Destrezza', valore: mod.DES }, ...scudo]) }];
-  for (const id of [...new Set(inventario)]) {
+  for (const id of armatureTutte) {
     const o = d.oggetti[id];
     if (!o?.armatura || o.armatura.categoria === 'scudo') continue;
     const a = o.armatura;
     const des = a.maxDes === 0 ? [] : [{ etichetta: a.maxDes ? `Destrezza (max ${a.maxDes})` : 'Destrezza', valore: a.maxDes ? Math.min(mod.DES, a.maxDes) : mod.DES }];
-    formule.push({ id: `armatura:${id}`, nome: o.nome, valore: numero([{ etichetta: o.nome, valore: a.base }, ...des, ...scudo, ...conArmatura]) });
+    const magica = armatureMagiche.filter((x) => x.o.base === id).map(({ o: m, e }) => ({ etichetta: m.nome, valore: e.bonus }));
+    formule.push({ id: `armatura:${id}`, nome: magica.length ? magica[0].etichetta : o.nome, valore: numero([{ etichetta: o.nome, valore: a.base }, ...magica, ...des, ...scudo, ...conArmatura]) });
     if (!addestramento.has(a.categoria))
       avvisa(`armatura-non-addestrato:${id}`, 'attenzione', `${o.nome}: senza addestramento hai svantaggio alle prove di FOR e DES e non puoi lanciare incantesimi`, { pagina: 92 });
-    if (a.forza && punteggi.FOR.totale < a.forza)
-      avvisa(`armatura-forza:${id}`, 'attenzione', `${o.nome} richiede Forza ${a.forza}: con meno la tua velocità cala di ${metri(10)}`, { pagina: 92 });
   }
   const aggiungiFormula = (f: FormulaCA) => {
     if (formule.some((x) => x.id === f.id)) return;
@@ -424,7 +441,27 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   for (const v of effetti('formulaCA')) aggiungiFormula(v.effetto.formula);
   if (lanciabili.has('mage-armor'))                     // Armatura magica: 13 + DES senza armatura (p. 145)
     aggiungiFormula({ id: 'armatura-magica', nome: 'Armatura magica', base: 13, caratteristiche: ['DES'], richiede: 'nessunaArmatura', srd: { pagina: 145 } });
+  // Bonus generici alla CA (Anello e Mantello di protezione +1; Bracciali della difesa +2 senza armatura né scudo)
+  for (const f of formule) for (const { o, e } of effettoMagico('ca')) {
+    if (e.soloSenzaArmatura && (f.id.startsWith('armatura:') || haScudo)) continue;
+    f.valore = numero([...f.valore.termini, { etichetta: o.nome, valore: e.bonus }]);
+  }
   const migliore = formule.reduce((m, f) => (f.valore.totale > m.valore.totale ? f : m)).id;
+
+  // CA attuale (21/11): l'armatura indossata, o la migliore senza armatura; gli incantesimi solo se attivi.
+  // La Difesa senza armatura del monaco non vale con lo scudo (p. 50).
+  const daIncantesimo = (id: Id) => id === 'armatura-magica';
+  for (const f of formule) if (daIncantesimo(f.id)) (f as { incantesimo?: boolean }).incantesimo = true;
+  const vietata = (id: Id) => id === 'difesa-senza-armatura-monaco' && haScudo;
+  const sceltaArmatura = pg.equip?.armatura;
+  const scelta = sceltaArmatura && sceltaArmatura !== 'nessuna' && armatureTutte.includes(sceltaArmatura) && d.oggetti[sceltaArmatura]?.armatura ? `armatura:${sceltaArmatura}` : null;
+  const senzaArmaturaOk = formule.filter((f) => !f.id.startsWith('armatura:') && !vietata(f.id) && (!daIncantesimo(f.id) || pg.equip?.attivi?.includes(f.id)));
+  const migliorTra = (l: typeof formule) => l.reduce((m, f) => (f.valore.totale > m.valore.totale ? f : m)).id;
+  const attuale = scelta ?? (sceltaArmatura === 'nessuna' || pg.equip?.attivi?.some(daIncantesimo)
+    ? migliorTra(senzaArmaturaOk)
+    : migliorTra([...senzaArmaturaOk, ...formule.filter((f) => f.id.startsWith('armatura:'))]));
+  const indossata = attuale.startsWith('armatura:') ? attuale.slice('armatura:'.length) : null;
+  const armaturaIndossata = indossata ? d.oggetti[indossata].armatura! : null;
 
   // ───────── Attacchi con le armi (p. 22-23, 89-91) ─────────
   const addestramentoArmi = new Set<string>([...classe.addestramentoArmi,
@@ -439,24 +476,34 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const padronanze = new Set([...scelte.values()].filter((x) => x.tipo === 'maestriaArma').flatMap((x) => risposta(x.id)));
   // Arti marziali (p. 50): senza armatura né scudo, DES al posto di FOR e il dado (1d6) su colpo senz'armi e armi da monaco
   const dadoMarziale = effetti('valoreClasse').find((v) => v.effetto.id === 'martial-arts-die')?.effetto.valore;
-  const senzaArmatura = !inventario.some((id) => d.oggetti[id]?.armatura);
+  const senzaArmatura = !indossata && !haScudo;   // Arti marziali: niente armatura indossata né scudo (21/11)
   const arti = dadoMarziale && senzaArmatura ? dadoMarziale : null;
   const daMonaco = (id: Id) => ARMI[id].tipo === 'mischia' && (ARMI[id].categoria === 'semplice' || ARMI[id].proprieta.includes('leggera'));
   const media = (dadi: string) => { const m = dadi.match(/^(\d+)d(\d+)$/); return m ? (+m[1] * (+m[2] + 1)) / 2 : +dadi; };
   const carMigliore = (): Car => (mod.DES > mod.FOR ? 'DES' : 'FOR');
   const testoDanni = (dadi: string, m: number, tipo: string) =>
     /^\d+$/.test(dadi) ? `${+dadi + m} ${tipo}` : `${dadi}${m > 0 ? ` + ${m}` : m < 0 ? ` − ${-m}` : ''} ${tipo}`;
-  const attacco = (id: Id, nome: string, quantita: number, car: Car, competente: boolean, dadi: string, tipo: string, extra: Partial<Attacco> & { dueMani?: string; bonus?: Termine[] }): Attacco => ({
+  const attacco = (id: Id, nome: string, quantita: number, car: Car, competente: boolean, dadi: string, tipo: string, extra: Partial<Attacco> & { dueMani?: string; bonus?: Termine[]; bonusDanni?: number }): Attacco => ({
     id, nome, quantita, caratteristica: car, competente,
     colpire: numero([{ etichetta: NOME_CAR[car], valore: mod[car] }, ...(competente ? [{ etichetta: 'Competenza', valore: PB }] : []), ...(extra.bonus ?? [])]),
-    danni: { dadi, mod: mod[car], tipo, testo: testoDanni(dadi, mod[car], tipo),
-      ...(extra.dueMani ? { dadiDueMani: extra.dueMani, testoDueMani: testoDanni(extra.dueMani, mod[car], tipo) } : {}) },
+    danni: { dadi, mod: mod[car] + (extra.bonusDanni ?? 0), tipo, testo: testoDanni(dadi, mod[car] + (extra.bonusDanni ?? 0), tipo),
+      ...(extra.dueMani ? { dadiDueMani: extra.dueMani, testoDueMani: testoDanni(extra.dueMani, mod[car] + (extra.bonusDanni ?? 0), tipo) } : {}) },
     padronanza: extra.padronanza ?? null, ...(extra.gittata ? { gittata: extra.gittata } : {}), proprieta: extra.proprieta ?? [], note: extra.note ?? [],
   });
   const perArma = new Map<Id, number>();
   for (const v of inventarioVoci) { const arma = d.oggetti[v.oggetto]?.arma; if (arma && ARMI[arma]) perArma.set(arma, (perArma.get(arma) ?? 0) + v.quantita); }
   const attacchi: Attacco[] = [];
-  for (const [id, quantita] of perArma) {
+  // Le armi magiche (21/11) sono un attacco a parte, con il loro nome; il +N vale solo se l'oggetto è attivo
+  const armiMagiche = (pg.oggettiMagici ?? []).filter((x) => x.base && ARMI[x.base] && (x.personalizzato ? false : OGGETTI_MAGICI[x.id]?.base === 'arma'));
+  const voceArmi: { id: Id; quantita: number; nome?: string; magico?: number; uid?: string }[] = [
+    ...[...perArma].map(([id, quantita]) => ({ id, quantita })),
+    ...armiMagiche.map((x) => {
+      const att = magici.find((m) => m.uid === x.uid);
+      const b = att?.effetti.find((e): e is Extract<EffettoMagico, { tipo: 'arma' }> => e.tipo === 'arma')?.bonus ?? 0;
+      return { id: x.base!, quantita: 1, nome: nomeOggetto(x, d), magico: b, uid: x.uid };
+    }),
+  ];
+  for (const { id, quantita, nome: nomeMagico, magico, uid } of voceArmi) {
     const a = ARMI[id];
     const [dadiBase, tipo] = [a.danni.split(' ')[0], a.danni.split(' ').slice(1).join(' ')];
     const monaco = arti && daMonaco(id);
@@ -471,8 +518,9 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     if (a.proprieta.includes('pesante') && (a.tipo === 'mischia' ? punteggi.FOR.totale : punteggi.DES.totale) < 13)
       note.push(`Svantaggio ai tiri per colpire: ${a.tipo === 'mischia' ? 'Forza' : 'Destrezza'} sotto 13 (Pesante)`);
     if (monaco) note.push('Arti marziali: senza armatura né scudo');
-    attacchi.push(attacco(id, a.nome, quantita, car, comp, dadi, tipo, {
-      bonus: a.tipo === 'distanza' && talenti.includes('archery') ? [{ etichetta: 'Tiro', valore: 2 }] : [],
+    attacchi.push(attacco(uid ? `magico:${uid}` : id, nomeMagico ?? a.nome, quantita, car, comp, dadi, tipo, {
+      bonus: [...(a.tipo === 'distanza' && talenti.includes('archery') ? [{ etichetta: 'Tiro', valore: 2 }] : []), ...(magico ? [{ etichetta: nomeMagico!, valore: magico }] : [])],
+      bonusDanni: magico ?? 0,
       dueMani: DUE_MANI_ARMI[id], gittata: GITTATA_ARMI[id], proprieta: a.proprieta,
       padronanza: padronanze.has(id) ? a.padronanza : null, note,
     }));
@@ -511,7 +559,18 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const cdSpeciali = effetti('cdSpeciale').map((v) => ({ id: v.effetto.id, nome: v.effetto.nome,
     cd: numero([{ etichetta: 'Base', valore: 8 }, { etichetta: NOME_CAR[v.effetto.caratteristica], valore: mod[v.effetto.caratteristica] }, { etichetta: 'Competenza', valore: PB }]) }));
   const vel = effetti('velocita');
-  const velocita = vel.length ? Math.max(...vel.map((v) => v.effetto.valore)) : specie.velocita;
+  // Armatura pesante con Forza sotto il requisito: -10 piedi (p. 92), solo se la indossi (21/11)
+  const forzaBassa = !!armaturaIndossata?.forza && punteggi.FOR.totale < armaturaIndossata.forza;
+  if (forzaBassa) avvisa(`armatura-forza:${indossata}`, 'attenzione', `${d.oggetti[indossata!].nome} richiede Forza ${armaturaIndossata!.forza}: con meno la tua velocità cala di ${metri(10)}`, { pagina: 92 });
+  const velocita = (vel.length ? Math.max(...vel.map((v) => v.effetto.valore)) : specie.velocita) - (forzaBassa ? 10 : 0);
+  // Svantaggio alla Furtività con le armature che lo hanno (p. 92), solo se indossate
+  if (armaturaIndossata?.svantaggioFurtivita) abilita.stealth.svantaggio = `Svantaggio: ${d.oggetti[indossata!].nome}`;
+
+  // Oggetti magici sugli incantesimi (21/11): la bacchetta del mago da guerra al tiro per colpire, e i bonus scritti a mano
+  const conTermini = (n: Numero | null, extra: Termine[]) => (n && extra.length ? numero([...n.termini, ...extra]) : n);
+  const bonusAtt = effettoMagico('attaccoIncantesimi').map(({ o, e }) => ({ etichetta: o.nome, valore: e.bonus }));
+  const bonusCd = effettoMagico('cdIncantesimi').map(({ o, e }) => ({ etichetta: o.nome, valore: e.bonus }));
+  for (const m of magia) { m.attacco = conTermini(m.attacco, bonusAtt); m.cd = conTermini(m.cd, bonusCd); }
 
   // Regole del tavolo (sezione 5.1): i suoi avvisi, e le eccezioni concesse in anticipo dal master
   if (pg.tavolo) avvisi.push(...avvisiTavolo(pg, pg.tavolo, d));
@@ -519,7 +578,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
 
   return {
     punteggi, modificatori: mod, competenza: PB, pf, iniziativa,
-    ca: { formule, migliore },
+    ca: { formule, migliore, attuale, indossata, scudo: haScudo },
     tiriSalvezza, abilita,
     percezionePassiva: 10 + abilita.perception.totale,   // p. 22
     velocita,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { aggiorna, aggiornaTavolo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio } from './archivio/archivio';
+import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio } from './archivio/archivio';
 import { elementiUsati, registra, unione, type Elementi } from './creazione/personalizzati';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, concludi, concluso, daCompletarePrimaDiSalvare, PASSI, prossimoPasso, riapri, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
 import { importaJSON } from './creazione/riepilogo';
@@ -92,7 +92,9 @@ export default function App() {
   // I background inseriti dal proprio manuale entrano nei dati del motore (anche quelli di una scheda ricevuta)
   const mieiElementi = elementi(archivio);
   // e quelli del tavolo (del personaggio aperto o del link appena arrivato), anche se non sono tra i miei
-  registra(unione(elementiRicevuti, tavoloRicevuto?.elementi, bozza.tavolo?.elementi, mieiElementi));
+  // e quelli delle schede nei gruppi dei miei tavoli (21/11)
+  const elementiGruppi = tavoli(archivio).flatMap((t) => (t.gruppo ?? []).map((m) => m.elementi));
+  registra(unione(elementiRicevuti, tavoloRicevuto?.elementi, bozza.tavolo?.elementi, mieiElementi, ...elementiGruppi));
   const stati = useMemo(() => statoPassi(bozza), [bozza]);
   // Con almeno un personaggio salvato si chiede al browser di non cancellarlo da solo
   const haPersonaggi = archivio.personaggi.length > 0;
@@ -191,6 +193,11 @@ export default function App() {
           <>
             <div className="mb-4 rounded-xl border border-accento bg-superficie p-3 text-sm text-testo">
               Scheda ricevuta con un link. I tuoi personaggi non sono stati toccati.
+              <AggiungiAlGruppo archivio={archivio} bozza={ricevuta} salva={(id) => {
+                const r = aggiungiAlGruppo(archivio, id, ricevuta, elementiRicevuti);
+                setArchivio(r.archivio);
+                return r.aggiornato;
+              }} />
             </div>
             <PassoRiepilogo bozza={ricevuta} cambia={() => {}} apri={() => {}} ricevuta />
           </>
@@ -218,7 +225,9 @@ export default function App() {
         {!ricevuta && !tavoloRicevuto && vistaReale === 'tavolo' && (() => {
           const tv = tavoli(archivio).find((x) => x.id === tavoloAperto);
           if (!tv) return <ElencoTavoli archivio={archivio} apri={(id) => setTavoloAperto(id)} crea={() => { const r = nuovoTavolo(archivio); setArchivio(r.archivio); setTavoloAperto(r.id); }} />;
-          return <ModuloTavolo tavolo={tv.tavolo} mieiElementi={mieiElementi}
+          return <ModuloTavolo tavolo={tv.tavolo} mieiElementi={mieiElementi} membri={tv.gruppo}
+            apriMembro={(m) => { setRicevuta(m.bozza); setElementiRicevuti(m.elementi ? unione(m.elementi) : undefined); window.scrollTo(0, 0); }}
+            togliMembro={(id) => setArchivio(togliDalGruppo(archivio, tv.id, id))}
             cambia={(t) => setArchivio((a: Archivio) => aggiornaTavolo(a, tv.id, t))}
             elimina={() => { setArchivio(eliminaTavolo(archivio, tv.id)); setVista('tavoli'); }} />;
         })()}
@@ -431,7 +440,7 @@ function BottoneAvanti({ mancanti, cosaManca, avanti, etichetta = 'Avanti', tito
   return (
     <>
       <button onClick={() => (bloccato ? setAperto(true) : avanti())} aria-disabled={bloccato}
-        className={`relative h-12 flex-2 overflow-hidden rounded-xl text-base font-medium ${bloccato ? 'bg-bordo text-testo-2' : 'bg-accento text-su-accento'}`}>
+        className={`relative h-12 flex-2 overflow-hidden rounded-xl text-base font-medium ${bloccato ? 'bg-bordo text-testo' : 'bg-accento text-su-accento'}`}>
         {luccica > 0 && !bloccato && <span key={luccica} aria-hidden className="riflesso absolute inset-0" />}
         {bloccato ? `${etichetta} (${mancanti} da fare)` : etichetta}
       </button>
@@ -484,5 +493,32 @@ function Fiamma() {
       <path d="M28 4c4 10 16 18 16 34a16 16 0 0 1-32 0c0-8 4-13 8-17 0 6 3 9 6 10-2-9 0-18 2-27z" fill="var(--accento)" />
       <path className="anim-fiamma-interna" d="M28 30c3 5 8 9 8 16a8 8 0 0 1-16 0c0-5 3-8 5-10 0 3 1 5 3 6-1-4-1-8 0-12z" fill="var(--oro)" />
     </svg>
+  );
+}
+
+// Sulla scheda ricevuta, per il master (21/11): la mette nel gruppo di uno dei suoi tavoli.
+// Propone il tavolo con lo stesso nome di quello della scheda, se c'è.
+function AggiungiAlGruppo({ archivio, bozza, salva }: { archivio: Archivio; bozza: Bozza; salva: (tavoloId: string) => boolean }) {
+  const lista = tavoli(archivio);
+  const stesso = lista.find((t) => bozza.tavolo && t.tavolo.nome.trim() && t.tavolo.nome.trim() === bozza.tavolo.nome.trim());
+  const [scelto, setScelto] = useState(stesso?.id ?? lista[0]?.id ?? '');
+  const [fatto, setFatto] = useState<string | null>(null);
+  if (!lista.length) return null;
+  return (
+    <div className="mt-3 border-t border-bordo pt-3">
+      <p className="mb-2 text-sm text-testo-2">Sei il master? Mettila nel gruppo di un tuo tavolo:</p>
+      <div className="flex gap-2">
+        <select aria-label="Tavolo" value={scelto} onChange={(e) => { setScelto(e.target.value); setFatto(null); }}
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-bordo bg-sfondo px-2 text-base text-testo">
+          {lista.map((t) => <option key={t.id} value={t.id}>{t.tavolo.nome.trim() || 'Tavolo senza nome'}</option>)}
+        </select>
+        <button onClick={() => {
+          const agg = salva(scelto);
+          const nome = lista.find((t) => t.id === scelto)?.tavolo.nome.trim() || 'il tavolo';
+          setFatto(agg ? `Scheda aggiornata nel gruppo di ${nome}.` : `Aggiunta al gruppo di ${nome}.`);
+        }} className="min-h-11 rounded-lg bg-accento px-4 text-base font-medium text-su-accento">Aggiungi al gruppo</button>
+      </div>
+      {fatto && <p role="status" className="mt-2 text-sm text-ok">{fatto}</p>}
+    </div>
   );
 }

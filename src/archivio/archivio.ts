@@ -19,7 +19,9 @@ export interface PersonaggioSalvato {
 export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attivo: string | null; elementi?: Elementi; ultimaCopia?: string; tavoli?: TavoloSalvato[] }   // elementi: «I miei elementi»; ultimaCopia: ISO
 
 // I tavoli creati come master: si riaprono, si modificano, si ricondividono
-export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string }
+// gruppo: le schede che i giocatori hanno mandato al master per questo tavolo (21/11)
+export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string }
+export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string; gruppo?: MembroGruppo[] }
 
 export const archivioVuoto = (): Archivio => ({ versione: 1, personaggi: [], attivo: null });
 
@@ -180,3 +182,23 @@ export function portaAlTavolo(a: Archivio, id: string, t: Tavolo | undefined, or
   void _vecchio;
   return aggiorna(t ? unisciElementi(a, t.elementi) : a, id, { bozza: t ? { ...resto, tavolo: t } : resto }, ora);
 }
+
+// «Il mio gruppo» (21/11): la scheda di un giocatore entra nel gruppo di un tavolo. Se c'è già un personaggio con lo stesso
+// nome, è il giocatore che ha mandato la versione aggiornata: la sostituisce.
+export function aggiungiAlGruppo(a: Archivio, tavoloId: string, bozza: Bozza, elementi: Partial<Elementi> | undefined, ora = new Date()):
+  { archivio: Archivio; aggiornato: boolean } {
+  const chiave = bozza.nome.trim().toLowerCase();
+  let aggiornato = false;
+  const tavoliNuovi = (a.tavoli ?? []).map((t) => {
+    if (t.id !== tavoloId) return t;
+    const gruppo = t.gruppo ?? [];
+    const esistente = gruppo.find((m) => m.bozza.nome.trim().toLowerCase() === chiave && chiave);
+    aggiornato = !!esistente;
+    const membro: MembroGruppo = { id: esistente?.id ?? `gr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      bozza: structuredClone(bozza), ...(elementi ? { elementi } : {}), ricevuto: ora.toISOString() };
+    return { ...t, gruppo: esistente ? gruppo.map((m) => (m.id === esistente.id ? membro : m)) : [...gruppo, membro] };
+  });
+  return { archivio: { ...a, tavoli: tavoliNuovi }, aggiornato };
+}
+export const togliDalGruppo = (a: Archivio, tavoloId: string, membroId: string): Archivio =>
+  ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id === tavoloId ? { ...t, gruppo: (t.gruppo ?? []).filter((m) => m.id !== membroId) } : t)) });

@@ -2,7 +2,7 @@
 // di altri manuali o inventati. L'app ne conosce solo il NOME e il rimando al manuale: i dati li inserisce chi ha
 // il libro, con un modulo guidato. Si salvano tra «I miei elementi» e viaggiano con la scheda (JSON e link).
 import { DATI, type Dati } from '../regole/dati';
-import { STRUMENTI_ARTIGIANO, STRUMENTI_MUSICALI } from '../regole/dati/base';
+import { ARMI, STRUMENTI_ARTIGIANO, STRUMENTI_MUSICALI } from '../regole/dati/base';
 import { type Background, type Car, type ElementiPersonalizzati, type Id, type Scelta } from '../regole/tipi';
 
 // I background del Manuale del Giocatore 2024 che non sono nell'SRD: solo nomi (nomi italiani da verificare sul manuale)
@@ -78,6 +78,25 @@ export function controllaModulo(m: ModuloBackground, d: Dati = DATI): { campo: s
 const slug = (s: string) => s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 // Dal modulo al Background che il motore calcola come uno dell'SRD
+// La regola dell'SRD per creare un background (p. 192-193): 3 caratteristiche, un talento Origini, 2 abilità,
+// 1 strumento, e un equipaggiamento che vale 50 mo comprese le monete, senza armi da guerra né armature.
+// Sono avvisi (principio 3: avvisa, non vieta): un background copiato dal manuale può avere le sue eccezioni.
+export function regolaSrd(m: ModuloBackground, d: Dati = DATI): string[] {
+  const a: string[] = [];
+  const valore = m.oggettiA.reduce((s, o) => s + (d.oggetti[o.oggetto]?.costoMo ?? 0) * o.quantita, 0) + (m.moA || 0);
+  const tondo = Math.round(valore * 100) / 100;
+  // 50 mo sono il tetto: gli stessi background dell'SRD stanno un po' sotto (Sapiente 45 mo), quindi si avvisa solo se lo supera
+  if (tondo > 50) a.push(`L'equipaggiamento A vale ${String(tondo).replace('.', ',')} mo: la regola dà al massimo 50 mo in tutto, comprese le monete (SRD p. 193)`);
+  for (const o of m.oggettiA) {
+    const ogg = d.oggetti[o.oggetto];
+    if (ogg?.armatura && ogg.armatura.categoria !== 'scudo') a.push(`${ogg.nome}: un background non dà armature, arrivano dalla classe (SRD p. 193)`);
+    const arma = ogg?.arma ? ARMI[ogg.arma] : undefined;
+    if (arma?.categoria === 'guerra') a.push(`${ogg!.nome}: un background non dà armi da guerra (SRD p. 193)`);
+  }
+  if (m.talento?.tipo === 'libero') a.push('Il talento scritto a mano non è controllato: deve essere un talento Origini (SRD p. 192)');
+  return a;
+}
+
 export function creaBackground(m: ModuloBackground, d: Dati = DATI): Background {
   if (controllaModulo(m, d).length) throw new Error('Modulo incompleto');
   const id = m.id ?? `pers-${m.daManuale ?? slug(m.nome)}`;

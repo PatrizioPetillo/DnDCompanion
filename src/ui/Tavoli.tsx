@@ -1,5 +1,7 @@
 // Il link del tavolo (sezione 5.1). Il master crea un tavolo e manda il link (WhatsApp o altro); il giocatore lo apre
 // e crea il personaggio già con le regole del master. Senza link l'app non ha restrizioni.
+import { rigaGruppo, riassuntoGruppo, type RigaGruppo } from '../creazione/gruppo';
+import type { MembroGruppo } from '../archivio/archivio';
 import { useEffect, useRef, useState } from 'react';
 import { elenco, tavoli, type Archivio } from '../archivio/archivio';
 import type { Elementi } from '../creazione/personalizzati';
@@ -46,11 +48,14 @@ export function ElencoTavoli({ archivio, apri, crea }: { archivio: Archivio; apr
 }
 
 // ───────── Il tavolo, come lo prepara il master: si salva a ogni tocco ─────────
-export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi }: {
+export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [], apriMembro, togliMembro }: {
   tavolo: Tavolo;
   cambia: (t: Tavolo) => void;
   elimina: () => void;
   mieiElementi: Elementi;
+  membri?: MembroGruppo[];
+  apriMembro?: (m: MembroGruppo) => void;
+  togliMembro?: (id: string) => void;
 }) {
   const [stato, setStato] = useState<string | null>(null);
   const escludi = tavolo.fonti.escludi ?? [];
@@ -172,6 +177,8 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi }: {
       <textarea id="note-tavolo" value={tavolo.note ?? ''} onChange={(e) => cambia({ ...tavolo, note: e.target.value })} rows={4} maxLength={2000}
         placeholder="Ambientazione, data della sessione, cose da sapere" className="w-full rounded-lg border border-bordo bg-superficie p-3 text-base text-testo" />
 
+      <Gruppo gruppo={membri} apri={apriMembro} togli={togliMembro} />
+
       <div className="mt-6 space-y-2 border-t border-bordo pt-4">
         <button onClick={condividi} disabled={!tavolo.nome.trim()} className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo-2">
           {tavolo.nome.trim() ? 'Condividi il link ai giocatori' : 'Dai un nome al tavolo per condividerlo'}
@@ -181,6 +188,54 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi }: {
         <button onClick={() => window.confirm(`Eliminare il tavolo «${tavolo.nome || 'senza nome'}»? I personaggi già creati non cambiano.`) && elimina()}
           className="h-12 w-full rounded-xl border border-attenzione text-base text-attenzione">Elimina il tavolo</button>
       </div>
+    </section>
+  );
+}
+
+// ───────── Il gruppo del master (21/11) ─────────
+function Gruppo({ gruppo, apri, togli }: { gruppo: MembroGruppo[]; apri?: (m: MembroGruppo) => void; togli?: (id: string) => void }) {
+  const righe = gruppo.map((m) => ({ m, r: rigaGruppo(m.id, m.bozza) })).filter((x): x is { m: MembroGruppo; r: RigaGruppo } => !!x.r);
+  const sintesi = riassuntoGruppo(righe.map((x) => x.r));
+  return (
+    <section className="mt-6 border-t border-bordo pt-4" aria-labelledby="titolo-gruppo">
+      <h2 id="titolo-gruppo" className="font-titolo text-lg text-accento">Il gruppo {righe.length > 0 && <span className="font-sans text-sm text-testo-2">({righe.length})</span>}</h2>
+      {righe.length === 0 ? (
+        <p className="mt-1 text-sm text-testo-2">Quando un giocatore ti manda la sua scheda con il link, aprila e tocca «Aggiungi al gruppo»: qui vedrai tutti i personaggi insieme.</p>
+      ) : (
+        <>
+          <ul className="mt-2 space-y-2">
+            {righe.map(({ m, r }) => (
+              <li key={m.id} className="rounded-xl border border-bordo bg-superficie">
+                <button onClick={() => apri?.(m)} className="w-full p-3 text-left">
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="text-base font-medium text-testo">{r.nome}</span>
+                    {r.avvisi > 0 && <span className="text-xs text-attenzione">{r.avvisi} da controllare</span>}
+                  </span>
+                  <span className="block text-xs text-testo-2">{r.chi}</span>
+                  <span className="mt-2 grid grid-cols-5 gap-1 text-center">
+                    {[['CA', r.ca], ['PF', r.pf], ['Iniz.', r.iniziativa], ['Perc.', r.percezione], ['CD', r.cd ?? '—']].map(([e, v]) => (
+                      <span key={String(e)} className="rounded-lg bg-sfondo py-1">
+                        <span className="block text-base font-medium text-testo">{v}</span>
+                        <span className="block text-xs text-testo-2">{e}</span>
+                      </span>
+                    ))}
+                  </span>
+                </button>
+                {togli && (
+                  <div className="flex justify-end border-t border-bordo px-2">
+                    <button onClick={() => window.confirm(`Togliere ${r.nome} dal gruppo?`) && togli(m.id)} className="min-h-11 px-3 text-sm text-attenzione">Togli dal gruppo</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 rounded-xl border border-bordo bg-superficie p-3 text-sm text-testo">
+            {sintesi.migliorPercezione && <p><span className="text-testo-2">Percezione passiva più alta:</span> {sintesi.migliorPercezione.nome} ({sintesi.migliorPercezione.percezione})</p>}
+            <p className="mt-1"><span className="text-testo-2">Lingue del gruppo:</span> {sintesi.lingue.map((l) => `${l.lingua}${righe.length > 1 && l.chi.length === 1 ? ` (solo ${l.chi[0]})` : ''}`).join(', ')}</p>
+          </div>
+          <p className="mt-2 text-xs text-testo-2">Tocca un personaggio per aprire la sua scheda. Se il giocatore ti rimanda il link, la scheda si aggiorna.</p>
+        </>
+      )}
     </section>
   );
 }

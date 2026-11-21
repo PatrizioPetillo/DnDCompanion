@@ -11,7 +11,7 @@ describe('Scheda di Travis', () => {
   });
   it('combattimento: i numeri con la somma, tiri salvezza, attacchi', () => {
     const n = Object.fromEntries(r.combattimento.numeri.map((x) => [x.id, x.valore]));
-    expect(n).toEqual({ ca: '14', pf: '7', iniziativa: '+3', velocita: '9 metri', competenza: '+2', percezione: '12' });
+    expect(n).toEqual({ ca: '11', pf: '7', iniziativa: '+3', velocita: '9 metri', competenza: '+2', percezione: '12' });
     expect(r.combattimento.numeri.find((x) => x.id === 'ca')!.somma!.termini[0].etichetta).toBe('Base');   // Armatura magica 13 + DES
     expect(r.combattimento.tiriSalvezza.filter((t) => t.competente).map((t) => [t.car, t.valore])).toEqual([['INT', '+5'], ['SAG', '+4']]);
     expect(r.combattimento.attacchi.map((a) => a.id)).toEqual(['dagger', 'quarterstaff', 'unarmed-strike']);

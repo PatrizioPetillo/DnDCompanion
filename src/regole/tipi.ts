@@ -229,6 +229,24 @@ export interface Personaggio {
   ruolo?: { aspetto?: string; trattoVisibile?: string; oggetto?: string; segreto?: string; storia?: string };   // storia: 19/11
   // Data in cui il giocatore ha salvato il personaggio (19/11): da lì le scelte della creazione restano bloccate
   conclusoIl?: string;
+  // Cosa indossa e impugna (21/11). Senza scelta: l'armatura migliore che ha e lo scudo se ce l'ha.
+  // attivi: incantesimi che cambiano la CA mentre durano (Armatura magica); finiscono con il riposo lungo.
+  equip?: { armatura?: Id | 'nessuna'; scudo?: boolean; attivi?: Id[] };
+  // Oggetti magici dati dal master (21/11): bonus solo se sintonizzati quando serve (massimo 3, SRD p. 102-103)
+  oggettiMagici?: OggettoMagicoPosseduto[];
+}
+
+export interface OggettoMagicoPosseduto {
+  uid: string;
+  id: Id;                                   // un id di OGGETTI_MAGICI, oppure 'personalizzato'
+  variante?: string;                        // '+1', 'hill', 'greater'…
+  base?: Id;                                // l'arma (ARMI) o l'armatura (oggetti) per gli oggetti «a scelta»
+  sintonizzato?: boolean;
+  cariche?: number;                         // cariche rimaste
+  quantita?: number;                        // pozioni, pergamene, munizioni
+  nota?: string;                            // per la pergamena: quale incantesimo; o altro
+  // Oggetto di un altro manuale o dell'SRD non in elenco: nome e bonus li scrive il giocatore
+  personalizzato?: { nome: string; sintonia: boolean; riga?: string; cariche?: number; bonus: { ca?: number; ts?: number; attaccoIncantesimi?: number; cdIncantesimi?: number } };
 }
 
 // ───────────── Risultato del motore ─────────────
@@ -288,9 +306,10 @@ export interface Scheda {
   competenza: number;
   pf: Numero;
   iniziativa: Numero;
-  ca: { formule: { id: Id; nome: string; valore: Numero }[]; migliore: Id };
+  // migliore: la CA più alta possibile; attuale: quella con ciò che indossa e gli incantesimi attivi (21/11)
+  ca: { formule: { id: Id; nome: string; valore: Numero; incantesimo?: boolean }[]; migliore: Id; attuale: Id; indossata: Id | null; scudo: boolean };
   tiriSalvezza: Record<Car, { totale: number; competente: boolean }>;
-  abilita: Record<Id, { totale: number; competente: boolean; maestria: boolean; fonti: string[] }>;
+  abilita: Record<Id, { totale: number; competente: boolean; maestria: boolean; fonti: string[]; svantaggio?: string }>;
   percezionePassiva: number;
   velocita: number;
   resistenze: Id[];

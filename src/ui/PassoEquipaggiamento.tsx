@@ -10,6 +10,7 @@ import type { Numero } from '../regole/tipi';
 import { Separatore } from './PassoMagia';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 import { Tendina } from './Tendina';
+import { Indossato } from './Indossato';
 import { STRUMENTI_MUSICALI } from '../regole/dati/base';
 
 // «Forza −1 + Competenza 2 = +1»: il segno sta sul valore, così una caratteristica negativa si legge bene
@@ -34,7 +35,7 @@ export function PassoEquipaggiamento({ bozza, cambia }: { bozza: Bozza; cambia: 
   const s = calcolaScheda(pg);
   const classe = DATI.classi[pg.classe];
   const bg = DATI.background[pg.background];
-  const ca = s.ca.formule.find((f) => f.id === s.ca.migliore)!;
+  const ca = s.ca.formule.find((f) => f.id === s.ca.attuale)!;
   const avvisi = statoPassi(bozza).equipaggiamento.avvisi.filter((a) => !a.accettato);
   const extra = pg.equipaggiamento.extra ?? [];
   // Oggetti «a scelta» da decidere qui (lo strumento musicale del bardo)
@@ -88,6 +89,7 @@ export function PassoEquipaggiamento({ bozza, cambia }: { bozza: Bozza; cambia: 
           {s.ca.formule.filter((f) => f.id !== ca.id).map((f) => <p key={f.id}>{f.nome}: {f.valore.totale}</p>)}
         </div>
       )}
+      <Indossato bozza={bozza} scheda={s} cambia={cambia} />
 
       {avvisi.length > 0 && (
         <ul className="mt-3 space-y-2">

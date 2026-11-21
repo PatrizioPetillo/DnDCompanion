@@ -8,6 +8,7 @@ import { DATI } from '../regole';
 import { ABILITA, NOME_CAR } from '../regole/dati/base';
 import { metri } from '../regole/misure';
 import { Fascia } from './Illustrazione';
+import { cosaOttieniSpecie } from '../creazione/cosa-ottieni-specie';
 import type { Scelta, Specie } from '../regole/tipi';
 import { istanzaVersatile, RiquadroIniziato } from './RiquadroIniziato';
 import { Tendina } from './Tendina';
@@ -91,9 +92,13 @@ export function PassoSpecie({ bozza, scegli, cambia, salvaSpecie, eliminaSpecie 
                 </div>
               )}
 
+              {/* Come per la classe (21/11): toccando la specie si aprono i suoi tratti, poi le scelte */}
+              {scelta && <TrattiSpecie specieId={sp.id} />}
+
               {/* Le scelte della specie stanno nello stesso riquadro, sotto i tratti */}
               {scelta && scelte.length > 0 && (
                 <div className="space-y-3 border-t border-bordo px-4 pb-4 pt-3">
+                  <h3 className="text-sm font-medium text-testo">Le tue scelte</h3>
                   {scelte.map(({ scelta: s, titolo, opzioni }) => Array.from({ length: Math.max(1, s.quantita) }, (_, k) => {
                     // Una tendina per ogni scelta (2 abilità = 2 tendine); quella già presa nell'altra è spenta
                     const valori = Array.from({ length: s.quantita }, (_, i) => bozza.scelte[s.id]?.[i] ?? '');
@@ -133,5 +138,23 @@ export function PassoSpecie({ bozza, scegli, cambia, salvaSpecie, eliminaSpecie 
           salva={(sp) => { salvaSpecie(sp); setModulo(null); setAvviso(null); if (!bozza.specie) scegli(sp.id); }} />
       )}
     </section>
+  );
+}
+
+function TrattiSpecie({ specieId }: { specieId: string }) {
+  const righe = cosaOttieniSpecie(specieId);
+  if (!righe.length) return null;
+  return (
+    <div className="border-t border-bordo px-4 pb-4 pt-3">
+      <h3 className="mb-2 text-sm font-medium text-testo">Cosa ottieni</h3>
+      <ul className="space-y-2 text-sm leading-relaxed">
+        {righe.map((t) => (
+          <li key={t.nome}>
+            <span className="font-medium text-testo">{t.nome}.</span> <span className="text-testo-2">{t.testo}</span>
+            {t.pagina && <span className="ml-1 whitespace-nowrap text-xs text-testo-2/80">SRD p. {t.pagina}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

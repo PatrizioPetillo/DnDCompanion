@@ -9,7 +9,7 @@ const stati = (o: ReturnType<typeof opzioniIncantesimi>) => Object.fromEntries(o
 describe('Blocchi per fonte', () => {
   it('Travis: Mago e Iniziato alla Magia (Chierico), ognuno con CD, attacco e contatori', () => {
     const b = blocchiMagia(P.TRAVIS);
-    expect(b.map((x) => x.nome)).toEqual(['Classe: Mago', 'Talento: Iniziato alla Magia (Chierico)']);
+    expect(b.map((x) => x.nome)).toEqual(['Classe: Mago', 'Talento: Iniziato alla magia (Chierico)']);
     const mago = b[0];
     expect(mago.cd?.totale).toBe(13);
     expect(mago.cd?.termini.map((t) => t.etichetta)).toEqual(['Base', 'Competenza', 'Intelligenza']);
@@ -20,7 +20,7 @@ describe('Blocchi per fonte', () => {
       { tipo: 'libro', etichetta: 'Nel libro', scelti: 6, attesi: 6 },
       { tipo: 'preparati', etichetta: 'Preparati', scelti: 4, attesi: 4 },
     ]);
-    expect(mago.capacita.map((c) => c.nome)).toEqual(['Rituali', 'Recupero arcano']);
+    expect(mago.capacita.map((c) => c.nome)).toEqual(['Adepto dei rituali', 'Recupero arcano']);
     expect(b[1].contatori).toMatchObject([
       { tipo: 'trucchetti', etichetta: 'Trucchetti', scelti: 2, attesi: 2 },
       { tipo: 'incantesimi', etichetta: 'Incantesimo di 1°', scelti: 1, attesi: 1, voci: ['healing-word'] },
@@ -45,7 +45,7 @@ describe('Opzioni da scegliere', () => {
     const o = opzioniIncantesimi(P.TRAVIS, 'wizard', 'trucchetti');
     const luce = o.find((x) => x.id === 'light')!;
     expect(luce.stato).toBe('altraFonte');
-    expect(luce.fonte).toBe('Talento: Iniziato alla Magia (Chierico)');
+    expect(luce.fonte).toBe('Talento: Iniziato alla magia (Chierico)');
   });
   it('il mago prepara solo dal libro (p. 78)', () => {
     const o = opzioniIncantesimi(P.TRAVIS, 'wizard', 'preparati');

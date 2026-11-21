@@ -1,6 +1,6 @@
 // Schermata Caratteristiche (sezione 5.2, passo 5). Regole: SRD p. 21.
 import { describe, expect, it } from 'vitest';
-import { abilitaPer, assegna, contatoreAbilitaClasse, contatoreMaestria, daCompletare, scegliMaestria, opzioniPunteggio, punteggiIniziali, scegliAbilitaClasse, spesaPointBuy, statoAbilita } from '../src/creazione/caratteristiche';
+import { abilitaPer, assegna, contatoreAbilitaClasse, contatoreMaestria, daCompletare, scegliMaestria, scegliAbilitaClasse, statoAbilita, opzioniPunteggio, punteggiIniziali, spesaPointBuy } from '../src/creazione/caratteristiche';
 import { prossimoPasso, statoPassi, type Bozza } from '../src/creazione/percorso';
 import { calcolaScheda } from '../src/regole';
 import * as P from './personaggi';
@@ -130,7 +130,6 @@ describe('Riquadri da completare (bordo evidenziato e aperti)', () => {
     expect(['FOR', 'DES', 'COS', 'INT', 'SAG', 'CAR'].filter((c) => daCompletare(b, c as 'FOR'))).toEqual(['INT']);
   });
 });
-
 
 describe('Maestria del ladro nella griglia (p. 61)', () => {
   it('contatore: il ladro ne sceglie 2, il mago nessuna', () => {

@@ -88,7 +88,7 @@ describe('Attacchi con le armi (p. 22-23, 89-91)', () => {
     expect(b.colpire.totale).toBe(1);
     expect(b.danni).toMatchObject({ testo: '1d6 − 1 contundenti', testoDueMani: '1d8 − 1 contundenti' });
   });
-  it('colpo senz\'armi: FOR + competenza, 1 + FOR contundenti (p. 191)', () => {
+  it('colpo senz\'armi: FOR + competenza, 1 + FOR contundenti (p. 190)', () => {
     const c = att(P.BARBARO, 'unarmed-strike');
     expect(c.colpire.totale).toBe(5);
     expect(c.danni.testo).toBe('4 contundenti');

@@ -1,4 +1,4 @@
-// Iniziato alla Magia scelto dove nasce: nel Background (Accolito, Saggio) o nella Specie (umano con Versatile).
+// Iniziato alla Magia scelto dove nasce: nel Background (Accolito, Sapiente) o nella Specie (umano con Versatile).
 // Lista (se non è fissata dal background), caratteristica, trucchetti e incantesimo di 1°. Gli stessi dati si
 // vedono e si cambiano anche nella schermata Magia (SRD p. 83, 87).
 import { blocchiMagia } from '../creazione/magia';
@@ -31,7 +31,7 @@ export function RiquadroIniziato({ bozza, cambia, istanza }: { bozza: Bozza; cam
   return (
     <fieldset className={`mt-2 rounded-xl border bg-superficie p-4 ${incompleto ? 'border-attenzione' : 'border-bordo'}`}>
       <legend className="px-1 text-sm font-medium text-testo">
-        Iniziato alla Magia{lista ? ` (${NOME_LISTA[lista]})` : ''}
+        Iniziato alla magia{lista ? ` (${NOME_LISTA[lista]})` : ''}
       </legend>
       <p className="mb-3 text-sm text-testo-2">
         2 trucchetti e 1 incantesimo di 1° sempre preparato: lo lanci gratis 1 volta per riposo lungo, e anche con gli slot.

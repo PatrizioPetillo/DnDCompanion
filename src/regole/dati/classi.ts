@@ -33,7 +33,7 @@ export const CLASSI: Record<string, Classe> = {
       { id: 'barbarian-unarmored-defense', nome: 'Difesa senza armatura', nomeEn: 'Unarmored Defense', livello: 1, srd: { pagina: 29 }, effetti: [
         { tipo: 'formulaCA', formula: { id: 'difesa-senza-armatura-barbaro', nome: 'Difesa senza armatura', base: 10, caratteristiche: ['DES', 'COS'], richiede: 'nessunaArmatura', srd: { pagina: 29 } } },
       ] },
-      { id: 'barbarian-weapon-mastery', nome: 'Padronanza delle armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 29 }, effetti: [maestriaArmi('barbarian', 2, 29, 'mischia')] },
+      { id: 'barbarian-weapon-mastery', nome: 'Padronanza d\'armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 29 }, effetti: [maestriaArmi('barbarian', 2, 29, 'mischia')] },
     ],
   },
 
@@ -161,7 +161,7 @@ export const CLASSI: Record<string, Classe> = {
         { tipo: 'risorsa', risorsa: { id: 'second-wind', nome: 'Recuperare energie', usi: 2, dettaglio: '1d10 + livello da guerriero',
           recupero: [{ riposo: 'breve', quanti: 1 }, { riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 48 } } },
       ] },
-      { id: 'fighter-weapon-mastery', nome: 'Padronanza delle armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 48 }, effetti: [maestriaArmi('fighter', 3, 48)] },
+      { id: 'fighter-weapon-mastery', nome: 'Padronanza d\'armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 48 }, effetti: [maestriaArmi('fighter', 3, 48)] },
     ],
   },
 
@@ -208,7 +208,7 @@ export const CLASSI: Record<string, Classe> = {
           preparati: { numero: 2, da: 'lista' }, puoUsareSlot: true, slot: 'normali',
           cambio: { quando: 'riposoLungo', quanti: 1, srd: { pagina: 54 } }, srd: { pagina: 54 } } },
       ] },
-      { id: 'paladin-weapon-mastery', nome: 'Padronanza delle armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 54 }, effetti: [maestriaArmi('paladin', 2, 54)] },
+      { id: 'paladin-weapon-mastery', nome: 'Padronanza d\'armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 54 }, effetti: [maestriaArmi('paladin', 2, 54)] },
     ],
   },
 
@@ -236,7 +236,7 @@ export const CLASSI: Record<string, Classe> = {
       { id: 'favored-enemy', nome: 'Nemico prescelto', nomeEn: 'Favored Enemy', livello: 1, srd: { pagina: 58 }, effetti: [
         { tipo: 'nota', testo: 'Marchio del cacciatore sempre preparato, 2 lanci senza slot per riposo lungo (SRD p. 58)' },
       ] },
-      { id: 'ranger-weapon-mastery', nome: 'Padronanza delle armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 58 }, effetti: [maestriaArmi('ranger', 2, 58)] },
+      { id: 'ranger-weapon-mastery', nome: 'Padronanza d\'armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 58 }, effetti: [maestriaArmi('ranger', 2, 58)] },
     ],
   },
 
@@ -259,11 +259,11 @@ export const CLASSI: Record<string, Classe> = {
       { id: 'sneak-attack', nome: 'Attacco furtivo', nomeEn: 'Sneak Attack', livello: 1, srd: { pagina: 61 }, effetti: [
         { tipo: 'valoreClasse', id: 'sneak-attack', nome: 'Attacco furtivo', valore: '1d6', srd: { pagina: 62 } },
       ] },
-            { id: 'thieves-cant', nome: 'Gergo dei ladri', nomeEn: 'Thieves’ Cant', livello: 1, srd: { pagina: 62 }, effetti: [
+      { id: 'thieves-cant', nome: 'Gergo ladresco', nomeEn: 'Thieves’ Cant', livello: 1, srd: { pagina: 62 }, effetti: [
         { tipo: 'lingua', ids: ['thieves-cant'] },
         { tipo: 'scelta', scelta: { id: 'rogue.lingua', tipo: 'lingua', quantita: 1, opzioni: Object.keys({ ...LINGUE_STANDARD, ...LINGUE_RARE }).filter((l) => l !== 'thieves-cant'), srd: { pagina: 62 } } },
       ] },
-      { id: 'rogue-weapon-mastery', nome: 'Padronanza delle armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 62 }, effetti: [maestriaArmi('rogue', 2, 62, 'ladro')] },
+      { id: 'rogue-weapon-mastery', nome: 'Padronanza d\'armi', nomeEn: 'Weapon Mastery', livello: 1, srd: { pagina: 62 }, effetti: [maestriaArmi('rogue', 2, 62, 'ladro')] },
     ],
   },
 
@@ -308,8 +308,7 @@ export const CLASSI: Record<string, Classe> = {
     patto: { 1: { numero: 1, livello: 1 } },
     features: [
       { id: 'eldritch-invocations', nome: 'Suppliche occulte', nomeEn: 'Eldritch Invocations', livello: 1, srd: { pagina: 70 }, effetti: [
-        // Versione 1: solo le suppliche senza prerequisiti che il test usa; le altre arrivano con il passo «creazione».
-                // Le suppliche senza prerequisiti di livello (p. 72-73): le uniche possibili al livello 1
+        // Le suppliche senza prerequisiti di livello (p. 72-73): le uniche possibili al livello 1
         { tipo: 'opzioni', scelta: { id: 'warlock.suppliche', tipo: 'opzione', quantita: 1, opzioni: ['armor-of-shadows', 'eldritch-mind', 'pact-of-the-chain', 'pact-of-the-blade', 'pact-of-the-tome'], srd: { pagina: 70 } }, effetti: {
           'armor-of-shadows': [
             { tipo: 'formulaCA', formula: { id: 'armatura-magica', nome: 'Armatura magica (Armatura delle ombre)', base: 13, caratteristiche: ['DES'], richiede: 'nessunaArmatura', srd: { pagina: 72 } } },
@@ -360,7 +359,7 @@ export const CLASSI: Record<string, Classe> = {
           cambio: { quando: 'riposoLungo', quanti: 'tutti', srd: { pagina: 78 } }, cambioTrucchetti: { quando: 'riposoLungo', quanti: 1, srd: { pagina: 77 } },
           srd: { pagina: 77 } } },
       ] },
-      { id: 'ritual-adept', nome: 'Rituali', nomeEn: 'Ritual Adept', livello: 1, srd: { pagina: 78 }, effetti: [
+      { id: 'ritual-adept', nome: 'Adepto dei rituali', nomeEn: 'Ritual Adept', livello: 1, srd: { pagina: 78 }, effetti: [
         { tipo: 'nota', testo: 'Puoi lanciare come rituale qualsiasi incantesimo rituale del tuo libro, anche se non è preparato (SRD p. 78)' },
       ] },
       { id: 'arcane-recovery', nome: 'Recupero arcano', nomeEn: 'Arcane Recovery', livello: 1, srd: { pagina: 78 }, effetti: [

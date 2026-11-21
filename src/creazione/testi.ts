@@ -20,12 +20,12 @@ export const SCHEDE_CLASSE: Record<string, { alTavolo: string; principali: strin
 
 // Nomi degli strumenti dei background (p. 83) e dei giochi (p. 94). Nomi italiani da verificare con il manuale.
 export const NOMI_STRUMENTI: Record<string, string> = {
-  'calligraphers-supplies': 'Strumenti da calligrafo',
+  'calligraphers-supplies': 'Scorte da calligrafo',
   'thieves-tools': 'Arnesi da scasso',
   dice: 'Dadi',
   dragonchess: 'Scacchi dei draghi',
   'playing-cards': 'Carte da gioco',
-  'three-dragon-ante': 'Tre draghi',
+  'three-dragon-ante': 'Tre draghi al buio',
 };
 
 // Nomi leggibili delle scelte tolte quando si cambia classe o background (i test usano gli id interni).
@@ -33,15 +33,14 @@ const PARTI: Record<string, string> = {
   abilita: 'le abilità della classe', trucchetti: 'i trucchetti', incantesimo1: 'l\'incantesimo di 1°',
   caratteristica: 'la caratteristica da incantatore', gioco: 'il gioco', strumenti: 'gli strumenti', strumento: 'lo strumento',
   'maestria-armi': 'la padronanza delle armi', maestria: 'la maestria', lingua: 'la lingua', stile: 'lo stile di combattimento',
-  'ordine-divino': 'l\'ordine divino', 'ordine-primordiale': 'l\'ordine primordiale', suppliche: 'la supplica occulta',
-  versatile: 'il talento di Versatile', abile: 'l\'abilità di Abile', competenze: 'le 3 abilità',
-  'sensi-acuti': 'l\'abilità di Sensi acuti', lignaggio: 'la stirpe', eredita: 'l\'eredità', antenato: 'l\'antenato',
+  'ordine-divino': 'l\'ordine divino', versatile: 'il talento di Versatile', abile: 'l\'abilità di Pluriabilità', competenze: 'le 3 abilità',
+  'sensi-acuti': 'l\'abilità di Sensi acuti', lignaggio: 'la stirpe', eredita: 'l\'eredità', antenato: 'l\'antenato', 'ordine-primordiale': 'l\'ordine primordiale', suppliche: 'la supplica occulta',
 };
 export function descriviTolte(tolte: string[], nomi: Record<string, string>): string {
   return tolte.map((t) => {
     const [chi, parte] = t.split('.');
     if (!parte) return t.replace(/\(.*\)/, '').trim();
     const cosa = PARTI[parte] ?? parte;
-    return chi === 'magic-initiate' ? `${cosa} di Iniziato alla Magia` : nomi[chi] ? `${cosa} (${nomi[chi]})` : cosa;
+    return chi === 'magic-initiate' ? `${cosa} di Iniziato alla magia` : nomi[chi] ? `${cosa} (${nomi[chi]})` : cosa;
   }).join(', ');
 }

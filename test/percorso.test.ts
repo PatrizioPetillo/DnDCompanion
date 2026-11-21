@@ -224,7 +224,7 @@ describe('Cosa manca, in parole', () => {
     void _tolta;
     const v = statoPassi({ ...P.TRAVIS_SAGGIO, scelte }).magia;
     expect(v.stato).toBe('da-fare');
-    expect(v.cosaManca).toEqual(['Talento: Iniziato alla Magia: scegli la caratteristica per gli incantesimi (0 su 1)']);
+    expect(v.cosaManca).toEqual(['Talento: Iniziato alla magia: scegli la caratteristica per gli incantesimi (0 su 1)']);
   });
   it('classe e background: le cose da fare con il loro nome', () => {
     const b: Bozza = { ...bozzaVuota(), classe: 'rogue', background: 'sage' };

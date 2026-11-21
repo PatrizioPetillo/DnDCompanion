@@ -47,7 +47,7 @@ describe('Scheda di Travis', () => {
     expect(righe['Armature']).toBe('nessuna');
     expect(righe['Strumenti']).toBe('Scorte da calligrafo');
     expect(r.chiE.privilegi).toContain('Talento: Allerta');
-    expect(r.chiE.privilegi).toContain('Talento: Iniziato alla Magia (Chierico)');
+    expect(r.chiE.privilegi).toContain('Talento: Iniziato alla magia (Chierico)');
   });
 });
 
@@ -115,6 +115,7 @@ describe('La storia del personaggio (19/11)', () => {
     expect(riepilogo(P.TRAVIS)!.chiE.righe.some((r) => r.etichetta === 'La sua storia')).toBe(false);
     const storia = 'Nato a Vallecupa.\nLa madre è maga di corte.';
     const b = { ...P.TRAVIS, ruolo: { ...P.TRAVIS.ruolo, storia: `  ${storia}  ` } };
+    expect(riepilogo(b)!.chiE.righe.at(-1)).toEqual({ etichetta: 'La sua storia', valore: storia });
     const letto = importaJSON(esportaJSON(b));
     expect('bozza' in letto && letto.bozza.ruolo?.storia).toBe(`  ${storia}  `);
   });

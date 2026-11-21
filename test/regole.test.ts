@@ -3,8 +3,8 @@
 import { describe, expect, it } from 'vitest';
 import { calcolaScheda } from '../src/regole';
 import type { Car, Personaggio, Scheda } from '../src/regole/tipi';
-import { ALLINEAMENTI } from '../src/regole/dati/base';
 import * as P from './personaggi';
+import { ALLINEAMENTI } from '../src/regole/dati/base';
 
 const CAR: Car[] = ['FOR', 'DES', 'COS', 'INT', 'SAG', 'CAR'];
 
@@ -263,7 +263,7 @@ verifica('12. Mago · Umano · Accolito — Travis', P.TRAVIS, {
   expect(w.preparati).toEqual({ limite: 4, scelti: ['mage-armor', 'shield', 'feather-fall', 'find-familiar'] });
   expect(w.cambio).toMatchObject({ quando: 'riposoLungo', quanti: 'tutti' });
   const mi = s.magia.find((m) => m.id === 'magic-initiate')!;
-  expect(mi.nome).toBe('Talento: Iniziato alla Magia (Chierico)');   // lista fissata dall'Accolito (p. 83)
+  expect(mi.nome).toBe('Talento: Iniziato alla magia (Chierico)');   // lista fissata dall'Accolito (p. 83)
   expect(mi.trucchetti).toEqual({ attesi: 2, scelti: ['guidance', 'light'] });
   expect(mi.semprePreparati).toEqual(['healing-word']);
   expect(mi.lanciGratuiti).toEqual({ incantesimi: ['healing-word'], usi: 1, recupero: 'lungo' });
@@ -279,21 +279,21 @@ verifica('12 bis. Travis, variante Saggio', P.TRAVIS_SAGGIO, {
   magia: { wizard: { cd: 13, attacco: 5, car: 'INT' }, 'magic-initiate': { cd: 13, attacco: 5, car: 'INT' } },
   risorse: { 'arcane-recovery': 1 }, slot: [2], avvisi: ['scelta-non-valida:origine.lingue:undercommon'],
 }, (s) => {
-  expect(s.magia.find((m) => m.id === 'magic-initiate')!.nome).toBe('Talento: Iniziato alla Magia (Mago)');
+  expect(s.magia.find((m) => m.id === 'magic-initiate')!.nome).toBe('Talento: Iniziato alla magia (Mago)');
 });
 
 describe('Lingue (SRD p. 20-21)', () => {
   it('Comune + 2 lingue a scelta', () => {
     expect(calcolaScheda(P.TRAVIS).lingue).toEqual(['common', 'undercommon', 'elvish']);
   });
-    it('Travis: il Sottocomune è raro (p. 20), errore accettato dal master', () => {
+  it('Travis: il Sottocomune è raro (p. 20), errore accettato dal master', () => {
     const a = calcolaScheda(P.TRAVIS).avvisi.find((x) => x.id === 'scelta-non-valida:origine.lingue:undercommon');
     expect(a?.livello).toBe('errore');
     expect(a?.accettato).toBe(true);
     expect(a?.messaggio).toContain('lingua rara');
   });
   it('il ladro aggiunge il Gergo dei ladri e una lingua (p. 62)', () => {
-    expect(calcolaScheda(P.LADRO).lingue).toEqual(['common', 'halfling', 'dwarvish', 'thieves-cant', 'elvish',]);
+    expect(calcolaScheda(P.LADRO).lingue).toEqual(['common', 'halfling', 'dwarvish', 'thieves-cant', 'elvish']);
   });
   it('il druido conosce il Druidico (p. 42)', () => {
     expect(calcolaScheda(P.DRUIDO).lingue).toContain('druidic');
@@ -348,9 +348,9 @@ describe('Iniziato alla Magia preso due volte (ripetibile, lista diversa: p. 87)
   it('Travis: Iniziato (Chierico) dall\'Accolito e Iniziato (Mago) da Versatile, ognuno con la sua CD', () => {
     const s = calcolaScheda(travis2('wizard', 'CAR'));
     const m = Object.fromEntries(s.magia.map((x) => [x.id, x]));
-    expect(m['magic-initiate'].nome).toBe('Talento: Iniziato alla Magia (Chierico)');
+    expect(m['magic-initiate'].nome).toBe('Talento: Iniziato alla magia (Chierico)');
     expect(m['magic-initiate'].cd!.totale).toBe(13);                // INT 17
-    expect(m[MI2].nome).toBe('Talento: Iniziato alla Magia (Mago)');
+    expect(m[MI2].nome).toBe('Talento: Iniziato alla magia (Mago)');
     expect(m[MI2].cd!.totale).toBe(10);                             // CAR 10: 8 + 2 + 0
     expect(m[MI2].attacco!.totale).toBe(2);
     expect(m[MI2].trucchetti.scelti).toEqual(['ray-of-frost', 'prestidigitation']);

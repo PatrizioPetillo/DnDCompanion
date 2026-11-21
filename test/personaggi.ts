@@ -115,7 +115,7 @@ export const WARLOCK = pg({
 export const TRAVIS = pg({
   nome: 'Travis Whippletorn', idea: "Mago appena uscito dall'Accademia, «pronto per il mondo»",
   classe: 'wizard', specie: 'human', background: 'acolyte',
-    // Il Sottocomune è una lingua rara (p. 20): eccezione accettata dal master.
+  // Il Sottocomune è una lingua rara (p. 20): eccezione accettata dal master.
   avvisiAccettati: ['scelta-non-valida:origine.lingue:undercommon'],
   base: [8, 12, 13, 15, 14, 10], bonusBackground: { INT: 2, SAG: 1 },
   scelte: { 'origine.lingue': ['undercommon', 'elvish'], 'human.abile': ['medicine'], 'human.versatile': ['alert'], 'wizard.abilita': ['arcana', 'investigation'],
@@ -130,7 +130,6 @@ export const TRAVIS = pg({
 
 export const TRAVIS_SAGGIO = pg({
   nome: 'Travis, variante Saggio', classe: 'wizard', specie: 'human', background: 'sage',
-    // Il Sottocomune è una lingua rara (p. 20): eccezione accettata dal master.
   avvisiAccettati: ['scelta-non-valida:origine.lingue:undercommon'],
   base: [8, 14, 14, 15, 12, 8], bonusBackground: { INT: 2, SAG: 1 },
   scelte: { 'origine.lingue': ['undercommon', 'elvish'], 'human.abile': ['insight'], 'human.versatile': ['alert'], 'wizard.abilita': ['investigation', 'medicine'],

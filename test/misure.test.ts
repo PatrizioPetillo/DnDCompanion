@@ -26,8 +26,8 @@ describe('Nomi ufficiali (SRD 5.2.1 in italiano)', () => {
     expect(DATI.background.sage.nome).toBe('Sapiente');
     expect(DATI.talenti.skilled.nome).toBe('Abile');
     expect(DATI.talenti['savage-attacker'].nome).toBe('Aggressore selvaggio');
-    expect(DATI.talenti['magic-initiate'].nome).toBe('Iniziato alla Magia');
+    expect(DATI.talenti['magic-initiate'].nome).toBe('Iniziato alla magia');
     expect(DATI.specie.human.tratti.find((t) => t.id === 'skillful')?.nome).toBe('Pluriabilità');
-    expect(DATI.classi.rogue.features.find((f) => f.id === 'thieves-cant')?.nome).toBe('Gergo dei ladri');
+    expect(DATI.classi.rogue.features.find((f) => f.id === 'thieves-cant')?.nome).toBe('Gergo ladresco');
   });
 });

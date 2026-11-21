@@ -38,6 +38,7 @@ export const BACKGROUND: Record<string, Background> = {
     caratteristiche: ['FOR', 'DES', 'COS'],
     talento: { talento: 'savage-attacker' },
     abilita: ['athletics', 'intimidation'],
+    // Un tipo di gioco (p. 83); varianti: dadi, scacchi dei draghi, carte, tre draghi (p. 94)
     strumento: { id: 'soldier.gioco', tipo: 'strumento', quantita: 1, opzioni: ['dice', 'dragonchess', 'playing-cards', 'three-dragon-ante'], srd: { pagina: 83 } },
     equipaggiamento: {
       A: { oggetti: [{ oggetto: 'spear', quantita: 1 }, { oggetto: 'shortbow', quantita: 1 }, { oggetto: 'arrows', quantita: 20 }, { oggetto: 'gaming-set', quantita: 1 }, { oggetto: 'healers-kit', quantita: 1 }, { oggetto: 'quiver', quantita: 1 }, { oggetto: 'travelers-clothes', quantita: 1 }], mo: 14 },
@@ -53,7 +54,7 @@ export const TALENTI: Record<string, Talento> = {
       { tipo: 'nota', testo: 'Scambio di iniziativa con un alleato consenziente (SRD p. 87)' }],
   },
   'magic-initiate': {
-    id: 'magic-initiate', nome: 'Iniziato alla Magia', nomeEn: 'Magic Initiate', srd: { pagina: 87 }, categoria: 'origine',
+    id: 'magic-initiate', nome: 'Iniziato alla magia', nomeEn: 'Magic Initiate', srd: { pagina: 87 }, categoria: 'origine',
     ripetibile: { condizione: 'listaDiversa' },
     effetti: [
       { tipo: 'scelta', scelta: { id: 'magic-initiate.lista', tipo: 'listaIncantesimi', quantita: 1, opzioni: ['cleric', 'druid', 'wizard'], srd: { pagina: 87 } } },
@@ -61,7 +62,7 @@ export const TALENTI: Record<string, Talento> = {
       { tipo: 'scelta', scelta: { id: 'magic-initiate.trucchetti', tipo: 'trucchetto', quantita: 2, filtro: { lista: { daScelta: 'magic-initiate.lista' }, livello: 0 }, srd: { pagina: 87 } } },
       { tipo: 'scelta', scelta: { id: 'magic-initiate.incantesimo1', tipo: 'incantesimo', quantita: 1, filtro: { lista: { daScelta: 'magic-initiate.lista' }, livello: 1 }, srd: { pagina: 87 } } },
       { tipo: 'magia', concessione: {
-        id: 'magic-initiate', nome: 'Talento: Iniziato alla Magia', fonte: { tipo: 'talento', id: 'magic-initiate' },
+        id: 'magic-initiate', nome: 'Talento: Iniziato alla magia', fonte: { tipo: 'talento', id: 'magic-initiate' },
         lista: { daScelta: 'magic-initiate.lista' }, caratteristica: { daScelta: 'magic-initiate.caratteristica' },
         trucchetti: { quantita: 2, scelta: 'magic-initiate.trucchetti' },
         incantesimiScelti: { scelta: 'magic-initiate.incantesimo1' },

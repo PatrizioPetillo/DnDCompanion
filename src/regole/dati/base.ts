@@ -46,13 +46,13 @@ export const OGGETTI: Record<string, Oggetto> = Object.fromEntries([
   arm('studded-leather-armor', 'Armatura di cuoio borchiato', 'Studded Leather Armor', 'leggera', 12, null, 45),
   arm('hide-armor', 'Armatura di pelle', 'Hide Armor', 'media', 12, 2, 10),
   arm('chain-shirt', 'Giaco di maglia', 'Chain Shirt', 'media', 13, 2, 50),
-  arm('scale-mail', 'Corazza di scaglie', 'Scale Mail', 'media', 14, 2, 50, undefined, true),
+  arm('scale-mail', 'Corazza a scaglie', 'Scale Mail', 'media', 14, 2, 50, undefined, true),
   arm('breastplate', 'Corazza di piastre', 'Breastplate', 'media', 14, 2, 400),
   arm('half-plate-armor', 'Mezza armatura', 'Half Plate Armor', 'media', 15, 2, 750, undefined, true),
-  arm('ring-mail', 'Cotta ad anelli', 'Ring Mail', 'pesante', 14, 0, 30, undefined, true),
+  arm('ring-mail', 'Corazza ad anelli', 'Ring Mail', 'pesante', 14, 0, 30, undefined, true),
   arm('chain-mail', 'Cotta di maglia', 'Chain Mail', 'pesante', 16, 0, 75, 13, true),
-  arm('splint-armor', 'Armatura a strisce', 'Splint Armor', 'pesante', 17, 0, 200, 15, true),
-  arm('plate-armor', 'Armatura di piastre', 'Plate Armor', 'pesante', 18, 0, 1500, 15, true),
+  arm('splint-armor', 'Corazza a strisce', 'Splint Armor', 'pesante', 17, 0, 200, 15, true),
+  arm('plate-armor', 'Armatura a piastre', 'Plate Armor', 'pesante', 18, 0, 1500, 15, true),
   arm('shield', 'Scudo', 'Shield', 'scudo', 2, null, 10),
 ].map((o) => [o.id, o]));
 // Nota: i nomi italiani delle armature sono da verificare con il manuale italiano.
@@ -69,8 +69,8 @@ export const LINGUE_STANDARD: Record<string, string> = {
   giant: 'Gigante', gnomish: 'Gnomesco', goblin: 'Goblin', halfling: 'Halfling', orc: 'Orchesco',
 };
 export const LINGUE_RARE: Record<string, string> = {
-  abyssal: 'Abissale', celestial: 'Celestiale', 'deep-speech': 'Linguaggio delle profondità', druidic: 'Druidico',
-  infernal: 'Infernale', primordial: 'Primordiale', sylvan: 'Silvano', 'thieves-cant': 'Gergo dei ladri', undercommon: 'Sottocomune',
+  abyssal: 'Abissale', celestial: 'Celestiale', 'deep-speech': 'Gergo delle profondità', druidic: 'Druidico',
+  infernal: 'Infernale', primordial: 'Primordiale', sylvan: 'Silvano', 'thieves-cant': 'Gergo ladresco', undercommon: 'Sottocomune',
 };
 export const NOME_LINGUA: Record<string, string> = { common: 'Comune', ...LINGUE_STANDARD, ...LINGUE_RARE };
 // Nota: i nomi italiani delle lingue sono da verificare con il manuale italiano.
@@ -89,7 +89,6 @@ export const ALLINEAMENTI: Record<string, { nome: string; sigla: string; malvagi
   'chaotic-evil': { nome: 'Caotico malvagio', sigla: 'CM', malvagio: true },
 };
 
-
 // Serie standard consigliata per classe (p. 21, «Standard Array by Class»): FOR DES COS INT SAG CAR.
 export const SERIE_PER_CLASSE: Record<string, number[]> = {
   barbarian: [15, 13, 14, 10, 12, 8], bard: [8, 14, 12, 13, 10, 15], cleric: [14, 8, 13, 10, 15, 12],
@@ -97,7 +96,6 @@ export const SERIE_PER_CLASSE: Record<string, number[]> = {
   paladin: [15, 10, 13, 8, 12, 14], ranger: [12, 15, 13, 8, 14, 10], rogue: [12, 15, 13, 14, 10, 8],
   sorcerer: [10, 13, 14, 8, 12, 15], warlock: [8, 14, 13, 12, 10, 15], wizard: [8, 12, 13, 15, 14, 10],
 };
-
 
 // Armi (p. 89; nomi, proprietà e padronanze dell'SRD 5.2.1 italiano, p. 104). Proprietà con le chiavi italiane.
 export interface Arma { nome: string; nomeEn: string; categoria: 'semplice' | 'guerra'; tipo: 'mischia' | 'distanza'; danni: string; proprieta: string[]; padronanza: string }

@@ -48,3 +48,27 @@ html, body { background: var(--sfondo); color: var(--testo); }
 body { margin: 0; -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--oro); outline-offset: 2px; }
+
+/* Animazioni (21/11): brevi, solo transform e opacity, spente con «Riduci movimento» del telefono */
+@media (prefers-reduced-motion: no-preference) {
+  .anim-avanti { animation: entra-destra 200ms ease-out; }
+  .anim-indietro { animation: entra-sinistra 200ms ease-out; }
+  .anim-srotola { animation: srotola 250ms ease-out; transform-origin: top; }
+  .anim-pergamena { animation: pergamena 300ms cubic-bezier(.2, .8, .3, 1); transform-origin: top; }
+  .anim-sigillo { animation: sigillo 700ms ease-out 250ms both; }
+  .anim-fiamma { animation: fiamma 900ms ease-out both; transform-origin: bottom; }
+  .anim-fiamma-interna { animation: guizzo 1.2s ease-in-out 900ms infinite alternate; transform-origin: bottom; }
+  .riflesso::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(110deg, transparent 35%, rgb(255 255 255 / .45) 50%, transparent 65%);
+    animation: riflesso 700ms ease-out both;
+  }
+}
+@keyframes entra-destra { from { opacity: 0; transform: translateX(16px); } }
+@keyframes entra-sinistra { from { opacity: 0; transform: translateX(-16px); } }
+@keyframes srotola { from { opacity: 0; transform: scaleY(.92) translateY(-6px); } }
+@keyframes pergamena { from { opacity: 0; transform: scaleY(.6); } 60% { opacity: 1; } }
+@keyframes sigillo { 0% { opacity: .4; transform: scale(.7) rotate(-20deg); } 60% { opacity: 1; transform: scale(1.12) rotate(4deg); filter: brightness(1.6); } 100% { transform: scale(1) rotate(0); } }
+@keyframes riflesso { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes fiamma { 0% { opacity: 0; transform: scaleY(.2); } 50% { opacity: 1; transform: scaleY(1.15); } 75% { transform: scaleY(.92); } 100% { transform: scaleY(1); } }
+@keyframes guizzo { from { transform: scaleY(1) skewX(0); } to { transform: scaleY(.9) skewX(3deg); } }

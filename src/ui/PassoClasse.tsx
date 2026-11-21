@@ -87,7 +87,7 @@ function CosaOttieni({ classeId }: { classeId: string }) {
     </li>
   );
   return (
-    <div className="border-t border-bordo px-4 pb-4 pt-3">
+    <div className="anim-srotola border-t border-bordo px-4 pb-4 pt-3">
       <h3 className="mb-2 text-sm font-medium text-testo">Cosa ottieni al livello 1</h3>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
         <dt className="text-testo-2">Tiri salvezza</dt><dd className="text-testo">{c.tiriSalvezza}</dd>

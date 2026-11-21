@@ -44,13 +44,17 @@ export default function App() {
 
   const [menu, setMenu] = useState(false);
   // Ogni cambio di schermata entra nella cronologia: il tasto Indietro del telefono torna alla schermata prima
+  // Direzione dell'animazione tra le schermate (21/11): indietro se si torna a un passo precedente o col tasto del telefono
+  const [direzione, setDirezione] = useState<'avanti' | 'indietro'>('avanti');
   const setVista = (v: Vista) => {
+    const da = PASSI.findIndex((p) => p.id === vista), a = PASSI.findIndex((p) => p.id === v);
+    setDirezione((da >= 0 && a >= 0 && a < da) || (da === 0 && v === 'personaggi') ? 'indietro' : 'avanti');
     setVistaGrezza(v); setMessaggio(null); setMenu(false); window.scrollTo(0, 0);
     if (history.state?.vista !== v) history.pushState({ vista: v }, '');
   };
   useEffect(() => {
     if (!history.state?.vista) history.replaceState({ vista: 'home' }, '');
-    const indietro = (e: PopStateEvent) => { setVistaGrezza((e.state?.vista as Vista) ?? 'home'); setMenu(false); setMessaggio(null); window.scrollTo(0, 0); };
+    const indietro = (e: PopStateEvent) => { setDirezione('indietro'); setVistaGrezza((e.state?.vista as Vista) ?? 'home'); setMenu(false); setMessaggio(null); window.scrollTo(0, 0); };
     window.addEventListener('popstate', indietro);
     return () => window.removeEventListener('popstate', indietro);
   }, []);
@@ -176,7 +180,8 @@ export default function App() {
         )}
       </header>
 
-      <main className="flex-1 px-4 pb-28 pt-4">
+      <main className="flex-1 overflow-x-clip px-4 pb-28 pt-4">
+        <div key={vistaReale} className={tavoloRicevuto ? '' : direzione === 'indietro' ? 'anim-indietro' : 'anim-avanti'}>
         {messaggio && (
           <div role="status" className="mb-4 rounded-xl border border-attenzione/50 bg-superficie p-3 text-sm text-testo">
             {messaggio}
@@ -318,10 +323,13 @@ export default function App() {
               setVista('indice');
             }} />
         )}
+        </div>
+        {/* Fogli fuori dal riquadro animato: un elemento «fixed» dentro una trasformazione si sposta */}
         {compendio && <Compendio chiudi={() => setCompendio(false)} />}
         {appenaSalvato && vistaReale === 'riepilogo' && (
-          <FoglioDalBasso chiudi={() => setAppenaSalvato(false)} titolo={<h2 className="font-titolo text-lg text-accento">Personaggio salvato</h2>}>
-            <p className="text-base text-testo">{bozza.nome.trim() || 'Il tuo personaggio'} è pronto per il tavolo.</p>
+          <FoglioDalBasso chiudi={() => setAppenaSalvato(false)} titolo={<h2 className="font-titolo text-lg text-accento">Pronto per il tavolo</h2>}>
+            <Fiamma />
+            <p className="text-base text-testo">{bozza.nome.trim() || 'Il tuo personaggio'} è salvato.</p>
             <p className="mt-2 text-sm text-testo-2">Le scelte della creazione ora sono bloccate. Restano modificabili i dati di gioco (punti ferita, slot, monete, componenti) e il ritratto (toccalo in cima alla scheda). Per cambiare altro: «Riapri la creazione», in fondo alla sezione «Chi è».</p>
             <button onClick={() => setAppenaSalvato(false)} className="mt-4 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Apri la scheda</button>
           </FoglioDalBasso>
@@ -413,10 +421,18 @@ function BottoneAvanti({ mancanti, cosaManca, avanti, etichetta = 'Avanti', tito
 }) {
   const [aperto, setAperto] = useState(false);
   const bloccato = mancanti > 0;
+  // Riflesso d'ottone quando il passo diventa completo (21/11): solo nel momento in cui si sblocca
+  const prima = useRef(bloccato);
+  const [luccica, setLuccica] = useState(0);
+  useEffect(() => {
+    if (prima.current && !bloccato) setLuccica((n) => n + 1);
+    prima.current = bloccato;
+  }, [bloccato]);
   return (
     <>
       <button onClick={() => (bloccato ? setAperto(true) : avanti())} aria-disabled={bloccato}
-        className={`h-12 flex-2 rounded-xl text-base font-medium ${bloccato ? 'bg-bordo text-testo-2' : 'bg-accento text-su-accento'}`}>
+        className={`relative h-12 flex-2 overflow-hidden rounded-xl text-base font-medium ${bloccato ? 'bg-bordo text-testo-2' : 'bg-accento text-su-accento'}`}>
+        {luccica > 0 && !bloccato && <span key={luccica} aria-hidden className="riflesso absolute inset-0" />}
         {bloccato ? `${etichetta} (${mancanti} da fare)` : etichetta}
       </button>
       {aperto && bloccato && (
@@ -460,3 +476,13 @@ const IconaSole = () => (
     <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
   </svg>
 );
+
+// La fiammata del salvataggio (21/11): si accende, poi guizza piano finché il foglio è aperto
+function Fiamma() {
+  return (
+    <svg width="56" height="64" viewBox="0 0 56 64" aria-hidden="true" className="anim-fiamma mx-auto mb-3 block">
+      <path d="M28 4c4 10 16 18 16 34a16 16 0 0 1-32 0c0-8 4-13 8-17 0 6 3 9 6 10-2-9 0-18 2-27z" fill="var(--accento)" />
+      <path className="anim-fiamma-interna" d="M28 30c3 5 8 9 8 16a8 8 0 0 1-16 0c0-5 3-8 5-10 0 3 1 5 3 6-1-4-1-8 0-12z" fill="var(--oro)" />
+    </svg>
+  );
+}

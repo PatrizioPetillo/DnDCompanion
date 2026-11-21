@@ -145,7 +145,7 @@ function TrattiSpecie({ specieId }: { specieId: string }) {
   const righe = cosaOttieniSpecie(specieId);
   if (!righe.length) return null;
   return (
-    <div className="border-t border-bordo px-4 pb-4 pt-3">
+    <div className="anim-srotola border-t border-bordo px-4 pb-4 pt-3">
       <h3 className="mb-2 text-sm font-medium text-testo">Cosa ottieni</h3>
       <ul className="space-y-2 text-sm leading-relaxed">
         {righe.map((t) => (

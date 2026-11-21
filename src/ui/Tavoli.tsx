@@ -242,7 +242,7 @@ function Invito({ tavolo, accetta, rifiuta }: { tavolo: Tavolo; accetta: () => v
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onKeyDown={(e) => e.key === 'Escape' && rifiuta()}>
       <div role="dialog" aria-modal="true" aria-labelledby="invito-titolo"
-        className="w-full max-w-sm rounded-2xl border-2 border-oro bg-superficie p-1.5 shadow-2xl">
+        className="anim-pergamena w-full max-w-sm rounded-2xl border-2 border-oro bg-superficie p-1.5 shadow-2xl">
         <div className="rounded-xl border border-oro/50 px-5 pb-5 pt-4 text-center">
           <Sigillo />
           <p className="mt-2 text-xs uppercase tracking-[0.2em] text-oro">Un invito al tavolo</p>
@@ -262,7 +262,7 @@ function Invito({ tavolo, accetta, rifiuta }: { tavolo: Tavolo; accetta: () => v
 
 // Un d20 d'ottone, lo stesso dell'icona dell'app
 const Sigillo = () => (
-  <svg width="44" height="44" viewBox="0 0 48 48" className="mx-auto text-oro" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+  <svg width="44" height="44" viewBox="0 0 48 48" className="anim-sigillo mx-auto text-oro" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
     <path d="M24 3 43 14v20L24 45 5 34V14z" />
     <path d="M24 3 14 20h20zM14 20 5 34M34 20l9 14M14 20l10 25 10-25M5 14l9 6M43 14l-9 6" />
   </svg>

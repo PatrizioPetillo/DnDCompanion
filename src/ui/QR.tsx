@@ -14,7 +14,7 @@ export function ScannerQR({ chiudi, letto }: { chiudi: () => void; letto: (testo
   const video = useRef<HTMLVideoElement>(null);
   const [errore, setErrore] = useState<string | null>(null);
   const avvisa = useRef(letto);
-  avvisa.current = letto;
+  useEffect(() => { avvisa.current = letto; }, [letto]);
   useEffect(() => {
     let flusso: MediaStream | null = null, fermo = false, giro = 0;
     const tela = document.createElement('canvas');

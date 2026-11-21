@@ -234,6 +234,8 @@ export interface Personaggio {
   equip?: { armatura?: Id | 'nessuna'; scudo?: boolean; attivi?: Id[] };
   // Oggetti magici dati dal master (21/11): bonus solo se sintonizzati quando serve (massimo 3, SRD p. 102-103)
   oggettiMagici?: OggettoMagicoPosseduto[];
+  // Monete ricevute (+) o spese (−) durante il gioco, anche dal bottino del master (21/11)
+  movimenti?: MovimentoMonete[];
 }
 
 export interface OggettoMagicoPosseduto {
@@ -253,6 +255,7 @@ export interface OggettoMagicoPosseduto {
   aspetto?: string;                         // come appare: resta anche dopo l'identificazione
   identificatoIl?: string;                  // ISO
 }
+export interface MovimentoMonete { id: string; mo: number; nota?: string; il: string }
 export interface BonusMagici { ca?: number; ts?: number; attaccoIncantesimi?: number; cdIncantesimi?: number }
 // Cosa viaggia cifrato nel link dell'oggetto: diventa «personalizzato» quando il master sblocca
 export interface OggettoSvelato { nome: string; sintonia: boolean; riga?: string; descrizione?: string; cariche?: number; bonus: BonusMagici }

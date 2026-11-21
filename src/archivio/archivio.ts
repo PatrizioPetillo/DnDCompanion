@@ -5,7 +5,8 @@ import { statoVuoto, type StatoPartita } from '../partita/partita';
 import { DATI, type Dati } from '../regole/dati';
 import { elementiVuoti, unione, type Elementi } from '../creazione/personalizzati';
 import { importaJSON } from '../creazione/riepilogo';
-import type { Background, OggettoSvelato, Specie, Tavolo, Velo } from '../regole/tipi';
+import type { Background, MovimentoMonete, OggettoSvelato, Specie, Tavolo, Velo } from '../regole/tipi';
+import type { Combattimento, Nemico } from '../creazione/incontri';
 import { tavoloVuoto } from '../regole/tavolo';
 
 export interface PersonaggioSalvato {
@@ -21,7 +22,9 @@ export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attiv
 // I tavoli creati come master: si riaprono, si modificano, si ricondividono
 // gruppo: le schede che i giocatori hanno mandato al master per questo tavolo (21/11)
 export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string }
-export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string; gruppo?: MembroGruppo[]; oggetti?: OggettoDelMaster[] }
+export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string; gruppo?: MembroGruppo[]; oggetti?: OggettoDelMaster[]; incontri?: Incontro[] }
+// Gli incontri preparati dal master (21/11); senza gruppo, il master scrive quanti personaggi e di che livello
+export interface Incontro { id: string; nome: string; nemici: Nemico[]; combattimento?: Combattimento; manuale?: { quanti: number; livello: number } }
 // Gli oggetti creati dal master (21/11): cosa fanno lo sa solo lui finché non sblocca l'identificazione.
 // segreto: serve a sbloccare (non esce mai dal telefono); id: la sua impronta, nel link; chiave: decifra cosa fa.
 export interface OggettoDelMaster {
@@ -234,4 +237,18 @@ export function sostituisciOggetto(a: Archivio, pgId: string, o: import('../rego
   const p = a.personaggi.find((x) => x.id === pgId);
   if (!p) return a;
   return aggiorna(a, pgId, { bozza: { ...p.bozza, oggettiMagici: (p.bozza.oggettiMagici ?? []).map((x) => (x.uid === o.uid ? o : x)) } }, ora);
+}
+
+export const salvaIncontro = (a: Archivio, tavoloId: string, inc: Incontro): Archivio =>
+  ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id !== tavoloId ? t : { ...t, incontri: (t.incontri ?? []).some((x) => x.id === inc.id)
+    ? (t.incontri ?? []).map((x) => (x.id === inc.id ? inc : x)) : [...(t.incontri ?? []), inc] })) });
+export const togliIncontro = (a: Archivio, tavoloId: string, id: string): Archivio =>
+  ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id !== tavoloId ? t : { ...t, incontri: (t.incontri ?? []).filter((x) => x.id !== id) })) });
+
+// Monete: dal bottino del master (link) o scritte dal giocatore. Lo stesso bottino non entra due volte.
+export function aggiungiMovimento(a: Archivio, pgId: string, m: MovimentoMonete, ora = new Date()): { archivio: Archivio; giaPresente: boolean } {
+  const p = a.personaggi.find((x) => x.id === pgId);
+  if (!p) return { archivio: a, giaPresente: false };
+  if ((p.bozza.movimenti ?? []).some((x) => x.id === m.id)) return { archivio: a, giaPresente: true };
+  return { archivio: aggiorna(a, pgId, { bozza: { ...p.bozza, movimenti: [...(p.bozza.movimenti ?? []), m] } }, ora), giaPresente: false };
 }

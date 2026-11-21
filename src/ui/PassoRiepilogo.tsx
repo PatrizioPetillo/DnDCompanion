@@ -4,7 +4,6 @@
 import { useState } from 'react';
 import { comePersonaggio, type IdPasso } from '../creazione/percorso';
 import { accettaAvviso, avvisiRiepilogo, riepilogo, type Riepilogo } from '../creazione/riepilogo';
-import { prezzo } from '../creazione/equipaggiamento';
 import type { Bozza } from '../creazione/percorso';
 import { metri } from '../regole/misure';
 import type { Numero, Scheda as SchedaCalcolata } from '../regole/tipi';
@@ -18,6 +17,7 @@ import { MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } fro
 import { Borsa, Libro } from './Zaino';
 import { Indossato } from './Indossato';
 import { OggettiMagici } from './OggettiMagici';
+import { Monete } from './Monete';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 
 type Scheda = 'combattimento' | 'abilita' | 'magia' | 'zaino' | 'chi';
@@ -282,7 +282,7 @@ function Zaino({ r, scheda, tavolo, bozza, cambia }: { r: Riepilogo; scheda: Sch
     : DATI.oggetti[id]?.focus && scheda.magia.length ? { borsa: nome } : null);
   return (
     <div className="space-y-3">
-      <p className="text-base text-testo">Monete: <span className="font-medium">{m < 0 ? `−${prezzo(-m)}` : prezzo(m)}</span></p>
+      <Monete bozza={bozza} totale={m} cambia={cambia} />
       <Indossato bozza={bozza} scheda={scheda} cambia={cambia} />
       <OggettiMagici bozza={bozza} cambia={cambia} />
       <ul className="overflow-hidden rounded-xl border border-bordo bg-superficie">

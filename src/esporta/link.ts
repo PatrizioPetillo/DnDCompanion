@@ -98,3 +98,34 @@ export async function leggiLinkOggetto(hash: string): Promise<{ velo: Velo } | {
     return velo ? { velo } : rovinato;
   } catch { return rovinato; }
 }
+
+// ───────── Link del bottino (21/11): monete a testa dopo «#bottino=» ─────────
+const PREFISSO_BOTTINO = '#bottino=';
+export interface Bottino { id: string; mo: number; nota?: string; tavolo?: string }
+
+export async function creaLinkBottino(b: Bottino, base: string): Promise<string> {
+  const json = JSON.stringify({ formato: 'companion-b20-bottino', versione: 1, bottino: b });
+  const compresso = await trasforma(new TextEncoder().encode(json), new CompressionStream('deflate-raw'));
+  return `${base.split('#')[0]}${PREFISSO_BOTTINO}${base64url(compresso)}`;
+}
+
+export async function leggiLinkBottino(hash: string): Promise<{ bottino: Bottino } | { errore: string } | null> {
+  if (!hash.startsWith(PREFISSO_BOTTINO)) return null;
+  const rovinato = { errore: 'Il link del bottino è rovinato o incompleto: chiedi al master di rimandarlo.' };
+  try {
+    const json = new TextDecoder().decode(await trasforma(daBase64url(hash.slice(PREFISSO_BOTTINO.length)), new DecompressionStream('deflate-raw')));
+    const x = JSON.parse(json) as { formato?: string; versione?: number; bottino?: Partial<Bottino> };
+    const b = x.bottino;
+    if (x.formato !== 'companion-b20-bottino' || x.versione !== 1 || !b) return rovinato;
+    if (!corta(b.id, 40) || typeof b.mo !== 'number' || !Number.isFinite(b.mo) || b.mo <= 0 || b.mo > 1e7) return rovinato;
+    if (b.nota !== undefined && !corta(b.nota, 200)) return rovinato;
+    if (b.tavolo !== undefined && !corta(b.tavolo, 120)) return rovinato;
+    return { bottino: { id: b.id!, mo: Math.round(b.mo * 100) / 100, ...(b.nota ? { nota: b.nota } : {}), ...(b.tavolo ? { tavolo: b.tavolo } : {}) } };
+  } catch { return rovinato; }
+}
+
+// Divide il bottino in parti uguali, in monete di rame (1 mo = 100 mr): il resto lo tiene il master
+export function dividi(mo: number, parti: number): { aTesta: number; resto: number } {
+  const mr = Math.round(mo * 100), n = Math.max(1, Math.floor(parti));
+  return { aTesta: Math.floor(mr / n) / 100, resto: (mr % n) / 100 };
+}

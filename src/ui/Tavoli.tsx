@@ -1,7 +1,9 @@
 // Il link del tavolo (sezione 5.1). Il master crea un tavolo e manda il link (WhatsApp o altro); il giocatore lo apre
 // e crea il personaggio già con le regole del master. Senza link l'app non ha restrizioni.
 import { rigaGruppo, riassuntoGruppo, type RigaGruppo } from '../creazione/gruppo';
-import type { MembroGruppo, OggettoDelMaster } from '../archivio/archivio';
+import type { Incontro, MembroGruppo, OggettoDelMaster } from '../archivio/archivio';
+import { Incontri } from './Incontri';
+import { DaiBottino } from './Monete';
 import { OggettiTavolo } from './OggettiTavolo';
 import { useEffect, useRef, useState } from 'react';
 import { elenco, tavoli, type Archivio } from '../archivio/archivio';
@@ -49,7 +51,7 @@ export function ElencoTavoli({ archivio, apri, crea }: { archivio: Archivio; apr
 }
 
 // ───────── Il tavolo, come lo prepara il master: si salva a ogni tocco ─────────
-export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [], apriMembro, togliMembro, oggetti = [], salvaOggetto, togliOggetto }: {
+export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [], apriMembro, togliMembro, oggetti = [], salvaOggetto, togliOggetto, incontri = [], salvaIncontro, togliIncontro }: {
   tavolo: Tavolo;
   cambia: (t: Tavolo) => void;
   elimina: () => void;
@@ -60,6 +62,9 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
   oggetti?: OggettoDelMaster[];
   salvaOggetto?: (o: OggettoDelMaster) => void;
   togliOggetto?: (uid: string) => void;
+  incontri?: Incontro[];
+  salvaIncontro?: (i: Incontro) => void;
+  togliIncontro?: (id: string) => void;
 }) {
   const [stato, setStato] = useState<string | null>(null);
   const escludi = tavolo.fonti.escludi ?? [];
@@ -183,7 +188,10 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
 
       <Gruppo gruppo={membri} apri={apriMembro} togli={togliMembro} />
 
+      {salvaIncontro && togliIncontro && <Incontri incontri={incontri} membri={membri} salva={salvaIncontro} togli={togliIncontro} />}
+
       {salvaOggetto && togliOggetto && <OggettiTavolo oggetti={oggetti} nomeTavolo={tavolo.nome} salva={salvaOggetto} togli={togliOggetto} />}
+      <DaiBottino nomeTavolo={tavolo.nome} inGruppo={membri.length} />
 
       <div className="mt-6 space-y-2 border-t border-bordo pt-4">
         <button onClick={condividi} disabled={!tavolo.nome.trim()} className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo-2">

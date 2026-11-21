@@ -390,9 +390,11 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const monete = numero([
     { etichetta: etClasse, valore: pacchettoClasse?.mo ?? 0 }, { etichetta: etBg, valore: pacchettoBg?.mo ?? 0 },
     ...(spesa ? [{ etichetta: 'Acquisti', valore: -spesa }] : []),
+    // Durante il gioco: bottino del master e spese del giocatore (21/11)
+    ...(pg.movimenti?.length ? [{ etichetta: 'Durante il gioco', valore: Math.round(pg.movimenti.reduce((t, m) => t + Math.round(m.mo * 100), 0)) / 100 }] : []),
   ]);
   monete.totale = Math.round(monete.totale * 100) / 100;
-  if (monete.totale < 0) avvisa('monete-negative', 'errore', `Hai speso ${-monete.totale} mo più di quanto hai: togli qualcosa`, { pagina: 23 });
+  if (monete.totale < 0) avvisa('monete-negative', 'errore', pg.movimenti?.length ? `Le monete sono sotto zero di ${-monete.totale} mo: controlla le spese nello Zaino` : `Hai speso ${-monete.totale} mo più di quanto hai: togli qualcosa`, { pagina: 23 });
 
   // Focus da incantatore della classe (p. 96-97); la borsa per componenti vale per tutti (p. 105); il mago ha il libro (p. 77)
   const FOCUS_CLASSE: Record<Id, string[]> = {

@@ -3,10 +3,20 @@
 import { describe, expect, it } from 'vitest';
 import { calcolaScheda } from '../src/regole';
 import * as P from './personaggi';
+import { copieDoppie, sintonizzati } from '../src/regole/oggetti-magici';
 
 const ca = (s: ReturnType<typeof calcolaScheda>) => s.ca.formule.find((f) => f.id === s.ca.attuale)!.valore.totale;
 
 describe('Oggetti magici', () => {
+  it('Due Anelli di protezione sintonizzati: conta solo il primo, avviso e sintonia 1/3', () => {
+    const s = calcolaScheda({ ...P.TRAVIS, oggettiMagici: [{ uid: 'a', id: 'ring-of-protection', sintonizzato: true }, { uid: 'b', id: 'ring-of-protection', sintonizzato: true }] });
+    expect(ca(s)).toBe(12);
+    expect(s.avvisi.some((a) => a.id === 'sintonia-copia:b')).toBe(true);
+    expect(sintonizzati([{ uid: 'a', id: 'ring-of-protection', sintonizzato: true }, { uid: 'b', id: 'ring-of-protection', sintonizzato: true }])).toBe(1);
+  });
+  it('Due armi +1 diverse non sono copie', () => {
+    expect(copieDoppie([{ uid: 'a', id: 'weapon-plus', variante: '+1', base: 'longsword', sintonizzato: true }, { uid: 'b', id: 'weapon-plus', variante: '+1', base: 'dagger', sintonizzato: true }]).size).toBe(0);
+  });
   it('Anello di protezione: +1 a CA e tiri salvezza solo da sintonizzato', () => {
     const non = calcolaScheda({ ...P.TRAVIS, oggettiMagici: [{ uid: 'a', id: 'ring-of-protection' }] });
     expect(ca(non)).toBe(11);

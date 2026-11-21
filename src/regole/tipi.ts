@@ -246,8 +246,16 @@ export interface OggettoMagicoPosseduto {
   quantita?: number;                        // pozioni, pergamene, munizioni
   nota?: string;                            // per la pergamena: quale incantesimo; o altro
   // Oggetto di un altro manuale o dell'SRD non in elenco: nome e bonus li scrive il giocatore
-  personalizzato?: { nome: string; sintonia: boolean; riga?: string; cariche?: number; bonus: { ca?: number; ts?: number; attaccoIncantesimi?: number; cdIncantesimi?: number } };
+  personalizzato?: { nome: string; sintonia: boolean; riga?: string; descrizione?: string; cariche?: number; bonus: BonusMagici };
+  // Oggetto del master da identificare (21/11): finché è velato non dà bonus e cosa fa resta cifrato
+  velato?: Velo;
+  aspetto?: string;                         // come appare: resta anche dopo l'identificazione
+  identificatoIl?: string;                  // ISO
 }
+export interface BonusMagici { ca?: number; ts?: number; attaccoIncantesimi?: number; cdIncantesimi?: number }
+// Cosa viaggia cifrato nel link dell'oggetto: diventa «personalizzato» quando il master sblocca
+export interface OggettoSvelato { nome: string; sintonia: boolean; riga?: string; descrizione?: string; cariche?: number; bonus: BonusMagici }
+export interface Velo { sblocco: string; apparente: string; aspetto?: string; tavolo?: string; iv: string; cifrato: string }
 
 // ───────────── Risultato del motore ─────────────
 export type LivelloAvviso = 'errore' | 'attenzione' | 'info';

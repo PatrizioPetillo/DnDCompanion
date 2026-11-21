@@ -8,6 +8,7 @@ import type { OggettoMagicoPosseduto } from './tipi';
 export interface OggettoAttivo { uid: string; nome: string; effetti: EffettoMagico[]; base?: string }
 
 export function nomeOggetto(o: OggettoMagicoPosseduto, d: Dati): string {
+  if (o.velato) return o.velato.apparente.trim() || 'Oggetto da identificare';
   if (o.personalizzato) return o.personalizzato.nome.trim() || 'Oggetto magico';
   const def = OGGETTI_MAGICI[o.id];
   if (!def) return o.id;
@@ -20,11 +21,26 @@ export function nomeOggetto(o: OggettoMagicoPosseduto, d: Dati): string {
   return v?.nome ? `${def.nome} ${v.nome}` : def.nome;
 }
 
+// Un oggetto velato non si sa se richieda sintonia: lo si scopre identificandolo (SRD p. 102)
 export const richiedeSintonia = (o: OggettoMagicoPosseduto) =>
-  o.personalizzato ? o.personalizzato.sintonia : !!OGGETTI_MAGICI[o.id]?.sintonia;
+  o.velato ? false : o.personalizzato ? o.personalizzato.sintonia : !!OGGETTI_MAGICI[o.id]?.sintonia;
+
+// Non ci si sintonizza con due copie dello stesso oggetto (SRD p. 102): la seconda copia sintonizzata non funziona.
+const chiaveCopia = (o: OggettoMagicoPosseduto) =>
+  o.personalizzato ? `p:${o.personalizzato.nome.trim().toLowerCase()}` : `${o.id}|${o.variante ?? ''}|${o.base ?? ''}`;
+export function copieDoppie(lista: OggettoMagicoPosseduto[] | undefined): Set<string> {
+  const viste = new Set<string>(); const doppie = new Set<string>();
+  for (const o of lista ?? []) {
+    if (!richiedeSintonia(o) || !o.sintonizzato) continue;
+    const k = chiaveCopia(o);
+    if (viste.has(k)) doppie.add(o.uid); else viste.add(k);
+  }
+  return doppie;
+}
 
 export function oggettiAttivi(lista: OggettoMagicoPosseduto[] | undefined, d: Dati): OggettoAttivo[] {
-  return (lista ?? []).filter((o) => !richiedeSintonia(o) || o.sintonizzato).map((o) => {
+  const doppie = copieDoppie(lista);
+  return (lista ?? []).filter((o) => !o.velato && (!richiedeSintonia(o) || o.sintonizzato) && !doppie.has(o.uid)).map((o) => {
     const nome = nomeOggetto(o, d);
     if (o.personalizzato) {
       const b = o.personalizzato.bonus;
@@ -41,6 +57,17 @@ export function oggettiAttivi(lista: OggettoMagicoPosseduto[] | undefined, d: Da
   });
 }
 
-export const sintonizzati = (lista: OggettoMagicoPosseduto[] | undefined) =>
-  (lista ?? []).filter((o) => richiedeSintonia(o) && o.sintonizzato).length;
+export const sintonizzati = (lista: OggettoMagicoPosseduto[] | undefined) => {
+  const doppie = copieDoppie(lista);
+  return (lista ?? []).filter((o) => richiedeSintonia(o) && o.sintonizzato && !doppie.has(o.uid)).length;
+};
 export { MAX_SINTONIA };
+
+// Lo sblocco del master: il contenuto decifrato diventa un oggetto personalizzato, l'aspetto resta
+export function svela(o: OggettoMagicoPosseduto, s: import('./tipi').OggettoSvelato, ora = new Date()): OggettoMagicoPosseduto {
+  const { velato, ...resto } = o;
+  return { ...resto, id: 'personalizzato', ...(velato?.aspetto ? { aspetto: velato.aspetto } : {}), identificatoIl: ora.toISOString(),
+    ...(s.cariche ? { cariche: s.cariche } : {}),
+    personalizzato: { nome: s.nome, sintonia: !!s.sintonia, ...(s.riga ? { riga: s.riga } : {}), ...(s.descrizione ? { descrizione: s.descrizione } : {}),
+      ...(s.cariche ? { cariche: s.cariche } : {}), bonus: s.bonus ?? {} } };
+}

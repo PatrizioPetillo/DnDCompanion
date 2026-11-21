@@ -1,0 +1,12 @@
+# Servizio degli sblocchi di Companion B20 (21/11): piano Workers gratuito, Durable Objects con SQLite.
+name = "companion-b20-sblocchi"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+
+[[durable_objects.bindings]]
+name = "SBLOCCHI"
+class_name = "Sblocco"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Sblocco"]

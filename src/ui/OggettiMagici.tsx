@@ -5,9 +5,12 @@ import type { Bozza } from '../creazione/percorso';
 import { DATI } from '../regole';
 import { ARMI } from '../regole/dati/base';
 import { OGGETTI_MAGICI, type OggettoMagico } from '../regole/dati/oggetti-magici';
-import { MAX_SINTONIA, nomeOggetto, richiedeSintonia, sintonizzati } from '../regole/oggetti-magici';
+import { MAX_SINTONIA, copieDoppie, nomeOggetto, richiedeSintonia, sintonizzati, svela } from '../regole/oggetti-magici';
 import type { OggettoMagicoPosseduto } from '../regole/tipi';
 import { FoglioDalBasso } from './SchedaIncantesimo';
+import { leggiQR } from '../sblocchi/cifra';
+import { cercaSblocco, servizioAttivo, svelaVelo } from '../sblocchi/servizio';
+import { ScannerQR } from './QR';
 
 const nuovoUid = () => `om-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -15,9 +18,11 @@ export function OggettiMagici({ bozza, cambia }: { bozza: Bozza; cambia?: (b: Bo
   const lista = bozza.oggettiMagici ?? [];
   const [aggiungi, setAggiungi] = useState(false);
   const [aperto, setAperto] = useState<string | null>(null);
+  const [ora] = useState(() => Date.now());   // per l'animazione di un oggetto appena identificato
   const metti = (l: OggettoMagicoPosseduto[]) => cambia?.({ ...bozza, oggettiMagici: l });
   const aggiorna = (uid: string, o: Partial<OggettoMagicoPosseduto>) => metti(lista.map((x) => (x.uid === uid ? { ...x, ...o } : x)));
   const n = sintonizzati(lista);
+  const doppie = copieDoppie(lista);
   if (!lista.length && !cambia) return null;
   return (
     <section className="space-y-2">
@@ -28,24 +33,30 @@ export function OggettiMagici({ bozza, cambia }: { bozza: Bozza; cambia?: (b: Bo
       {lista.length === 0 && <p className="text-sm text-testo-2">Quando il master ti dà un oggetto magico, aggiungilo qui: i suoi bonus entrano da soli nella scheda.</p>}
       <ul className="space-y-2">
         {lista.map((o) => {
+          if (o.velato) return <Velato key={o.uid} o={o} aperto={aperto === o.uid} apri={() => setAperto(aperto === o.uid ? null : o.uid)}
+            svelato={cambia ? (n) => metti(lista.map((x) => (x.uid === o.uid ? n : x))) : undefined}
+            togli={cambia ? () => metti(lista.filter((x) => x.uid !== o.uid)) : undefined} />;
+          const appena = !!o.identificatoIl && ora - Date.parse(o.identificatoIl) < 15000;
           const def = OGGETTI_MAGICI[o.id];
           const serve = richiedeSintonia(o);
           const max = o.personalizzato?.cariche ?? def?.cariche?.massimo;
           const su = aperto === o.uid;
           return (
-            <li key={o.uid} className={`rounded-xl border bg-superficie ${serve && !o.sintonizzato ? 'border-bordo' : 'border-oro'}`}>
+            <li key={o.uid} className={`${appena ? 'anim-sigillo ' : ''}rounded-xl border bg-superficie ${serve && (!o.sintonizzato || doppie.has(o.uid)) ? 'border-bordo' : 'border-oro'}`}>
               <button onClick={() => setAperto(su ? null : o.uid)} aria-expanded={su} className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left">
                 <span className="min-w-0 flex-1">
                   <span className="block text-base text-testo">{(o.quantita ?? 1) > 1 ? `${o.quantita} × ` : ''}{nomeOggetto(o, DATI)}</span>
                   <span className="block text-xs text-testo-2">
-                    {def ? `${def.categoria}, ${def.varianti?.find((v) => v.id === o.variante)?.rarita ?? def.rarita}` : 'Dal tuo manuale o dal master'}
-                    {serve ? (o.sintonizzato ? ' · sintonizzato' : ' · richiede sintonia: non attivo') : ''}
+                    {def ? `${def.categoria}, ${def.varianti?.find((v) => v.id === o.variante)?.rarita ?? def.rarita}` : o.identificatoIl ? 'Dal master · identificato' : 'Dal tuo manuale o dal master'}
+                    {serve ? (doppie.has(o.uid) ? ' · seconda copia: non attiva' : o.sintonizzato ? ' · sintonizzato' : ' · richiede sintonia: non attivo') : ''}
                   </span>
                 </span>
                 <span aria-hidden className={`text-testo-2 transition-transform ${su ? 'rotate-180' : ''}`}>▾</span>
               </button>
               {su && (
                 <div className="anim-srotola space-y-3 border-t border-bordo px-3 pb-3 pt-2 text-sm">
+                  {o.aspetto && <p className="italic text-testo-2">{o.aspetto}</p>}
+                  {o.personalizzato?.descrizione && <p className="whitespace-pre-line text-testo">{o.personalizzato.descrizione}</p>}
                   <p className="text-testo">{o.personalizzato?.riga ?? def?.riga}{def && <span className="ml-1 text-xs text-testo-2">SRD p. {def.pagina}</span>}</p>
                   {o.nota && <p className="text-testo-2">{o.nota}</p>}
                   {serve && (
@@ -196,5 +207,70 @@ function Aggiungi({ chiudi, aggiungi }: { chiudi: () => void; aggiungi: (o: Ogge
       </ul>
       <button onClick={() => setScelto('personalizzato')} className="mt-3 min-h-12 w-full rounded-xl border border-accento text-base text-accento">Un altro oggetto (lo scrivi tu)</button>
     </FoglioDalBasso>
+  );
+}
+
+// ───────── Oggetto del master da identificare (21/11) ─────────
+// Si vede com'è fatto; cosa fa resta sotto una patina finché il master non sblocca (servizio o QR al tavolo).
+// Sotto la patina c'è un testo finto: il vero non è nella pagina, né per gli occhi né per il lettore di schermo.
+function testoFinto(seme: string, n = 170): string {
+  const lettere = 'aeiourstlnmcdpvgbfz'; let h = 0, out = '';
+  for (let i = 0; out.length < n; i++) {
+    h = (h * 31 + seme.charCodeAt(i % seme.length)) >>> 0;
+    const lung = 2 + (h % 8);
+    for (let j = 0; j < lung; j++) { h = (h * 1103515245 + 12345) >>> 0; out += lettere[h % lettere.length]; }
+    out += h % 7 === 0 ? '. ' : ' ';
+  }
+  return out;
+}
+
+function Velato({ o, aperto, apri, svelato, togli }: { o: OggettoMagicoPosseduto; aperto: boolean; apri: () => void; svelato?: (n: OggettoMagicoPosseduto) => void; togli?: () => void }) {
+  const v = o.velato!;
+  const [stato, setStato] = useState<string | null>(null);
+  const [scanner, setScanner] = useState(false);
+  const usaChiave = async (chiave: string) => {
+    const s = await svelaVelo(v, chiave);
+    if (!s) { setStato('Questo sblocco non è di questo oggetto.'); return; }
+    svelato?.(svela(o, s));
+  };
+  const identifica = async () => {
+    setStato('Controllo…');
+    const k = await cercaSblocco(v.sblocco);
+    if (k) await usaChiave(k);
+    else setStato(navigator.onLine === false ? 'Sei offline: appena torna la connessione controllo da solo.'
+      : 'Il master non l\'ha ancora sbloccato. Per identificarlo serve un riposo breve passato a concentrarti sull\'oggetto, oppure l\'incantesimo Identificare (SRD p. 102): poi il master lo sblocca.');
+  };
+  const letto = (t: string) => {
+    setScanner(false);
+    const q = leggiQR(t);
+    if (!q || q.id !== v.sblocco) { setStato('Questo QR non è lo sblocco di questo oggetto.'); return; }
+    void usaChiave(q.chiave);
+  };
+  return (
+    <li className="rounded-xl border border-dashed border-oro bg-superficie">
+      <button onClick={apri} aria-expanded={aperto} className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left">
+        <span className="min-w-0 flex-1">
+          <span className="block text-base text-testo">{nomeOggetto(o, DATI)}</span>
+          <span className="block text-xs text-testo-2">Da identificare{v.tavolo ? ` · dal tavolo «${v.tavolo}»` : ''}</span>
+        </span>
+        <span aria-hidden className={`text-testo-2 transition-transform ${aperto ? 'rotate-180' : ''}`}>▾</span>
+      </button>
+      {aperto && (
+        <div className="anim-srotola space-y-3 border-t border-bordo px-3 pb-3 pt-2 text-sm">
+          {v.aspetto && <p className="italic text-testo-2">{v.aspetto}</p>}
+          <p aria-hidden className="select-none text-testo blur-[5px]">{testoFinto(v.cifrato)}</p>
+          <p className="sr-only">Cosa fa resta nascosto finché il master non sblocca l'identificazione.</p>
+          {svelato && (
+            <div className="space-y-2">
+              {servizioAttivo() && <button onClick={() => void identifica()} className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Identifica</button>}
+              <button onClick={() => setScanner(true)} className={`h-12 w-full rounded-xl text-base ${servizioAttivo() ? 'border border-bordo text-testo' : 'bg-accento font-medium text-su-accento'}`}>Inquadra il QR del master</button>
+            </div>
+          )}
+          {stato && <p role="status" className="text-testo-2">{stato}</p>}
+          {togli && <div className="flex justify-end"><button onClick={() => window.confirm(`Togliere «${nomeOggetto(o, DATI)}»?`) && togli()} className="min-h-11 px-3 text-sm text-attenzione">Togli</button></div>}
+        </div>
+      )}
+      {scanner && <ScannerQR chiudi={() => setScanner(false)} letto={letto} />}
+    </li>
   );
 }

@@ -5,7 +5,9 @@ import { importaJSON } from '../creazione/riepilogo';
 import { quanti, type Elementi } from '../creazione/personalizzati';
 import { DATI } from '../regole/dati';
 import { validaTavolo } from '../regole/tavolo';
-import type { Tavolo } from '../regole/tipi';
+import type { Tavolo, Velo } from '../regole/tipi';
+import type { OggettoDelMaster } from '../archivio/archivio';
+import { cifra } from '../sblocchi/cifra';
 
 const PREFISSO = '#scheda=';
 
@@ -56,4 +58,43 @@ export async function leggiLinkTavolo(hash: string): Promise<{ tavolo: Tavolo } 
   } catch {
     return rovinato;
   }
+}
+
+// ───────── Link dell'oggetto da identificare (21/11): aspetto in chiaro, cosa fa cifrato, dopo «#oggetto=» ─────────
+// La maledizione non entra mai nel link: resta nel telefono del master.
+const PREFISSO_OGGETTO = '#oggetto=';
+
+export async function veloDi(o: OggettoDelMaster, nomeTavolo?: string): Promise<Velo> {
+  const { iv, cifrato } = await cifra(o.svelato, o.chiave);
+  return { sblocco: o.id, apparente: o.apparente.trim() || 'Oggetto misterioso', ...(o.aspetto?.trim() ? { aspetto: o.aspetto.trim() } : {}),
+    ...(nomeTavolo?.trim() ? { tavolo: nomeTavolo.trim() } : {}), iv, cifrato };
+}
+
+export async function creaLinkOggetto(o: OggettoDelMaster, base: string, nomeTavolo?: string): Promise<string> {
+  const json = JSON.stringify({ formato: 'companion-b20-oggetto', versione: 1, velo: await veloDi(o, nomeTavolo) });
+  const compresso = await trasforma(new TextEncoder().encode(json), new CompressionStream('deflate-raw'));
+  return `${base.split('#')[0]}${PREFISSO_OGGETTO}${base64url(compresso)}`;
+}
+
+const corta = (x: unknown, n: number) => typeof x === 'string' && x.length <= n;
+export function veloValido(v: unknown): Velo | null {
+  const x = v as Partial<Velo> | null;
+  if (!x || typeof x !== 'object') return null;
+  if (!corta(x.sblocco, 40) || !/^[A-Za-z0-9_-]{22}$/.test(x.sblocco!) || !corta(x.apparente, 120) || !corta(x.iv, 40) || !corta(x.cifrato, 20000)) return null;
+  if (x.aspetto !== undefined && !corta(x.aspetto, 2000)) return null;
+  if (x.tavolo !== undefined && !corta(x.tavolo, 120)) return null;
+  return { sblocco: x.sblocco!, apparente: x.apparente!, iv: x.iv!, cifrato: x.cifrato!, ...(x.aspetto ? { aspetto: x.aspetto } : {}), ...(x.tavolo ? { tavolo: x.tavolo } : {}) };
+}
+
+export async function leggiLinkOggetto(hash: string): Promise<{ velo: Velo } | { errore: string } | null> {
+  if (!hash.startsWith(PREFISSO_OGGETTO)) return null;
+  const rovinato = { errore: 'Il link dell\'oggetto è rovinato o incompleto: chiedi al master di rimandarlo.' };
+  try {
+    const json = new TextDecoder().decode(await trasforma(daBase64url(hash.slice(PREFISSO_OGGETTO.length)), new DecompressionStream('deflate-raw')));
+    const x = JSON.parse(json) as { formato?: string; versione?: number; velo?: unknown };
+    if (x.formato !== 'companion-b20-oggetto') return rovinato;
+    if (x.versione !== 1) return { errore: 'Il link dell\'oggetto è di una versione dell\'app che questa non conosce: aggiorna l\'app.' };
+    const velo = veloValido(x.velo);
+    return velo ? { velo } : rovinato;
+  } catch { return rovinato; }
 }

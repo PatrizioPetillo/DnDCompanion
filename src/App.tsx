@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio } from './archivio/archivio';
+import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, aggiungiOggettoVelato, elenco, salvaOggettoTavolo, togliOggettoTavolo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio } from './archivio/archivio';
 import { elementiUsati, registra, unione, type Elementi } from './creazione/personalizzati';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, concludi, concluso, daCompletarePrimaDiSalvare, PASSI, prossimoPasso, riapri, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
 import { importaJSON } from './creazione/riepilogo';
 import { descriviTolte } from './creazione/testi';
-import { leggiLink, leggiLinkTavolo } from './esporta/link';
+import { leggiLink, leggiLinkOggetto, leggiLinkTavolo } from './esporta/link';
+import { OggettoRicevuto } from './ui/OggettiTavolo';
+import { useSblocchi } from './ui/useSblocchi';
+import type { Velo } from './regole/tipi';
 import type { StatoPartita } from './partita/partita';
 import { DATI } from './regole';
 import type { Tavolo } from './regole/tipi';
@@ -75,7 +78,16 @@ export default function App() {
   // Tavolo arrivato con il link del master (#tavolo=…): «Nuovo personaggio per questo tavolo» o «Usa un mio personaggio»
   const [tavoloRicevuto, setTavoloRicevuto] = useState<Tavolo | null>(null);
   const [tavoloAperto, setTavoloAperto] = useState<string | null>(null);   // il tavolo che il master sta preparando
+  // Oggetto del master arrivato con il link (#oggetto=…, 21/11): si sceglie a quale personaggio darlo
+  const [oggettoRicevuto, setOggettoRicevuto] = useState<Velo | null>(null);
+  useSblocchi(archivio, (f) => setArchivio(f), (t) => setMessaggio(t));
   useEffect(() => {
+    leggiLinkOggetto(location.hash).then((r) => {
+      if (!r) return;
+      history.replaceState(null, '', location.pathname + location.search);
+      if ('errore' in r) setMessaggio(r.errore);
+      else { setOggettoRicevuto(r.velo); window.scrollTo(0, 0); }
+    });
     leggiLinkTavolo(location.hash).then((r) => {
       if (!r) return;
       history.replaceState(null, '', location.pathname + location.search);
@@ -183,7 +195,7 @@ export default function App() {
       </header>
 
       <main className="flex-1 overflow-x-clip px-4 pb-28 pt-4">
-        <div key={vistaReale} className={tavoloRicevuto ? '' : direzione === 'indietro' ? 'anim-indietro' : 'anim-avanti'}>
+        <div key={vistaReale} className={tavoloRicevuto || oggettoRicevuto ? '' : direzione === 'indietro' ? 'anim-indietro' : 'anim-avanti'}>
         {messaggio && (
           <div role="status" className="mb-4 rounded-xl border border-attenzione/50 bg-superficie p-3 text-sm text-testo">
             {messaggio}
@@ -214,25 +226,37 @@ export default function App() {
             rifiuta={() => { setTavoloRicevuto(null); setVista('home'); }}
           />
         )}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'home' && (
+        {oggettoRicevuto && !ricevuta && !tavoloRicevuto && (
+          <OggettoRicevuto velo={oggettoRicevuto} voci={elenco(archivio)}
+            dai={(id) => {
+              const r = aggiungiOggettoVelato(archivio, id, oggettoRicevuto);
+              setOggettoRicevuto(null);
+              apri(id, r.archivio);
+              setMessaggio(r.giaPresente ? 'Questo oggetto ce l\'ha già: è nello Zaino.' : `«${oggettoRicevuto.apparente}» è nello Zaino, da identificare.`);
+            }}
+            rifiuta={() => { setOggettoRicevuto(null); setVista('home'); }} />
+        )}
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'home' && (
           <Home personaggi={archivio.personaggi.length} apriPersonaggi={() => setVista('personaggi')} apriTavoli={() => setVista('tavoli')} apriInformazioni={() => setVista('informazioni')} />
         )}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'tavoli' && (
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'tavoli' && (
           <ElencoTavoli archivio={archivio}
             apri={(id) => { setTavoloAperto(id); setVista('tavolo'); }}
             crea={() => { const r = nuovoTavolo(archivio); setArchivio(r.archivio); setTavoloAperto(r.id); setVista('tavolo'); }} />
         )}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'tavolo' && (() => {
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'tavolo' && (() => {
           const tv = tavoli(archivio).find((x) => x.id === tavoloAperto);
           if (!tv) return <ElencoTavoli archivio={archivio} apri={(id) => setTavoloAperto(id)} crea={() => { const r = nuovoTavolo(archivio); setArchivio(r.archivio); setTavoloAperto(r.id); }} />;
           return <ModuloTavolo tavolo={tv.tavolo} mieiElementi={mieiElementi} membri={tv.gruppo}
             apriMembro={(m) => { setRicevuta(m.bozza); setElementiRicevuti(m.elementi ? unione(m.elementi) : undefined); window.scrollTo(0, 0); }}
             togliMembro={(id) => setArchivio(togliDalGruppo(archivio, tv.id, id))}
+            oggetti={tv.oggetti} salvaOggetto={(o) => setArchivio((a: Archivio) => salvaOggettoTavolo(a, tv.id, o))}
+            togliOggetto={(uid) => setArchivio((a: Archivio) => togliOggettoTavolo(a, tv.id, uid))}
             cambia={(t) => setArchivio((a: Archivio) => aggiornaTavolo(a, tv.id, t))}
             elimina={() => { setArchivio(eliminaTavolo(archivio, tv.id)); setVista('tavoli'); }} />;
         })()}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'informazioni' && <Informazioni />}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'personaggi' && (
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'informazioni' && <Informazioni />}
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'personaggi' && (
           <Personaggi
             archivio={archivio}
             apri={(id) => apri(id)}
@@ -264,12 +288,12 @@ export default function App() {
             }}
           />
         )}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'indice' && (
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'indice' && (
           <Indice nome={bozza.nome} stati={stati} apri={setVista} tavolo={bozza.tavolo}
             togliTavolo={() => corrente && window.confirm(`Togliere ${bozza.nome.trim() || 'il personaggio'} dal tavolo «${bozza.tavolo?.nome}»? Le sue scelte restano, spariscono le regole del master.`)
               && setArchivio(portaAlTavolo(archivio, corrente.id, undefined))} />
         )}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'classe' && (
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'classe' && (
           <PassoClasse
             bozza={bozza}
             cambia={setBozza}
@@ -280,7 +304,7 @@ export default function App() {
             }}
           />
         )}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'background' && (
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'background' && (
           <PassoBackground
             bozza={bozza}
             cambia={setBozza}
@@ -298,7 +322,7 @@ export default function App() {
             }}
           />
         )}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'specie' && (
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'specie' && (
           <PassoSpecie
             bozza={bozza}
             cambia={setBozza}
@@ -316,13 +340,13 @@ export default function App() {
             }}
           />
         )}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'caratteristiche' && <PassoCaratteristiche bozza={bozza} cambia={setBozza} />}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'magia' && <PassoMagia bozza={bozza} cambia={setBozza} />}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'equipaggiamento' && <PassoEquipaggiamento bozza={bozza} cambia={setBozza} />}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'personaggio' && (
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'caratteristiche' && <PassoCaratteristiche bozza={bozza} cambia={setBozza} />}
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'magia' && <PassoMagia bozza={bozza} cambia={setBozza} />}
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'equipaggiamento' && <PassoEquipaggiamento bozza={bozza} cambia={setBozza} />}
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'personaggio' && (
           <PassoPersonaggio bozza={bozza} cambia={setBozza} ritratto={corrente?.ritratto} cambiaRitratto={(r) => modifica({ ritratto: r })} />
         )}
-        {!ricevuta && !tavoloRicevuto && vistaReale === 'riepilogo' && partita && (
+        {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && vistaReale === 'riepilogo' && partita && (
           <PassoRiepilogo bozza={bozza} cambia={setBozza} apri={(p) => setVista(p)} partita={partita}
             cambiaPartita={(s) => modifica({ partita: s })} ritratto={corrente?.ritratto}
             bloccata={bloccato} cambiaRitratto={(r) => modifica({ ritratto: r })}
@@ -345,7 +369,7 @@ export default function App() {
         )}
       </main>
 
-      {!tavoloRicevuto && !(!ricevuta && SENZA_BARRA.includes(vistaReale)) && <nav className="fixed inset-x-0 bottom-0 border-t border-bordo bg-sfondo/95 backdrop-blur">
+      {!tavoloRicevuto && !oggettoRicevuto && !(!ricevuta && SENZA_BARRA.includes(vistaReale)) && <nav className="fixed inset-x-0 bottom-0 border-t border-bordo bg-sfondo/95 backdrop-blur">
         <div className="mx-auto flex max-w-120 gap-3 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
           {ricevuta ? (
             <>

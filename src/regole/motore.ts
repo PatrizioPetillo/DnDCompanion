@@ -1,6 +1,6 @@
 // Motore delle regole: dal Personaggio (solo scelte) alla Scheda (tutti i valori, ognuno con la sua somma).
 // TypeScript puro, nessuna dipendenza dall'interfaccia. Ogni regola cita la pagina dell'SRD 5.2.
-import { nomeOggetto, oggettiAttivi, sintonizzati, MAX_SINTONIA } from './oggetti-magici';
+import { copieDoppie, nomeOggetto, oggettiAttivi, sintonizzati, MAX_SINTONIA } from './oggetti-magici';
 import { OGGETTI_MAGICI } from './dati/oggetti-magici';
 import type { EffettoMagico } from './dati/oggetti-magici';
 import { ABILITA, ALLINEAMENTI, ARMI, COSTO_POINT_BUY, LINGUE_RARE, LINGUE_STANDARD, NOME_LINGUA, MATERIALE_DA_OGGETTO, NOME_CAR, PUNTI_POINT_BUY, SERIE_STANDARD, TUTTE_LE_ABILITA } from './dati/base';
@@ -93,6 +93,10 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     if (punteggi[e.car].totale < e.valore) { punteggi[e.car] = numero([{ etichetta: `${o.nome} (la porta a ${e.valore})`, valore: e.valore }]); mod[e.car] = modificatore(e.valore); }
   if (sintonizzati(pg.oggettiMagici) > MAX_SINTONIA)
     avvisa('sintonia-troppi', 'errore', `Sei sintonizzato con ${sintonizzati(pg.oggettiMagici)} oggetti: il massimo è ${MAX_SINTONIA}`, { pagina: 102 });
+  for (const uid of copieDoppie(pg.oggettiMagici)) {
+    const o = pg.oggettiMagici!.find((x) => x.uid === uid)!;
+    avvisa(`sintonia-copia:${uid}`, 'errore', `Non puoi sintonizzarti con due copie di «${nomeOggetto(o, d)}»: la seconda non dà bonus`, { pagina: 102 });
+  }
 
   const valore = (v: Valore, min?: number): number => {
     let r: number;

@@ -5,7 +5,7 @@ import { statoVuoto, type StatoPartita } from '../partita/partita';
 import { DATI, type Dati } from '../regole/dati';
 import { elementiVuoti, unione, type Elementi } from '../creazione/personalizzati';
 import { importaJSON } from '../creazione/riepilogo';
-import type { Background, Specie, Tavolo } from '../regole/tipi';
+import type { Background, OggettoSvelato, Specie, Tavolo, Velo } from '../regole/tipi';
 import { tavoloVuoto } from '../regole/tavolo';
 
 export interface PersonaggioSalvato {
@@ -21,7 +21,13 @@ export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attiv
 // I tavoli creati come master: si riaprono, si modificano, si ricondividono
 // gruppo: le schede che i giocatori hanno mandato al master per questo tavolo (21/11)
 export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string }
-export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string; gruppo?: MembroGruppo[] }
+export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string; gruppo?: MembroGruppo[]; oggetti?: OggettoDelMaster[] }
+// Gli oggetti creati dal master (21/11): cosa fanno lo sa solo lui finché non sblocca l'identificazione.
+// segreto: serve a sbloccare (non esce mai dal telefono); id: la sua impronta, nel link; chiave: decifra cosa fa.
+export interface OggettoDelMaster {
+  uid: string; apparente: string; aspetto?: string; svelato: OggettoSvelato; maledizione?: string;
+  segreto: string; id: string; chiave: string; sbloccatoIl?: string; datoIl?: string;
+}
 
 export const archivioVuoto = (): Archivio => ({ versione: 1, personaggi: [], attivo: null });
 
@@ -202,3 +208,30 @@ export function aggiungiAlGruppo(a: Archivio, tavoloId: string, bozza: Bozza, el
 }
 export const togliDalGruppo = (a: Archivio, tavoloId: string, membroId: string): Archivio =>
   ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id === tavoloId ? { ...t, gruppo: (t.gruppo ?? []).filter((m) => m.id !== membroId) } : t)) });
+
+// ───────── Oggetti del master e oggetti ricevuti (21/11) ─────────
+export const salvaOggettoTavolo = (a: Archivio, tavoloId: string, o: OggettoDelMaster): Archivio =>
+  ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id !== tavoloId ? t : { ...t, oggetti: (t.oggetti ?? []).some((x) => x.uid === o.uid)
+    ? (t.oggetti ?? []).map((x) => (x.uid === o.uid ? o : x)) : [...(t.oggetti ?? []), o] })) });
+export const togliOggettoTavolo = (a: Archivio, tavoloId: string, uid: string): Archivio =>
+  ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id !== tavoloId ? t : { ...t, oggetti: (t.oggetti ?? []).filter((x) => x.uid !== uid) })) });
+
+// Il giocatore aggiunge l'oggetto ricevuto a un suo personaggio; lo stesso oggetto non entra due volte
+export function aggiungiOggettoVelato(a: Archivio, pgId: string, velo: Velo, ora = new Date()): { archivio: Archivio; giaPresente: boolean } {
+  const p = a.personaggi.find((x) => x.id === pgId);
+  if (!p) return { archivio: a, giaPresente: false };
+  const lista = p.bozza.oggettiMagici ?? [];
+  if (lista.some((o) => o.velato?.sblocco === velo.sblocco)) return { archivio: a, giaPresente: true };
+  const nuovo = { uid: `om-${ora.getTime().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, id: 'velato', velato: velo };
+  return { archivio: aggiorna(a, pgId, { bozza: { ...p.bozza, oggettiMagici: [...lista, nuovo] } }, ora), giaPresente: false };
+}
+
+// Tutti gli oggetti ancora da identificare, di tutti i personaggi: l'app li tiene d'occhio
+export const oggettiVelati = (a: Archivio) =>
+  a.personaggi.flatMap((p) => (p.bozza.oggettiMagici ?? []).filter((o) => o.velato).map((o) => ({ pgId: p.id, uid: o.uid, velo: o.velato! })));
+
+export function sostituisciOggetto(a: Archivio, pgId: string, o: import('../regole/tipi').OggettoMagicoPosseduto, ora = new Date()): Archivio {
+  const p = a.personaggi.find((x) => x.id === pgId);
+  if (!p) return a;
+  return aggiorna(a, pgId, { bozza: { ...p.bozza, oggettiMagici: (p.bozza.oggettiMagici ?? []).map((x) => (x.uid === o.uid ? o : x)) } }, ora);
+}

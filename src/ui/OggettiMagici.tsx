@@ -5,7 +5,7 @@ import type { Bozza } from '../creazione/percorso';
 import { DATI } from '../regole';
 import { ARMI } from '../regole/dati/base';
 import { OGGETTI_MAGICI, type OggettoMagico } from '../regole/dati/oggetti-magici';
-import { MAX_SINTONIA, copieDoppie, nomeOggetto, richiedeSintonia, sintonizzati, svela } from '../regole/oggetti-magici';
+import { MAX_SINTONIA, copieDoppie, nomeOggetto, richiedeSintonia, sintonizzati, svela, caricheConosciute } from '../regole/oggetti-magici';
 import type { OggettoMagicoPosseduto } from '../regole/tipi';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 import { leggiQR } from '../sblocchi/cifra';
@@ -65,10 +65,16 @@ export function OggettiMagici({ bozza, cambia }: { bozza: Bozza; cambia?: (b: Bo
                       <input type="checkbox" disabled={!cambia} checked={!!o.sintonizzato} onChange={(e) => aggiorna(o.uid, { sintonizzato: e.target.checked })} className="h-6 w-6 accent-[var(--accento)]" />
                     </label>
                   )}
-                  {max !== undefined && (
+                  {max !== undefined && (caricheConosciute(o) ? (
                     <Contatore etichetta={`Cariche${def?.cariche ? ` (tornano: ${def.cariche.recupero})` : ''}`} valore={o.cariche ?? max} max={max}
                       cambia={cambia ? (v) => aggiorna(o.uid, { cariche: v }) : undefined} />
-                  )}
+                  ) : (
+                    <div className="space-y-1 text-testo">
+                      <p>Cariche: ?/{max}{def?.cariche ? ` (tornano: ${def.cariche.recupero})` : ''}</p>
+                      <p className="text-xs text-testo-2">Quante ne restano lo sai con l'incantesimo Identificare{serve ? ' o sintonizzandoti' : ''} (SRD p. 206), oppure te lo dice il master.</p>
+                      {cambia && <button onClick={() => aggiorna(o.uid, { caricheNote: true })} className="min-h-11 text-sm text-accento">So quante ne restano</button>}
+                    </div>
+                  ))}
                   {def?.consumabile && (
                     <Contatore etichetta="Quantità" valore={o.quantita ?? 1} max={99} cambia={cambia ? (v) => (v === 0 ? metti(lista.filter((x) => x.uid !== o.uid)) : aggiorna(o.uid, { quantita: v })) : undefined} />
                   )}

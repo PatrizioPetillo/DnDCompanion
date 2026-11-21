@@ -243,6 +243,7 @@ export interface OggettoMagicoPosseduto {
   base?: Id;                                // l'arma (ARMI) o l'armatura (oggetti) per gli oggetti «a scelta»
   sintonizzato?: boolean;
   cariche?: number;                         // cariche rimaste
+  caricheNote?: boolean;                    // le rimaste si sanno con Identificare o con la sintonia (SRD p. 206)
   quantita?: number;                        // pozioni, pergamene, munizioni
   nota?: string;                            // per la pergamena: quale incantesimo; o altro
   // Oggetto di un altro manuale o dell'SRD non in elenco: nome e bonus li scrive il giocatore

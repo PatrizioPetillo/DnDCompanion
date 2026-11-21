@@ -1,6 +1,6 @@
 // Passo 8: Riepilogo (sezione 5.2 e 5.4). La scheda completa divisa in 5 schede (Combattimento, Abilità, Magia,
 // Zaino, Chi è), gli avvisi da accettare e l'esportazione in JSON. TypeScript puro: l'interfaccia lo mostra e basta.
-import { nomeOggetto, richiedeSintonia } from '../regole/oggetti-magici';
+import { nomeOggetto, richiedeSintonia, caricheConosciute } from '../regole/oggetti-magici';
 import { comePersonaggio, PASSI, statoPassi, type Bozza, type IdPasso } from './percorso';
 import { quanti, type Elementi } from './personalizzati';
 import { calcolaScheda } from '../regole/motore';
@@ -109,7 +109,7 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
       ],
     },
     zaino: { monete: s.monete, inventario: s.inventario,
-      magici: (pg.oggettiMagici ?? []).map((o) => `${(o.quantita ?? 1) > 1 ? `${o.quantita} × ` : ''}${nomeOggetto(o, d)}${richiedeSintonia(o) ? (o.sintonizzato ? ' (sintonizzato)' : ' (non sintonizzato)') : ''}${o.cariche !== undefined ? ` · ${o.cariche} cariche` : ''}`) },
+      magici: (pg.oggettiMagici ?? []).map((o) => `${(o.quantita ?? 1) > 1 ? `${o.quantita} × ` : ''}${nomeOggetto(o, d)}${richiedeSintonia(o) ? (o.sintonizzato ? ' (sintonizzato)' : ' (non sintonizzato)') : ''}${o.cariche !== undefined ? (caricheConosciute(o) ? ` · ${o.cariche} cariche` : ' · cariche da scoprire') : ''}`) },
     chiE: {
       righe: [
         ...(pg.idea?.trim() ? [{ etichetta: 'In una frase', valore: pg.idea.trim() }] : []),

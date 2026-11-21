@@ -63,3 +63,15 @@ describe('Oggetti magici', () => {
     expect(s.magia.find((m) => m.id === 'wizard')!.cd!.totale).toBe(calcolaScheda(P.TRAVIS).magia.find((m) => m.id === 'wizard')!.cd!.totale + 1);
   });
 });
+
+describe('Cariche da scoprire (SRD p. 206)', () => {
+  it('senza sintonia né Identificare le rimaste non si sanno', async () => {
+    const { caricheConosciute } = await import('../src/regole/oggetti-magici');
+    const bacchetta = { uid: 'w', id: 'wand-of-magic-missiles', cariche: 7 };
+    expect(caricheConosciute(bacchetta)).toBe(false);
+    expect(caricheConosciute({ ...bacchetta, caricheNote: true })).toBe(true);
+    const perla = { uid: 'p', id: 'pearl-of-power', cariche: 1 };
+    expect(caricheConosciute(perla)).toBe(false);
+    expect(caricheConosciute({ ...perla, sintonizzato: true })).toBe(true);
+  });
+});

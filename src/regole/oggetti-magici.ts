@@ -71,3 +71,6 @@ export function svela(o: OggettoMagicoPosseduto, s: import('./tipi').OggettoSvel
     personalizzato: { nome: s.nome, sintonia: !!s.sintonia, ...(s.riga ? { riga: s.riga } : {}), ...(s.descrizione ? { descrizione: s.descrizione } : {}),
       ...(s.cariche ? { cariche: s.cariche } : {}), bonus: s.bonus ?? {} } };
 }
+
+// Quante cariche restano lo sa chi è sintonizzato, o chi ha lanciato Identificare sull'oggetto (SRD p. 206)
+export const caricheConosciute = (o: OggettoMagicoPosseduto) => !!o.caricheNote || (richiedeSintonia(o) && !!o.sintonizzato);

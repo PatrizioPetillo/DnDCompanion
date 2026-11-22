@@ -228,8 +228,14 @@ export default function App() {
           <>
             <div className="mb-4 rounded-xl border border-accento bg-superficie p-3 text-sm text-testo">
               Scheda ricevuta con un link. I tuoi personaggi non sono stati toccati.
-              <AggiungiAlGruppo archivio={archivio} bozza={ricevuta} salva={(id) => {
-                const r = aggiungiAlGruppo(archivio, id, ricevuta, elementiRicevuti, new Date(), canaleRicevuto);
+              <AggiungiAlGruppo archivio={archivio} bozza={ricevuta} salva={(t) => {
+                let base = archivio, id = typeof t === 'string' ? t : '';
+                if (typeof t !== 'string') {
+                  const n = nuovoTavolo(archivio);
+                  base = { ...n.archivio, tavoli: (n.archivio.tavoli ?? []).map((x) => (x.id === n.id ? { ...x, tavolo: { ...x.tavolo, nome: t.nuovo } } : x)) };
+                  id = n.id;
+                }
+                const r = aggiungiAlGruppo(base, id, ricevuta, elementiRicevuti, new Date(), canaleRicevuto);
                 setArchivio(r.archivio);
                 return r.aggiornato;
               }} />
@@ -563,12 +569,25 @@ function Fiamma() {
 
 // Sulla scheda ricevuta, per il master (21/11): la mette nel gruppo di uno dei suoi tavoli.
 // Propone il tavolo con lo stesso nome di quello della scheda, se c'è.
-function AggiungiAlGruppo({ archivio, bozza, salva }: { archivio: Archivio; bozza: Bozza; salva: (tavoloId: string) => boolean }) {
+function AggiungiAlGruppo({ archivio, bozza, salva }: { archivio: Archivio; bozza: Bozza; salva: (tavolo: string | { nuovo: string }) => boolean }) {
   const lista = tavoli(archivio);
   const stesso = lista.find((t) => bozza.tavolo && t.tavolo.nome.trim() && t.tavolo.nome.trim() === bozza.tavolo.nome.trim());
   const [scelto, setScelto] = useState(stesso?.id ?? lista[0]?.id ?? '');
+  const [nome, setNome] = useState(bozza.tavolo?.nome.trim() || '');
   const [fatto, setFatto] = useState<string | null>(null);
-  if (!lista.length) return null;
+  // Il master non ha ancora tavoli (22/11): lo crea qui, con un nome, e la scheda entra nel suo gruppo
+  if (!lista.length) return (
+    <div className="mt-3 border-t border-bordo pt-3">
+      <p className="mb-2 text-sm text-testo-2">Sei il master? Crea un tavolo per il tuo gruppo e mettici questa scheda (non serve aver invitato nessuno):</p>
+      <div className="flex gap-2">
+        <input aria-label="Nome del tavolo" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome del tavolo"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-bordo bg-sfondo px-2 text-base text-testo" />
+        <button onClick={() => { salva({ nuovo: nome.trim() || 'Il mio tavolo' }); setFatto(`Tavolo creato e scheda aggiunta: lo trovi in «I miei tavoli».`); }}
+          className="min-h-11 rounded-lg bg-accento px-4 text-base font-medium text-su-accento">Crea e aggiungi</button>
+      </div>
+      {fatto && <p role="status" className="mt-2 text-sm text-ok">{fatto}</p>}
+    </div>
+  );
   return (
     <div className="mt-3 border-t border-bordo pt-3">
       <p className="mb-2 text-sm text-testo-2">Sei il master? Mettila nel gruppo di un tuo tavolo:</p>
@@ -579,8 +598,8 @@ function AggiungiAlGruppo({ archivio, bozza, salva }: { archivio: Archivio; bozz
         </select>
         <button onClick={() => {
           const agg = salva(scelto);
-          const nome = lista.find((t) => t.id === scelto)?.tavolo.nome.trim() || 'il tavolo';
-          setFatto(agg ? `Scheda aggiornata nel gruppo di ${nome}.` : `Aggiunta al gruppo di ${nome}.`);
+          const n = lista.find((t) => t.id === scelto)?.tavolo.nome.trim() || 'il tavolo';
+          setFatto(agg ? `Scheda aggiornata nel gruppo di ${n}.` : `Aggiunta al gruppo di ${n}.`);
         }} className="min-h-11 rounded-lg bg-accento px-4 text-base font-medium text-su-accento">Aggiungi al gruppo</button>
       </div>
       {fatto && <p role="status" className="mt-2 text-sm text-ok">{fatto}</p>}

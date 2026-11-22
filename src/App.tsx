@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, aggiungiOggettoVelato, aggiungiMovimento, elenco, salvaIncontro, togliIncontro, salvaOggettoTavolo, togliOggettoTavolo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio } from './archivio/archivio';
+import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, aggiungiOggettoVelato, aggiungiMovimento, elenco, salvaIncontro, togliIncontro, salvaOggettoTavolo, togliOggettoTavolo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio, type PersonaggioSalvato } from './archivio/archivio';
 import { elementiUsati, registra, unione, type Elementi } from './creazione/personalizzati';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, concludi, concluso, daCompletarePrimaDiSalvare, PASSI, prossimoPasso, riapri, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
 import { importaJSON } from './creazione/riepilogo';
@@ -9,13 +9,15 @@ import { BottinoRicevuto } from './ui/Monete';
 import { prezzo } from './creazione/equipaggiamento';
 import { OggettoRicevuto } from './ui/OggettiTavolo';
 import { useSblocchi } from './ui/useSblocchi';
+import { AvvisiMaster, useEventi } from './ui/Eventi';
+import { nuoveChiavi } from './sblocchi/cifra';
+import { servizioAttivo } from './sblocchi/servizio';
 import type { Velo } from './regole/tipi';
-import type { StatoPartita } from './partita/partita';
 import { DATI } from './regole';
 import type { Tavolo } from './regole/tipi';
 import { ElencoTavoli, ModuloTavolo, TavoloRicevuto } from './ui/Tavoli';
 import { FoglioDalBasso } from './ui/SchedaIncantesimo';
-import { mandaLink, scaricaCopia, scaricaPdf } from './ui/esporta';
+import { mandaLink, scaricaCopia, scaricaFoundry, scaricaPdf } from './ui/esporta';
 import { Compendio } from './ui/Compendio';
 import { Home } from './ui/Home';
 import { Informazioni } from './ui/Informazioni';
@@ -63,7 +65,7 @@ export default function App() {
     window.addEventListener('popstate', indietro);
     return () => window.removeEventListener('popstate', indietro);
   }, []);
-  const modifica = (m: Partial<{ bozza: Bozza; partita: StatoPartita; ritratto: string | undefined }>) =>
+  const modifica = (m: Partial<Omit<PersonaggioSalvato, 'id' | 'creato'>>) =>
     setArchivio((a: Archivio) => (a.attivo ? aggiorna(a, a.attivo, m) : a));
   const setBozza = (b: Bozza) => modifica({ bozza: b });
 
@@ -77,6 +79,7 @@ export default function App() {
   // Scheda arrivata con un link (#scheda=…): si guarda; «Aggiungi ai miei personaggi» la mette nella lista
   const [ricevuta, setRicevuta] = useState<Bozza | null>(null);
   const [elementiRicevuti, setElementiRicevuti] = useState<Elementi | undefined>(undefined);
+  const [canaleRicevuto, setCanaleRicevuto] = useState<string | undefined>(undefined);   // segreto per mandare eventi al giocatore (22/11)
   // Tavolo arrivato con il link del master (#tavolo=…): «Nuovo personaggio per questo tavolo» o «Usa un mio personaggio»
   const [tavoloRicevuto, setTavoloRicevuto] = useState<Tavolo | null>(null);
   const [tavoloAperto, setTavoloAperto] = useState<string | null>(null);   // il tavolo che il master sta preparando
@@ -84,6 +87,7 @@ export default function App() {
   const [oggettoRicevuto, setOggettoRicevuto] = useState<Velo | null>(null);
   const [bottinoRicevuto, setBottinoRicevuto] = useState<Bottino | null>(null);   // monete dal master (#bottino=…)
   useSblocchi(archivio, (f) => setArchivio(f), (t) => setMessaggio(t));
+  const eventi = useEventi(archivio, (f) => setArchivio(f));
   useEffect(() => {
     leggiLinkBottino(location.hash).then((r) => {
       if (!r) return;
@@ -107,7 +111,7 @@ export default function App() {
       if (!r) return;
       history.replaceState(null, '', location.pathname + location.search);
       if ('errore' in r) setMessaggio(r.errore);
-      else { setRicevuta(r.bozza); setElementiRicevuti(r.elementi); window.scrollTo(0, 0); }
+      else { setRicevuta(r.bozza); setElementiRicevuti(r.elementi); setCanaleRicevuto(r.canale); window.scrollTo(0, 0); }
     });
   }, []);
   // I background inseriti dal proprio manuale entrano nei dati del motore (anche quelli di una scheda ricevuta)
@@ -185,8 +189,17 @@ export default function App() {
               {(ricevuta || (corrente && (inPasso || vistaReale === 'indice'))) && <>
                 <p className="border-b border-bordo bg-sfondo px-4 pb-1 pt-3 text-xs uppercase tracking-widest text-testo-2">Esporta {(ricevuta ?? bozza).nome.trim() || 'la scheda'}</p>
                 <VoceMenu onClick={async () => { setMenu(false); setMessaggio('Preparo il PDF…'); setMessaggio(await scaricaPdf(ricevuta ?? bozza, ricevuta ? undefined : corrente?.ritratto)); }}>Scarica il PDF</VoceMenu>
+                <VoceMenu onClick={async () => { setMenu(false); setMessaggio('Preparo il file per Foundry…'); setMessaggio(await scaricaFoundry(ricevuta ?? bozza)); }}>Per Foundry VTT (prova)</VoceMenu>
                 {!ricevuta && <>
-                  <VoceMenu onClick={async () => { setMenu(false); setMessaggio(await mandaLink(bozza, elementiUsati(bozza, mieiElementi))); }}>Manda il link al master</VoceMenu>
+                  <VoceMenu onClick={async () => { setMenu(false); 
+                    // Collegamento col master (22/11): il link porta il segreto del canale; si crea la prima volta
+                    let segreto = corrente?.canale?.segreto;
+                    if (corrente && !segreto && servizioAttivo()) {
+                      const k = await nuoveChiavi();
+                      segreto = k.segreto;
+                      modifica({ canale: { segreto: k.segreto, id: k.id } });
+                    }
+                    setMessaggio(await mandaLink(bozza, elementiUsati(bozza, mieiElementi), segreto)); }}>Manda il link al master</VoceMenu>
                   <VoceMenu onClick={() => { setMenu(false); scaricaCopia(bozza, corrente?.ritratto, elementiUsati(bozza, mieiElementi)); }}>Copia di sicurezza (JSON)</VoceMenu>
                 </>}
                 <p className="border-b border-bordo bg-sfondo px-4 pb-1 pt-3 text-xs uppercase tracking-widest text-testo-2">App</p>
@@ -204,6 +217,7 @@ export default function App() {
       </header>
 
       <main className="flex-1 overflow-x-clip px-4 pb-28 pt-4">
+        <AvvisiMaster archivio={archivio} setArchivio={(f) => setArchivio(f)} avvisi={eventi.avvisi} togli={eventi.togliAvviso} aggiungi={eventi.aggiungiAvviso} />
         <div key={vistaReale} className={tavoloRicevuto || oggettoRicevuto || bottinoRicevuto ? '' : direzione === 'indietro' ? 'anim-indietro' : 'anim-avanti'}>
         {messaggio && (
           <div role="status" className="mb-4 rounded-xl border border-attenzione/50 bg-superficie p-3 text-sm text-testo">
@@ -215,7 +229,7 @@ export default function App() {
             <div className="mb-4 rounded-xl border border-accento bg-superficie p-3 text-sm text-testo">
               Scheda ricevuta con un link. I tuoi personaggi non sono stati toccati.
               <AggiungiAlGruppo archivio={archivio} bozza={ricevuta} salva={(id) => {
-                const r = aggiungiAlGruppo(archivio, id, ricevuta, elementiRicevuti);
+                const r = aggiungiAlGruppo(archivio, id, ricevuta, elementiRicevuti, new Date(), canaleRicevuto);
                 setArchivio(r.archivio);
                 return r.aggiornato;
               }} />
@@ -377,6 +391,11 @@ export default function App() {
               setBozza(riapri(bozza));
               setVista('indice');
             }} />
+        )}
+        {!ricevuta && vistaReale === 'riepilogo' && corrente?.canale && (
+          <p className="mt-4 text-xs text-testo-2">Collegato al master: danni, cure e condizioni che ti manda arrivano qui da soli, e puoi annullarli.{' '}
+            <button onClick={() => { if (window.confirm('Scollegare? Il master non potrà più mandarti eventi finché non gli rimandi il link della scheda.')) modifica({ canale: undefined, ultimoEvento: undefined, inAttesa: undefined }); }}
+              className="min-h-11 text-accento underline">Scollega</button></p>
         )}
         </div>
         {/* Fogli fuori dal riquadro animato: un elemento «fixed» dentro una trasformazione si sposta */}

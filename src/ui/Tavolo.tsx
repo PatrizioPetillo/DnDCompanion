@@ -11,6 +11,8 @@ import { cambia as cambiaIncantesimo, cambiati, cambiDopoRiposoLungo, sostituti,
 import { Tendina } from './Tendina';
 import { FoglioDalBasso, SchedaIncantesimo } from './SchedaIncantesimo';
 import { testoDadi } from '../regole/dati/dadi-incantesimi';
+import { aggiungi, cambiaLivello, CONDIZIONE, CONDIZIONI, fannoPerdereConcentrazione, inEffetto, livelloIndebolimento, riassunto, togli, type IdCondizione } from '../partita/condizioni';
+import { GUIDA_CONDIZIONI } from '../guide/guide';
 
 export interface PropsTavolo {
   scheda: Scheda; partita: StatoPartita; cambia: (s: StatoPartita) => void; dado: number;
@@ -359,5 +361,80 @@ function SceltaLancio({ v, m, id, partita, chiudi, fatto }: {
       </div>
       <p className="mt-3 text-xs text-testo-2">Un solo incantesimo con uno slot per turno (SRD p. 105).</p>
     </FoglioDalBasso>
+  );
+}
+
+// ───────── Condizioni (22/11) ─────────
+// Il giocatore segna quelle che ha; l'app riassume cosa cambia ai tiri (glossario dell'SRD, p. 177-191).
+export function CondizioniTavolo({ scheda, partita, cambia }: PropsTavolo) {
+  const [aperta, setAperta] = useState<IdCondizione | null>(null);
+  const [nota, setNota] = useState<string | null>(null);
+  const lista = partita.condizioni ?? [];
+  const pfZero = vista(scheda, partita, 0).pf.attuali === 0 && !partita.morte.morto;
+  const effetto = inEffetto(lista, pfZero);
+  const r = riassunto(lista, pfZero);
+  const lv = livelloIndebolimento(lista);
+  const metti = (nuova: typeof lista) => {
+    let st: StatoPartita = { ...partita, condizioni: nuova };
+    if (partita.concentrazione && fannoPerdereConcentrazione(nuova, pfZero)) {
+      setNota(`Concentrazione persa su ${nome(partita.concentrazione)}: da incapacitato non puoi mantenerla (SRD p. 184).`);
+      st = fineConcentrazione(st);
+    }
+    cambia(st);
+  };
+  const derivate = effetto.filter((id) => !lista.some((c) => c.id === id));
+  return (
+    <div className="rounded-xl border border-bordo bg-superficie p-3">
+      <h2 className="text-base font-medium text-testo">Condizioni</h2>
+      {!effetto.length && <p className="text-sm text-testo-2">Nessuna. Quando il master ti dice «sei prono», «sei avvelenato»…, segnala qui.</p>}
+      <select value="" aria-label="Aggiungi una condizione" onChange={(e) => { if (e.target.value) metti(aggiungi(lista, e.target.value as IdCondizione)); }}
+        className="mt-2 h-11 w-full rounded-lg border border-bordo bg-sfondo px-2 text-base text-testo">
+        <option value="">+ Aggiungi una condizione…</option>
+        {CONDIZIONI.map((c) => {
+          const gia = lista.some((x) => x.id === c.id) && c.id !== 'indebolimento';
+          return <option key={c.id} value={c.id} disabled={gia}>{c.nome}{c.id === 'indebolimento' && lv ? ` (+1 livello, ora ${lv})` : ''}</option>;
+        })}
+      </select>
+      {effetto.length > 0 && (
+        <ul className="mt-1 flex flex-wrap gap-2">
+          {lista.map((c) => (
+            <li key={c.id} className="flex items-center rounded-full border border-attenzione">
+              <button onClick={() => setAperta(c.id)} className="min-h-11 pl-3 pr-1 text-sm text-testo">{CONDIZIONE[c.id].nome}{c.id === 'indebolimento' ? ` ${lv}` : ''}</button>
+              <button onClick={() => metti(togli(lista, c.id))} aria-label={`Togli ${CONDIZIONE[c.id].nome}`} className="h-11 w-9 text-base text-testo-2">×</button>
+            </li>
+          ))}
+          {derivate.map((id) => (
+            <li key={id}><button onClick={() => setAperta(id)} className="min-h-11 rounded-full border border-dashed border-bordo px-3 text-sm text-testo-2">
+              {CONDIZIONE[id].nome}{id === 'privo-di-sensi' && pfZero ? ' (0 PF)' : ''}</button></li>
+          ))}
+        </ul>
+      )}
+      {lv > 0 && (
+        <div className="mt-2 flex items-center justify-between text-sm text-testo">
+          <span>Livello di indebolimento</span>
+          <span className="flex items-center gap-1">
+            <button onClick={() => metti(cambiaLivello(lista, lv - 1))} aria-label="Un livello in meno" className="h-11 w-11 rounded-full border border-bordo">−</button>
+            <span className="w-6 text-center text-base">{lv}</span>
+            <button disabled={lv >= 6} onClick={() => metti(cambiaLivello(lista, lv + 1))} aria-label="Un livello in più" className="h-11 w-11 rounded-full border border-bordo disabled:opacity-30">+</button>
+          </span>
+        </div>
+      )}
+      {r.righe.length > 0 && (
+        <ul className="mt-2 space-y-1 border-t border-bordo pt-2" aria-live="polite">
+          {r.righe.map((x, i) => <li key={i} className={`text-sm ${x.grave ? 'font-medium text-attenzione' : 'text-testo'}`}>{x.testo}</li>)}
+        </ul>
+      )}
+      {nota && <p role="status" className="mt-2 text-sm text-attenzione">{nota}</p>}
+      {pfZero && <p className="mt-2 text-xs text-testo-2">A 0 PF sei privo di sensi finché non recuperi almeno 1 PF (SRD p. 17).</p>}
+      {effetto.length > 0 && <p className="mt-2 text-xs text-testo-2">Finiscono quando lo dice l'effetto o il master: toglile tu. Il riposo lungo toglie solo 1 livello di indebolimento.</p>}
+
+      {aperta && (
+        <FoglioDalBasso chiudi={() => setAperta(null)} titolo={<><h2 className="text-lg font-medium text-testo">{CONDIZIONE[aperta].nome}</h2><p className="text-sm text-testo-2">SRD p. {CONDIZIONE[aperta].pagina}</p></>}>
+          <ul className="space-y-2">
+            {(GUIDA_CONDIZIONI.sezioni[0].capitoli.find((c) => c.id === aperta)?.righe ?? [CONDIZIONE[aperta].riga]).map((t, i) => <li key={i} className="text-base text-testo">{t}</li>)}
+          </ul>
+        </FoglioDalBasso>
+      )}
+    </div>
   );
 }

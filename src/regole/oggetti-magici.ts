@@ -74,3 +74,11 @@ export function svela(o: OggettoMagicoPosseduto, s: import('./tipi').OggettoSvel
 
 // Quante cariche restano lo sa chi è sintonizzato, o chi ha lanciato Identificare sull'oggetto (SRD p. 206)
 export const caricheConosciute = (o: OggettoMagicoPosseduto) => !!o.caricheNote || (richiedeSintonia(o) && !!o.sintonizzato);
+
+// Ricarica all'alba (22/11): tira i dadi dell'oggetto e aggiunge, senza superare il massimo
+export function tiraRicarica(r: { dadi: number; facce: number; piu: number } | 'tutte', massimo: number, dado = (f: number) => 1 + Math.floor(Math.random() * f)) {
+  if (r === 'tutte') return { tiri: [] as number[], totale: massimo };
+  const tiri = Array.from({ length: r.dadi }, () => dado(r.facce));
+  return { tiri, totale: tiri.reduce((t, x) => t + x, 0) + r.piu };
+}
+export const ricarica = (attuali: number, recuperate: number, massimo: number) => Math.max(0, Math.min(massimo, attuali + Math.max(0, recuperate)));

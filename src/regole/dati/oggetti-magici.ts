@@ -23,7 +23,8 @@ export interface OggettoMagico {
   base?: 'arma' | 'armatura' | 'munizioni';                  // l'oggetto è un'arma o un'armatura a scelta
   varianti?: Variante[];                                     // +1/+2/+3, i tipi di cintura, le pozioni
   effetti?: EffettoMagico[];
-  cariche?: { massimo: number; recupero: string };
+  // ricarica: i dadi che si tirano all'alba, oppure «tutte»; ultima: cosa succede spendendo l'ultima carica (22/11)
+  cariche?: { massimo: number; recupero: string; ricarica: { dadi: number; facce: number; piu: number } | 'tutte'; ultima?: string };
   consumabile?: boolean;
   riga: string;
   pagina: number;
@@ -127,12 +128,13 @@ export const OGGETTI_MAGICI: Record<Id, OggettoMagico> = {
   },
   'wand-of-magic-missiles': {
     id: 'wand-of-magic-missiles', nome: 'Bacchetta di dardi incantati', nomeEn: 'Wand of Magic Missiles', categoria: 'Bacchetta', rarita: 'non comune', sintonia: false, pagina: 248,
-    cariche: { massimo: 7, recupero: '1d6 + 1 a ogni alba' },
+    cariche: { massimo: 7, recupero: '1d6 + 1 a ogni alba', ricarica: { dadi: 1, facce: 6, piu: 1 },
+      ultima: 'Hai speso l\'ultima carica: tira 1d20. Con 1 la bacchetta si sbriciola in cenere ed è distrutta.' },
     riga: 'Spendi da 1 a 3 cariche per lanciare Dardo incantato (1 carica = 1° livello, ogni carica in più alza il livello di 1).',
   },
   'pearl-of-power': {
     id: 'pearl-of-power', nome: 'Perla del potere', nomeEn: 'Pearl of Power', categoria: 'Oggetto meraviglioso', rarita: 'non comune', sintonia: 'un incantatore', pagina: 232,
-    cariche: { massimo: 1, recupero: 'all\'alba' },
+    cariche: { massimo: 1, recupero: 'all\'alba', ricarica: 'tutte' },
     riga: 'Con un\'azione di Magia recuperi uno slot incantesimo di 3° livello o inferiore. Una volta al giorno.',
   },
   'weapon-of-warning': {

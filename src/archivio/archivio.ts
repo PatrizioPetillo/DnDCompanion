@@ -16,12 +16,16 @@ export interface PersonaggioSalvato {
   ritratto?: string;          // immagine piccola (data URL JPEG), solo nel telefono e nella copia JSON
   creato: string;             // ISO
   aggiornato: string;         // ISO
+  // Collegamento col master (22/11): il segreto va nel link della scheda; con quello il master manda eventi a questo personaggio
+  canale?: { segreto: string; id: string };
+  ultimoEvento?: number;                                        // l'ultimo evento già applicato
+  inAttesa?: import('../partita/eventi').EventoRicevuto[];      // tiri salvezza che aspettano la risposta del giocatore
 }
 export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attivo: string | null; elementi?: Elementi; ultimaCopia?: string; tavoli?: TavoloSalvato[] }   // elementi: «I miei elementi»; ultimaCopia: ISO
 
 // I tavoli creati come master: si riaprono, si modificano, si ricondividono
 // gruppo: le schede che i giocatori hanno mandato al master per questo tavolo (21/11)
-export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string }
+export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string; canale?: string }   // canale: il segreto per mandargli eventi (22/11)
 export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string; gruppo?: MembroGruppo[]; oggetti?: OggettoDelMaster[]; incontri?: Incontro[] }
 // Gli incontri preparati dal master (21/11); senza gruppo, il master scrive quanti personaggi e di che livello
 export interface Incontro { id: string; nome: string; nemici: Nemico[]; combattimento?: Combattimento; manuale?: { quanti: number; livello: number } }
@@ -194,7 +198,7 @@ export function portaAlTavolo(a: Archivio, id: string, t: Tavolo | undefined, or
 
 // «Il mio gruppo» (21/11): la scheda di un giocatore entra nel gruppo di un tavolo. Se c'è già un personaggio con lo stesso
 // nome, è il giocatore che ha mandato la versione aggiornata: la sostituisce.
-export function aggiungiAlGruppo(a: Archivio, tavoloId: string, bozza: Bozza, elementi: Partial<Elementi> | undefined, ora = new Date()):
+export function aggiungiAlGruppo(a: Archivio, tavoloId: string, bozza: Bozza, elementi: Partial<Elementi> | undefined, ora = new Date(), canale?: string):
   { archivio: Archivio; aggiornato: boolean } {
   const chiave = bozza.nome.trim().toLowerCase();
   let aggiornato = false;
@@ -204,7 +208,7 @@ export function aggiungiAlGruppo(a: Archivio, tavoloId: string, bozza: Bozza, el
     const esistente = gruppo.find((m) => m.bozza.nome.trim().toLowerCase() === chiave && chiave);
     aggiornato = !!esistente;
     const membro: MembroGruppo = { id: esistente?.id ?? `gr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      bozza: structuredClone(bozza), ...(elementi ? { elementi } : {}), ricevuto: ora.toISOString() };
+      bozza: structuredClone(bozza), ...(elementi ? { elementi } : {}), ricevuto: ora.toISOString(), ...(canale ?? esistente?.canale ? { canale: canale ?? esistente?.canale } : {}) };
     return { ...t, gruppo: esistente ? gruppo.map((m) => (m.id === esistente.id ? membro : m)) : [...gruppo, membro] };
   });
   return { archivio: { ...a, tavoli: tavoliNuovi }, aggiornato };

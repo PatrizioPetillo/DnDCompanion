@@ -3,6 +3,7 @@
 import { rigaGruppo, riassuntoGruppo, type RigaGruppo } from '../creazione/gruppo';
 import type { Incontro, MembroGruppo, OggettoDelMaster } from '../archivio/archivio';
 import { Incontri } from './Incontri';
+import { MandaEventi } from './Eventi';
 import { DaiBottino } from './Monete';
 import { OggettiTavolo } from './OggettiTavolo';
 import { useEffect, useRef, useState } from 'react';
@@ -187,6 +188,7 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
         placeholder="Ambientazione, data della sessione, cose da sapere" className="w-full rounded-lg border border-bordo bg-superficie p-3 text-base text-testo" />
 
       <Gruppo gruppo={membri} apri={apriMembro} togli={togliMembro} />
+      <MandaEventi membri={membri} nomeTavolo={tavolo.nome} />
 
       {salvaIncontro && togliIncontro && <Incontri incontri={incontri} membri={membri} salva={salvaIncontro} togli={togliIncontro} />}
 

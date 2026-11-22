@@ -3,6 +3,7 @@
 // rifare la scheda non lo azzera, e si salva soltanto ciò che si consuma (i massimi li calcola il motore).
 import type { Id, MagiaCalcolata, Riposo, Scheda } from '../regole/tipi';
 import { DATI, type Dati } from '../regole/dati';
+import { dopoRiposoLungo } from './condizioni';
 
 export interface StatoPartita {
   pfPersi: number;                       // PF attuali = massimo − persi (se il massimo cambia, il conto resta giusto)
@@ -15,6 +16,7 @@ export interface StatoPartita {
   concentrazione: Id | null;             // incantesimo a concentrazione attivo
   morte: { successi: number; fallimenti: number; stabile: boolean; morto: boolean };   // tiri salvezza contro la morte (p. 17-18)
   componenti?: Record<Id, number>;       // componenti con costo aggiunte (+) o usate (−) durante il gioco
+  condizioni?: import('./condizioni').CondizioneSegnata[];   // le condizioni del personaggio (22/11)
 }
 
 export const statoVuoto = (): StatoPartita => ({
@@ -63,7 +65,9 @@ export function danno(st: StatoPartita, n: number, massimo: number, critico = fa
     m.fallimenti = Math.min(3, m.fallimenti + (critico ? 2 : 1));
     if (m.fallimenti >= 3 || resto >= massimo) m.morto = true;
   } else if (resto >= attuali && resto - attuali >= massimo) m.morto = true;
-  return { ...st, pfTemporanei: st.pfTemporanei - t, pfPersi: limita(st.pfPersi + resto, 0, massimo), morte: m };
+  const pfPersi = limita(st.pfPersi + resto, 0, massimo);
+  // A 0 PF si è privi di sensi, quindi incapacitati: la concentrazione finisce (p. 17 e 184)
+  return { ...st, pfTemporanei: st.pfTemporanei - t, pfPersi, morte: m, ...(pfPersi >= massimo ? { concentrazione: null } : {}) };
 }
 // La cura non supera il massimo e non tocca i PF temporanei; recuperare PF azzera i tiri contro la morte (p. 17)
 export const cura = (st: StatoPartita, n: number): StatoPartita =>
@@ -164,4 +168,6 @@ export function riposoBreve(st: StatoPartita, s: Scheda): StatoPartita {
 }
 
 // Riposo lungo (p. 185): tutti i PF e tutti i dadi vita, tutti gli slot, tutte le risorse; i PF temporanei finiscono (p. 18)
-export const riposoLungo = (st: StatoPartita): StatoPartita => (st.morte.morto ? st : { ...statoVuoto(), concentrazione: st.concentrazione });
+// Le condizioni restano (finiscono quando lo dice il loro effetto); l'indebolimento cala di 1 livello (p. 185)
+export const riposoLungo = (st: StatoPartita): StatoPartita => (st.morte.morto ? st
+  : { ...statoVuoto(), concentrazione: st.concentrazione, ...(st.condizioni?.length ? { condizioni: dopoRiposoLungo(st.condizioni) } : {}) });

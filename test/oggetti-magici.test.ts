@@ -75,3 +75,13 @@ describe('Cariche da scoprire (SRD p. 206)', () => {
     expect(caricheConosciute({ ...perla, sintonizzato: true })).toBe(true);
   });
 });
+
+describe('Ricarica all\'alba (22/11)', () => {
+  it('1d6 + 1, mai oltre il massimo; «tutte» torna al massimo', async () => {
+    const { tiraRicarica, ricarica } = await import('../src/regole/oggetti-magici');
+    expect(tiraRicarica({ dadi: 1, facce: 6, piu: 1 }, 7, () => 4)).toEqual({ tiri: [4], totale: 5 });
+    expect(ricarica(4, 5, 7)).toBe(7);
+    expect(ricarica(0, 5, 7)).toBe(5);
+    expect(tiraRicarica('tutte', 1).totale).toBe(1);
+  });
+});

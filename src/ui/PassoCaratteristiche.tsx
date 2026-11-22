@@ -58,6 +58,12 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
           </p>
         );
       })()}
+      {p?.metodo === 'pointBuy27' && (
+        <p className="mb-3 text-sm text-testo-2">
+          <strong className="text-testo">Point buy</strong> vuol dire «compra i punteggi»: hai 27 punti da spendere. Ogni caratteristica parte da 8, che non costa niente;
+          alzarla costa punti, sempre di più verso l'alto (13 costa 5, 14 costa 7, 15 costa 9). Il costo è scritto accanto a ogni valore (SRD p. 21).
+        </p>
+      )}
       {p?.metodo === 'tiri' && (
         <p className="mb-3 text-sm text-testo-2">
           Tira 4d6 e tieni i tre dadi più alti: fallo sei volte e scrivi ogni risultato dove vuoi (SRD p. 21). Tira con il master se lo chiede.

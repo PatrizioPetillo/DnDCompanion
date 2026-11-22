@@ -19,8 +19,9 @@ async function trasforma(dati: Uint8Array, flusso: CompressionStream | Decompres
   return new Uint8Array(await risposta.arrayBuffer());
 }
 
-export async function creaLink(b: Bozza, base: string, elementi?: Elementi): Promise<string> {
-  const json = JSON.stringify({ formato: 'companion-b20', versione: 1, personaggio: b, ...(elementi && quanti(elementi) ? { elementi } : {}) });
+// canale (22/11): il segreto con cui il master può mandare danni, cure e condizioni a questo personaggio
+export async function creaLink(b: Bozza, base: string, elementi?: Elementi, canale?: string): Promise<string> {
+  const json = JSON.stringify({ formato: 'companion-b20', versione: 1, personaggio: b, ...(elementi && quanti(elementi) ? { elementi } : {}), ...(canale ? { canale } : {}) });
   const compresso = await trasforma(new TextEncoder().encode(json), new CompressionStream('deflate-raw'));
   return `${base.split('#')[0]}${PREFISSO}${base64url(compresso)}`;
 }

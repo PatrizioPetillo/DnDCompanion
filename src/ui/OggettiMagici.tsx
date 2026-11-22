@@ -5,7 +5,7 @@ import type { Bozza } from '../creazione/percorso';
 import { DATI } from '../regole';
 import { ARMI } from '../regole/dati/base';
 import { OGGETTI_MAGICI, type OggettoMagico } from '../regole/dati/oggetti-magici';
-import { MAX_SINTONIA, copieDoppie, nomeOggetto, richiedeSintonia, sintonizzati, svela, caricheConosciute } from '../regole/oggetti-magici';
+import { MAX_SINTONIA, copieDoppie, nomeOggetto, richiedeSintonia, sintonizzati, svela, caricheConosciute, ricarica, tiraRicarica } from '../regole/oggetti-magici';
 import type { OggettoMagicoPosseduto } from '../regole/tipi';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 import { leggiQR } from '../sblocchi/cifra';
@@ -66,8 +66,15 @@ export function OggettiMagici({ bozza, cambia }: { bozza: Bozza; cambia?: (b: Bo
                     </label>
                   )}
                   {max !== undefined && (caricheConosciute(o) ? (
-                    <Contatore etichetta={`Cariche${def?.cariche ? ` (tornano: ${def.cariche.recupero})` : ''}`} valore={o.cariche ?? max} max={max}
-                      cambia={cambia ? (v) => aggiorna(o.uid, { cariche: v }) : undefined} />
+                    <>
+                      <Contatore etichetta={`Cariche${def?.cariche ? ` (tornano: ${def.cariche.recupero})` : ''}`} valore={o.cariche ?? max} max={max}
+                        cambia={cambia ? (v) => aggiorna(o.uid, { cariche: v, ...(v > 0 ? { ultimoTiro: undefined } : {}) }) : undefined} />
+                      {cambia && <Ricarica o={o} max={max} regola={def?.cariche?.ricarica} cambia={(v) => aggiorna(o.uid, { cariche: v, ultimoTiro: undefined })} />}
+                      {cambia && def?.cariche?.ultima && (o.cariche ?? max) === 0 && (
+                        <UltimaCarica testo={def.cariche.ultima} pagina={def.pagina} tiro={o.ultimoTiro}
+                          tira={(n) => aggiorna(o.uid, { ultimoTiro: n })} distruggi={() => metti(lista.filter((x) => x.uid !== o.uid))} />
+                      )}
+                    </>
                   ) : (
                     <div className="space-y-1 text-testo">
                       <p>Cariche: ?/{max}{def?.cariche ? ` (tornano: ${def.cariche.recupero})` : ''}</p>
@@ -278,5 +285,57 @@ function Velato({ o, aperto, apri, svelato, togli }: { o: OggettoMagicoPosseduto
       )}
       {scanner && <ScannerQR chiudi={() => setScanner(false)} letto={letto} />}
     </li>
+  );
+}
+
+// ───────── Ricarica all'alba (22/11) ─────────
+// Tira i dadi dell'oggetto e propone il risultato: se il giocatore ha tirato da sé, lo corregge. Mai oltre il massimo.
+function Ricarica({ o, max, regola, cambia }: { o: OggettoMagicoPosseduto; max: number; regola?: { dadi: number; facce: number; piu: number } | 'tutte'; cambia: (v: number) => void }) {
+  const [aperto, setAperto] = useState(false);
+  const [n, setN] = useState('');
+  const [spiega, setSpiega] = useState('');
+  const attuali = o.cariche ?? max;
+  if (attuali >= max) return <p className="text-xs text-testo-2">Cariche al massimo.</p>;
+  const apri = () => {
+    if (regola === 'tutte') { cambia(max); return; }
+    if (regola) {
+      const r = tiraRicarica(regola, max);
+      setN(String(r.totale));
+      setSpiega(`${regola.dadi}d${regola.facce}${regola.piu ? ` + ${regola.piu}` : ''}: ${r.tiri.join(' + ')}${regola.piu ? ` + ${regola.piu}` : ''} = ${r.totale}`);
+    } else { setN(''); setSpiega(''); }
+    setAperto(true);
+  };
+  const recuperate = Number(n.replace(/\D/g, '')) || 0;
+  return aperto ? (
+    <div className="space-y-2 rounded-lg border border-bordo p-2">
+      {spiega && <p className="text-sm text-testo" aria-live="polite">{spiega}</p>}
+      <label className="flex items-center justify-between gap-2 text-sm text-testo">
+        <span>{regola ? 'Cariche recuperate (correggi se hai tirato tu)' : 'Quante ne recupera?'}</span>
+        <input inputMode="numeric" value={n} onChange={(e) => setN(e.target.value)} className="h-11 w-16 rounded-lg border border-bordo bg-sfondo text-center text-base" />
+      </label>
+      <p className="text-xs text-testo-2">Diventano {ricarica(attuali, recuperate, max)}/{max}{attuali + recuperate > max ? ': il resto si perde, non si va oltre il massimo' : ''}.</p>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => setAperto(false)} className="min-h-11 rounded-lg border border-bordo text-sm text-testo">Annulla</button>
+        <button disabled={!recuperate} onClick={() => { cambia(ricarica(attuali, recuperate, max)); setAperto(false); }} className="min-h-11 rounded-lg bg-accento text-sm font-medium text-su-accento disabled:bg-bordo disabled:text-testo">Conferma</button>
+      </div>
+    </div>
+  ) : (
+    <button onClick={apri} className="min-h-11 w-full rounded-lg border border-accento text-sm text-accento">{regola === 'tutte' ? 'Torna disponibile (alba)' : 'Ricarica all\'alba'}</button>
+  );
+}
+
+function UltimaCarica({ testo, pagina, tiro, tira, distruggi }: { testo: string; pagina: number; tiro?: number; tira: (n: number) => void; distruggi: () => void }) {
+  return (
+    <div className="space-y-2 rounded-lg border border-attenzione p-2 text-sm text-testo" role="status">
+      <p>{testo} <span className="text-xs text-testo-2">SRD p. {pagina}</span></p>
+      {tiro === undefined ? (
+        <button onClick={() => tira(1 + Math.floor(Math.random() * 20))} className="min-h-11 w-full rounded-lg border border-bordo">Tira 1d20</button>
+      ) : tiro === 1 ? (
+        <>
+          <p className="font-medium text-attenzione">Hai tirato 1: è distrutta.</p>
+          <button onClick={distruggi} className="min-h-11 w-full rounded-lg bg-accento font-medium text-su-accento">Togli dallo zaino</button>
+        </>
+      ) : <p>Hai tirato {tiro}: è salva. All'alba si ricarica.</p>}
+    </div>
   );
 }

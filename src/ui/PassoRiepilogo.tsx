@@ -13,7 +13,7 @@ import type { Elementi } from '../creazione/personalizzati';
 import { Avatar, riduciRitratto } from './Avatar';
 import { Fascia, immagine } from './Illustrazione';
 import { iniziali } from '../archivio/archivio';
-import { MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
+import { CondizioniTavolo, MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
 import { Borsa, Libro } from './Zaino';
 import { Indossato } from './Indossato';
 import { OggettiMagici } from './OggettiMagici';
@@ -145,6 +145,7 @@ function Combattimento({ r, tavolo }: { r: Riepilogo; tavolo: PropsTavolo | null
   return (
     <div className="space-y-4">
       {tavolo && <PuntiFerita {...tavolo} />}
+      {tavolo && <CondizioniTavolo {...tavolo} />}
       <div className="grid grid-cols-3 gap-2">
         {c.numeri.filter((n) => !tavolo || n.id !== 'pf').map((n) => (
           <button key={n.id} disabled={!n.somma} onClick={() => setSpiega(spiega === n.id ? null : n.id)} aria-expanded={spiega === n.id}

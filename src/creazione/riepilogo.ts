@@ -170,10 +170,10 @@ export function esportaJSON(b: Bozza, ritratto?: string, elementi?: Elementi): s
   return JSON.stringify({ formato: FORMATO, versione: 1, personaggio: b, ...(ritratto ? { ritratto } : {}), ...usati }, null, 2);
 }
 
-export function importaJSON(testo: string, d: Dati = DATI): { bozza: Bozza; ritratto?: string; elementi?: Elementi } | { errore: string } {
+export function importaJSON(testo: string, d: Dati = DATI): { bozza: Bozza; ritratto?: string; elementi?: Elementi; canale?: string } | { errore: string } {
   let dati: unknown;
   try { dati = JSON.parse(testo); } catch { return { errore: 'Il file non è un JSON valido.' }; }
-  const x = dati as { formato?: string; versione?: number; personaggio?: Bozza; ritratto?: unknown; elementi?: Elementi };
+  const x = dati as { formato?: string; versione?: number; personaggio?: Bozza; ritratto?: unknown; elementi?: Elementi; canale?: unknown };
   if (x?.formato !== FORMATO || !x.personaggio) return { errore: 'Questo file non è una scheda di Companion B20.' };
   if (x.versione !== 1 || x.personaggio.schema !== 1) return { errore: 'La scheda è di una versione dell\'app che questa non conosce.' };
   const p = x.personaggio;
@@ -191,7 +191,8 @@ export function importaJSON(testo: string, d: Dati = DATI): { bozza: Bozza; ritr
     if (campo && !archivio[campo]) return { errore: `La scheda usa «${campo}», che qui non c'è (forse un elemento personalizzato di un altro tavolo).` };
   const ritratto = typeof x.ritratto === 'string' && x.ritratto.startsWith('data:image/') ? x.ritratto : undefined;
   return { bozza: { ...p, scelte: p.scelte ?? {}, avvisiAccettati: p.avvisiAccettati ?? [], incantesimi: p.incantesimi ?? { preparati: {} } },
-    ...(ritratto ? { ritratto } : {}), ...(quanti(elementi) ? { elementi } : {}) };
+    ...(ritratto ? { ritratto } : {}), ...(quanti(elementi) ? { elementi } : {}),
+    ...(typeof x.canale === 'string' && /^[A-Za-z0-9_-]{43}$/.test(x.canale) ? { canale: x.canale } : {}) };
 }
 
 export const nomeFile = (b: Bozza) => `${(b.nome.trim() || 'personaggio').toLowerCase().replace(/[^a-z0-9àèéìòù]+/g, '-').replace(/^-|-$/g, '')}.json`;

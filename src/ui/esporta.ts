@@ -22,8 +22,8 @@ export async function scaricaPdf(bozza: Bozza, ritratto?: string): Promise<strin
 }
 
 // Il link contiene tutta la scheda: chi lo apre la vede, senza toccare il suo personaggio
-export async function mandaLink(bozza: Bozza, elementi?: Elementi): Promise<string | null> {
-  const url = await creaLink(bozza, location.href, elementi);
+export async function mandaLink(bozza: Bozza, elementi?: Elementi, canale?: string): Promise<string | null> {
+  const url = await creaLink(bozza, location.href, elementi, canale);
   try {
     if (navigator.share) { await navigator.share({ title: bozza.nome || 'Scheda', url }); return null; }
     await navigator.clipboard.writeText(url);
@@ -33,4 +33,15 @@ export async function mandaLink(bozza: Bozza, elementi?: Elementi): Promise<stri
 
 export function scaricaCopia(bozza: Bozza, ritratto?: string, elementi?: Elementi) {
   scarica(esportaJSON(bozza, ritratto, elementi), 'application/json', nomeFile(bozza));
+}
+
+// Per Foundry VTT (22/11): file JSON da importare con «Import Data». I dati del sistema D&D5e si caricano solo adesso.
+export async function scaricaFoundry(bozza: Bozza): Promise<string> {
+  try {
+    const { fileFoundry } = await import('../esporta/foundry');
+    const { nome, testo, avvisi } = await fileFoundry(bozza);
+    scarica(testo, 'application/json', nome);
+    const base = 'In Foundry: crea un personaggio vuoto, tasto destro su di lui nella barra degli attori, «Import Data», scegli questo file.';
+    return avvisi.length ? `${base} Attenzione: ${avvisi.length} elementi non sono dell'SRD e sono arrivati come semplici oggetti, controllali.` : base;
+  } catch { return 'Non sono riuscito a creare il file per Foundry. Riprova.'; }
 }

@@ -7,6 +7,15 @@ compatibility_date = "2026-11-01"
 name = "SBLOCCHI"
 class_name = "Sblocco"
 
+[[durable_objects.bindings]]
+name = "CANALI"
+class_name = "Canale"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Sblocco"]
+
+# 22/11: canale degli eventi dal master
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Canale"]

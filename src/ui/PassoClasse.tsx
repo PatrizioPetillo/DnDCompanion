@@ -83,7 +83,7 @@ function CosaOttieni({ classeId }: { classeId: string }) {
   const voce = (p: Privilegio) => (
     <li key={p.nome}>
       <span className="font-medium text-testo">{p.nome}.</span> <span className="text-testo-2">{p.riga}</span>
-      <span className="ml-1 whitespace-nowrap text-xs text-testo-2/80">SRD p. {p.pagina}</span>
+      <span className="ml-1 whitespace-nowrap text-xs text-testo-2">SRD p. {p.pagina}</span>
     </li>
   );
   return (

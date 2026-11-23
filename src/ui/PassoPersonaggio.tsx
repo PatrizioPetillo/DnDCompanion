@@ -15,7 +15,7 @@ const CAMPI: { chiave: keyof Ruolo; etichetta: string; esempio: string }[] = [
   { chiave: 'segreto', etichetta: 'Il segreto', esempio: 'Non ha mai lanciato un incantesimo fuori dall\'aula' },
 ];
 
-const campo = 'w-full rounded-lg border border-bordo bg-superficie px-3 text-base text-testo placeholder:text-testo-2/70';
+const campo = 'w-full rounded-lg border border-bordo bg-superficie px-3 text-base text-testo placeholder:text-testo-2';
 
 export function PassoPersonaggio({ bozza, cambia, ritratto, cambiaRitratto }: {
   bozza: Bozza; cambia: (b: Bozza) => void; ritratto?: string; cambiaRitratto: (r: string | undefined) => void;

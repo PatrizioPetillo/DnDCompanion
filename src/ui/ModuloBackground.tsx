@@ -8,7 +8,7 @@ import { CARATTERISTICHE, type Background, type Car } from '../regole/tipi';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 import { Tendina } from './Tendina';
 
-const base = 'rounded-lg border border-bordo bg-sfondo px-3 text-base text-testo placeholder:text-testo-2/70';
+const base = 'rounded-lg border border-bordo bg-sfondo px-3 text-base text-testo placeholder:text-testo-2';
 const campo = `w-full ${base}`;
 const STRUMENTI_FISSI = [...Object.keys(STRUMENTI_ARTIGIANO), ...Object.keys(STRUMENTI_MUSICALI), ...GIOCHI, 'thieves-tools', 'herbalism-kit',
   'disguise-kit', 'forgery-kit', 'navigators-tools', 'poisoners-kit'];

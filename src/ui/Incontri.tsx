@@ -190,11 +190,11 @@ function Combattendo({ c, cambia, fine }: { c: Combattimento; cambia: (c: Combat
                   {x.ca && <span className="block text-xs text-testo-2">CA {x.ca}</span>}
                   <label className="flex items-center gap-1 text-xs text-testo-2">d20
                     <input inputMode="numeric" value={x.tiro} aria-label={`d20 di ${x.nome}`} onChange={(e) => cambia(cambiaTiro(c, x.id, Number(e.target.value) || 1))}
-                      className="h-8 w-11 rounded border border-bordo bg-sfondo text-center text-sm text-testo" /> {segno(x.bonus)}</label>
+                      className="h-11 w-12 rounded border border-bordo bg-sfondo text-center text-base text-testo" /> {segno(x.bonus)}</label>
                 </span>
                 <span className="flex flex-col">
-                  <button onClick={() => cambia(sposta(c, i, -1))} disabled={i === 0} aria-label={`Sposta ${x.nome} su`} className="h-8 w-11 text-testo-2 disabled:opacity-30">▲</button>
-                  <button onClick={() => cambia(sposta(c, i, 1))} disabled={i === c.ordine.length - 1} aria-label={`Sposta ${x.nome} giù`} className="h-8 w-11 text-testo-2 disabled:opacity-30">▼</button>
+                  <button onClick={() => cambia(sposta(c, i, -1))} disabled={i === 0} aria-label={`Sposta ${x.nome} su`} className="h-11 w-11 text-testo-2 disabled:opacity-30">▲</button>
+                  <button onClick={() => cambia(sposta(c, i, 1))} disabled={i === c.ordine.length - 1} aria-label={`Sposta ${x.nome} giù`} className="h-11 w-11 text-testo-2 disabled:opacity-30">▼</button>
                 </span>
               </div>
               {x.tipo === 'nemico' && <CondizioniNemico x={x} cambia={(k, cond, si) => cambia(cambiaCondizioneNemico(c, x.id, k, cond, si))} />}
@@ -204,7 +204,7 @@ function Combattendo({ c, cambia, fine }: { c: Combattimento; cambia: (c: Combat
                     <label key={k} className={`flex items-center gap-1 rounded-lg border px-2 text-sm ${v === 0 ? 'border-bordo text-testo-2 line-through' : 'border-bordo text-testo'}`}>
                       {x.pf!.length > 1 ? `${k + 1}:` : 'PF'}
                       <input inputMode="numeric" value={v} aria-label={`PF di ${x.nome} ${k + 1}`} onChange={(e) => cambia(cambiaPf(c, x.id, k, Number(e.target.value) || 0))}
-                        className="h-9 w-12 bg-transparent text-center text-base" />/{x.pfMax}
+                        className="h-11 w-12 bg-transparent text-center text-base" />/{x.pfMax}
                     </label>
                   ))}
                 </div>

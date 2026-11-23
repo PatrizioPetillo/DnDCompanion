@@ -275,7 +275,7 @@ export function MagiaTavolo({ scheda, partita, cambia, bozza }: PropsTavolo) {
       <div className="flex gap-1 overflow-x-auto" role="group" aria-label="Filtra per tempo di lancio">
         {TEMPI.map((t) => (
           <button key={t.id} onClick={() => setFiltro(t.id)} aria-pressed={filtro === t.id}
-            className={`min-h-9 shrink-0 rounded-full border px-3 text-xs ${filtro === t.id ? 'border-accento bg-accento text-su-accento' : 'border-bordo text-testo-2'}`}>
+            className={`min-h-11 shrink-0 rounded-full border px-3 text-sm ${filtro === t.id ? 'border-accento bg-accento text-su-accento' : 'border-bordo text-testo-2'}`}>
             {t.nome}
           </button>
         ))}

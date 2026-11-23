@@ -130,7 +130,7 @@ export function PassoEquipaggiamento({ bozza, cambia }: { bozza: Bozza; cambia: 
           <li key={v.oggetto} className="border-b border-bordo px-3 py-2 last:border-b-0">
             {v.contenuto ? (
               <details>
-                <summary className="min-h-8 cursor-pointer text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</summary>
+                <summary className="min-h-11 cursor-pointer py-2.5 text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</summary>
                 <p className="mt-1 text-sm text-testo-2">{v.contenuto.map((c) => `${c.quantita > 1 ? `${c.quantita} × ` : ''}${c.nome}`).join(', ')}</p>
               </details>
             ) : (
@@ -245,9 +245,9 @@ function Personalizzato({ aggiungi }: { aggiungi: (nome: string, mo: number) => 
       <Separatore titolo="Oggetto personalizzato" />
       <div className="flex gap-2">
         <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome (es. corda di seta)" autoComplete="off"
-          className="h-12 min-w-0 flex-1 rounded-lg border border-bordo bg-superficie px-3 text-base text-testo placeholder:text-testo-2/70" />
+          className="h-12 min-w-0 flex-1 rounded-lg border border-bordo bg-superficie px-3 text-base text-testo placeholder:text-testo-2" />
         <input value={mo} onChange={(e) => setMo(e.target.value)} inputMode="decimal" placeholder="mo" aria-label="Prezzo in monete d'oro"
-          className="h-12 w-20 rounded-lg border border-bordo bg-superficie px-3 text-base text-testo placeholder:text-testo-2/70" />
+          className="h-12 w-20 rounded-lg border border-bordo bg-superficie px-3 text-base text-testo placeholder:text-testo-2" />
       </div>
       <button disabled={!valido} onClick={() => { aggiungi(nome, Number(mo.replace(',', '.') || '0')); setNome(''); setMo(''); }}
         className="mt-2 h-12 w-full rounded-xl border border-bordo text-base text-testo disabled:text-testo-2/50">

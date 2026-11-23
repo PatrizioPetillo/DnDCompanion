@@ -17,8 +17,9 @@ function leggi<T>(chiave: string, predefinito: T): T {
     return predefinito;
   }
 }
-function scrivi(chiave: string, valore: unknown) {
-  try { localStorage.setItem(chiave, JSON.stringify(valore)); } catch { /* spazio pieno o modalità privata */ }
+// false se il browser non ha salvato (spazio pieno o modalità privata): chi chiama lo dice all'utente
+function scrivi(chiave: string, valore: unknown): boolean {
+  try { localStorage.setItem(chiave, JSON.stringify(valore)); return true; } catch { return false; }
 }
 
 // «I miei personaggi»: tutti i personaggi in una chiave sola. Al primo avvio la vecchia bozza (un solo personaggio)
@@ -30,8 +31,11 @@ export function useArchivio() {
     if (salvato?.versione === 1) return { ...salvato, personaggi: salvato.personaggi.map((p) => ({ ...p, partita: { ...statoVuoto(), ...p.partita } })) };
     return migra(leggi<Bozza | null>(CHIAVE, null), leggi<StatoPartita | null>(CHIAVE_PARTITA, null));
   });
-  useEffect(() => scrivi(CHIAVE_ARCHIVIO, archivio), [archivio]);
-  return [archivio, setArchivio] as const;
+  // Revisione tecnica (23/11): prima un salvataggio fallito era silenzioso e alla riapertura le modifiche sparivano.
+  // Ora l'app lo sa e mostra un avviso finché un salvataggio non riesce di nuovo.
+  const [salvato, setSalvato] = useState(true);
+  useEffect(() => { setSalvato(scrivi(CHIAVE_ARCHIVIO, archivio)); }, [archivio]);
+  return [archivio, setArchivio, salvato] as const;
 }
 
 export type Tema = 'giorno' | 'notte';

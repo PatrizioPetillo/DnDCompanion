@@ -26,8 +26,12 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
   const [modulo, setModulo] = useState<Modulo | null>(null);
   const [avviso, setAvviso] = useState<string | null>(null);
   // Lingue che la classe dà già (Druidico, Gergo ladresco): spente nelle tendine
-  const lingueDiClasse = (bozza.classe ? DATI.classi[bozza.classe].features : [])
-    .flatMap((f) => f.effetti).flatMap((e) => (e.tipo === 'lingua' ? e.ids : []));
+  // …e quelle scelte nella classe (la lingua del ladro, SRD p. 62): prima non si vedevano qui (giro delle 12 classi, 23/11)
+  const effettiClasse = (bozza.classe ? DATI.classi[bozza.classe].features : []).flatMap((f) => f.effetti);
+  const lingueDiClasse = [
+    ...effettiClasse.flatMap((e) => (e.tipo === 'lingua' ? e.ids : [])),
+    ...effettiClasse.flatMap((e) => (e.tipo === 'scelta' && e.scelta.tipo === 'lingua' ? bozza.scelte[e.scelta.id] ?? [] : [])),
+  ];
   const tutti = Object.values(DATI.background).filter((b) => visibile(bozza, b.id, bozza.background));
   const srd = tutti.filter((b) => !b.personalizzato);
   const miei = tutti.filter((b) => b.personalizzato);

@@ -6,6 +6,7 @@ import { Tendina } from './Tendina';
 import { blocchiMagia, type Blocco, type TipoScelta } from '../creazione/magia';
 import type { Bozza } from '../creazione/percorso';
 import { DATI } from '../regole';
+import { NOME_LISTA } from '../regole/dati';
 import type { Id, Numero } from '../regole/tipi';
 import { SchedaIncantesimo } from './SchedaIncantesimo';
 import { SelettoreIncantesimi } from './SelettoreIncantesimi';
@@ -49,6 +50,7 @@ export function BloccoMagia({ blocco: b, bozza, cambia, soloScelte }: {
   const contatore = aperto ? b.contatori.find((c) => c.tipo === aperto) : undefined;
   return (
     <div className="space-y-3">
+      {b.listaDaScegliere && !soloScelte && <SceltaListaIniziato blocco={b} bozza={bozza} cambia={cambia} />}
       {b.caratteristica && !soloScelte && (
         // La caratteristica di un talento o di una specie si sceglie anche qui; nel riquadro di Iniziato ci sono già i pulsanti (23/11: era doppia)
         <Tendina etichetta="Caratteristica per questi incantesimi" valore={b.caratteristica.valore}
@@ -90,7 +92,8 @@ export function BloccoMagia({ blocco: b, bozza, cambia, soloScelte }: {
           <button
             key={c.tipo}
             onClick={() => setAperto(c.tipo)}
-            className={`w-full rounded-xl border bg-superficie p-3 text-left ${c.scelti < c.attesi ? 'border-attenzione' : 'border-bordo'}`}
+            disabled={!!b.listaDaScegliere}
+            className={`w-full rounded-xl border bg-superficie p-3 text-left disabled:opacity-50 ${c.scelti < c.attesi ? 'border-attenzione' : 'border-bordo'}`}
           >
             <span className="flex items-baseline justify-between">
               <span className="text-base font-medium text-testo">{c.etichetta}</span>
@@ -128,3 +131,29 @@ export function BloccoMagia({ blocco: b, bozza, cambia, soloScelte }: {
   );
 }
 
+
+// Iniziato alla magia senza lista (dato da Pluriabilità): la lista si sceglie anche qui, prima degli incantesimi (SRD p. 87)
+function SceltaListaIniziato({ blocco: b, bozza, cambia }: { blocco: Blocco; bozza: Bozza; cambia: (b: Bozza) => void }) {
+  const altre = Object.entries(bozza.scelte).filter(([k]) => k.endsWith('.lista') && k !== b.listaDaScegliere).flatMap(([, v]) => v);
+  const bgLista = bozza.background ? DATI.background[bozza.background]?.talento.parametri?.['magic-initiate.lista'] : undefined;
+  if (bgLista) altre.push(bgLista);
+  const scegli = (l: string) => {
+    const base = b.listaDaScegliere!.replace(/\.lista$/, '');
+    const scelte = { ...bozza.scelte, [b.listaDaScegliere!]: [l] };
+    delete scelte[`${base}.trucchetti`];
+    delete scelte[`${base}.incantesimo1`];
+    cambia({ ...bozza, scelte });
+  };
+  return (
+    <div className="rounded-xl border border-attenzione bg-superficie p-3">
+      <p className="mb-2 text-sm font-medium text-testo">Prima scegli la lista</p>
+      <div className="grid grid-cols-3 gap-2">
+        {(['cleric', 'druid', 'wizard'] as const).map((l) => (
+          <button key={l} onClick={() => scegli(l)} disabled={altre.includes(l)} title={altre.includes(l) ? 'Già presa con l\'altro Iniziato: serve una lista diversa (p. 87)' : undefined}
+            className="min-h-11 rounded-lg border border-bordo text-sm text-testo disabled:opacity-40">{NOME_LISTA[l]}</button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-testo-2">Trucchetti e incantesimo di 1° vengono da questa lista.</p>
+    </div>
+  );
+}

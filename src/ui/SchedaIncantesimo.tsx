@@ -1,6 +1,6 @@
 // La scheda di un incantesimo, dal basso, sopra la lista (sezione 6.3). Il testo completo (SRD 5.2.1 in italiano)
 // si carica solo quando la si apre: è un file a parte, pesante.
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { DATI } from '../regole';
 import { NOME_CAR } from '../regole/dati/base';
 import type { Id } from '../regole/tipi';
@@ -47,25 +47,56 @@ function TabellaSrd({ t }: { t: Tabella }) {
 }
 let cache: Testi | null = null;
 
+// Fogli aperti uno sopra l'altro: Esc e Tab valgono solo per quello in cima (23/11)
+const pila: number[] = [];
+let prossimo = 0;
+
 export function FoglioDalBasso({ titolo, chiudi, children }: { titolo: React.ReactNode; chiudi: () => void; children: React.ReactNode }) {
+  const foglio = useRef<HTMLDivElement>(null);
+  const idTitolo = useId();
+  const chiudiRef = useRef(chiudi);
+  useEffect(() => { chiudiRef.current = chiudi; }, [chiudi]);
+  // Accessibilità (revisione del 23/11): il fuoco entra nel foglio, Tab resta dentro, alla chiusura torna dov'era
   useEffect(() => {
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && chiudi();
-    window.addEventListener('keydown', esc);
-    return () => window.removeEventListener('keydown', esc);
-  }, [chiudi]);
+    const mio = ++prossimo;
+    pila.push(mio);
+    const prima = document.activeElement as HTMLElement | null;
+    foglio.current?.focus();
+    const tasti = (e: KeyboardEvent) => {
+      if (pila[pila.length - 1] !== mio) return;
+      if (e.key === 'Escape') { e.preventDefault(); chiudiRef.current(); return; }
+      if (e.key !== 'Tab' || !foglio.current) return;
+      const f = [...foglio.current.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+        .filter((x) => x.offsetParent !== null);
+      if (!f.length) return;
+      const [primo, ultimo] = [f[0], f[f.length - 1]];
+      if (e.shiftKey && (document.activeElement === primo || document.activeElement === foglio.current)) { e.preventDefault(); ultimo.focus(); }
+      else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primo.focus(); }
+    };
+    window.addEventListener('keydown', tasti);
+    return () => {
+      window.removeEventListener('keydown', tasti);
+      pila.splice(pila.indexOf(mio), 1);
+      if (prima && document.contains(prima)) prima.focus();
+    };
+  }, []);   // una volta sola: rieseguirlo a ogni render ruberebbe il fuoco ai campi mentre si scrive
   return (
     <div className="fixed inset-0 z-30 flex flex-col justify-end bg-black/40" onClick={chiudi}>
       <div
+        ref={foglio}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={idTitolo}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="mx-auto flex max-h-[88vh] w-full max-w-120 flex-col rounded-t-2xl border-t border-bordo bg-sfondo pb-[env(safe-area-inset-bottom)]"
+        className="mx-auto flex max-h-[88vh] w-full max-w-120 flex-col rounded-t-2xl border-t border-bordo bg-sfondo pb-[env(safe-area-inset-bottom)] outline-none"
       >
         <div className="flex items-start justify-between gap-2 border-b border-bordo px-4 py-3">
-          <div className="min-w-0">{titolo}</div>
+          <div id={idTitolo} className="min-w-0">{titolo}</div>
           <button onClick={chiudi} className="min-h-11 shrink-0 rounded-lg px-3 text-base text-accento">Chiudi</button>
         </div>
-        <div className="overflow-y-auto px-4 py-3">{children}</div>
+        {/* tabIndex: il testo lungo si scorre anche con la tastiera (axe: scrollable-region-focusable) */}
+        <div className="overflow-y-auto px-4 py-3" tabIndex={0}>{children}</div>
       </div>
     </div>
   );

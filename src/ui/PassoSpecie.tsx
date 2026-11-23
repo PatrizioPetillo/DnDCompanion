@@ -39,6 +39,7 @@ export function PassoSpecie({ bozza, scegli, cambia, salvaSpecie, eliminaSpecie 
   const [avviso, setAvviso] = useState<string | null>(null);
   const imposta = (id: string, valori: string[]) => cambia({ ...bozza, scelte: { ...bozza.scelte, [id]: valori } });
   const specie = bozza.specie ? DATI.specie[bozza.specie] : undefined;
+  const talentoBg = bozza.background ? DATI.talenti[DATI.background[bozza.background]?.talento.talento] : undefined;
 
   // Scelte interne della specie scelta: stirpe/eredità, poi quelle dei tratti.
   const scelte: { scelta: Scelta; titolo: string; opzioni: { id: string; nome: string }[] }[] = [];
@@ -107,7 +108,12 @@ export function PassoSpecie({ bozza, scegli, cambia, salvaSpecie, eliminaSpecie 
                         key={`${s.id}-${k}`}
                         etichetta={s.quantita > 1 ? `${titolo} (${k + 1} di ${s.quantita})` : titolo}
                         valore={valori[k]}
-                        opzioni={opzioni.map((o) => ({ ...o, disattivata: valori.includes(o.id) && valori[k] !== o.id }))}
+                        opzioni={opzioni.map((o) => {
+                          // un talento non ripetibile già dato dal background si spegne, con il motivo (SRD p. 87)
+                          const dalBg = s.tipo === 'talento' && talentoBg?.id === o.id && !talentoBg.ripetibile;
+                          const gia = valori.includes(o.id) && valori[k] !== o.id;
+                          return { ...o, disattivata: gia || dalBg, ...(dalBg ? { motivo: `già dal ${DATI.background[bozza.background!]?.nome}` } : {}) };
+                        })}
                         cambia={(v) => { const n = [...valori]; n[k] = v; imposta(s.id, n.filter(Boolean)); }}
                       />
                     );
@@ -151,7 +157,7 @@ function TrattiSpecie({ specieId }: { specieId: string }) {
         {righe.map((t) => (
           <li key={t.nome}>
             <span className="font-medium text-testo">{t.nome}.</span> <span className="text-testo-2">{t.testo}</span>
-            {t.pagina && <span className="ml-1 whitespace-nowrap text-xs text-testo-2/80">SRD p. {t.pagina}</span>}
+            {t.pagina && <span className="ml-1 whitespace-nowrap text-xs text-testo-2">SRD p. {t.pagina}</span>}
           </li>
         ))}
       </ul>

@@ -96,3 +96,20 @@ describe('Iniziato già nel Background (la specie non è ancora scelta)', () => 
     expect(blocchiMagia(b).map((x) => x.id)).toEqual(['wizard', 'magic-initiate']);
   });
 });
+
+describe('Iniziato alla magia da Pluriabilità senza lista (giro delle 12 classi, 23/11)', () => {
+  const monaco = { ...P.MONACO, scelte: { ...P.MONACO.scelte, 'human.versatile': ['magic-initiate'] } } as never as Parameters<typeof blocchiMagia>[0];
+  it('senza lista niente incantesimi da scegliere, e il blocco chiede la lista', () => {
+    const b = blocchiMagia(monaco).find((x) => x.id === 'magic-initiate')!;
+    expect(b.listaDaScegliere).toBe('magic-initiate.lista');
+    expect(opzioniIncantesimi(monaco, 'magic-initiate', 'trucchetti')).toEqual([]);
+  });
+  it('con la lista solo i suoi incantesimi: Beffa crudele (bardo) non c\'è più', () => {
+    const conLista = { ...monaco, scelte: { ...(monaco as { scelte: Record<string, string[]> }).scelte, 'magic-initiate.lista': ['wizard'] } } as typeof monaco;
+    const t = opzioniIncantesimi(conLista, 'magic-initiate', 'trucchetti');
+    expect(t.length).toBeGreaterThan(5);
+    expect(t.every((x) => DATI.incantesimi[x.id].liste.includes('wizard'))).toBe(true);
+    expect(t.some((x) => x.id === 'vicious-mockery')).toBe(false);
+    expect(blocchiMagia(conLista).find((x) => x.id === 'magic-initiate')!.listaDaScegliere).toBeUndefined();
+  });
+});

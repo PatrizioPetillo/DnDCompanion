@@ -8,7 +8,7 @@ import type { Car, Specie } from '../regole/tipi';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 import { Tendina } from './Tendina';
 
-const base = 'rounded-lg border border-bordo bg-sfondo px-3 text-base text-testo placeholder:text-testo-2/70';
+const base = 'rounded-lg border border-bordo bg-sfondo px-3 text-base text-testo placeholder:text-testo-2';
 const campo = `w-full ${base}`;
 const ORIGINE = Object.values(DATI.talenti).filter((t) => t.categoria === 'origine');
 const ABILITA_ORD = Object.entries(ABILITA).sort((a, b) => a[1].nome.localeCompare(b[1].nome, 'it'));

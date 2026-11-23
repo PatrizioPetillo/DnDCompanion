@@ -293,13 +293,13 @@ function Zaino({ r, scheda, tavolo, bozza, cambia, restituibile = false }: { r: 
           return (
             <li key={v.oggetto} className="border-b border-bordo px-3 py-2 last:border-b-0">
               {a ? (
-                <button onClick={() => setAperto(a)} className="flex min-h-8 w-full items-center justify-between text-left text-base text-testo">
+                <button onClick={() => setAperto(a)} className="flex min-h-11 w-full items-center justify-between text-left text-base text-testo">
                   <span>{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</span>
                   <span className="text-sm text-accento">Apri ›</span>
                 </button>
               ) : v.contenuto ? (
                 <details>
-                  <summary className="min-h-8 cursor-pointer text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</summary>
+                  <summary className="min-h-11 cursor-pointer py-2.5 text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</summary>
                   <p className="mt-1 text-sm text-testo-2">{v.contenuto.map((c) => `${c.quantita > 1 ? `${c.quantita} × ` : ''}${c.nome}`).join(', ')}</p>
                 </details>
               ) : <span className="text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</span>}

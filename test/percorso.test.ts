@@ -253,3 +253,15 @@ describe('Titoli delle scelte di classe (20/11)', () => {
     expect(monaco?.titolo).toBe('Strumento');
   });
 });
+
+describe('bonus del background completi (giro delle 12 classi, 23/11)', () => {
+  it('con il solo +2 il passo Background non è fatto', async () => {
+    const { bonusCompleto, statoPassi: stato } = await import('../src/creazione/percorso');
+    const base = { ...P.TRAVIS, scelte: { ...P.TRAVIS.scelte } } as never as Parameters<typeof stato>[0];
+    expect(bonusCompleto({ ...base, bonusBackground: { INT: 2, SAG: 1 } })).toBe(true);
+    expect(bonusCompleto({ ...base, bonusBackground: { INT: 1, SAG: 1, CAR: 1 } })).toBe(true);
+    expect(bonusCompleto({ ...base, bonusBackground: { INT: 2 } })).toBe(false);
+    expect(bonusCompleto({ ...base, bonusBackground: { INT: 2, FOR: 1 } })).toBe(true);    // FOR non è dell'Accolito: lo dice l'avviso, non blocca
+    expect(stato({ ...base, bonusBackground: { INT: 2 } }).background.stato).not.toBe('fatto');
+  });
+});

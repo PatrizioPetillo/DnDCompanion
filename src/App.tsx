@@ -43,7 +43,7 @@ const SENZA_BARRA: Vista[] = ['home', 'personaggi', 'informazioni', 'tavoli', 't
 const NOMI = Object.fromEntries([...Object.values(DATI.classi), ...Object.values(DATI.background), ...Object.values(DATI.specie)].map((x) => [x.id, x.nome]));
 
 export default function App() {
-  const [archivio, setArchivio] = useArchivio();
+  const [archivio, setArchivio, salvato] = useArchivio();
   const [tema, setTema] = useTema();
   const [vista, setVistaGrezza] = useState<Vista>('home');
   const [messaggio, setMessaggio] = useState<string | null>(null);
@@ -52,6 +52,19 @@ export default function App() {
   const partita = corrente?.partita;
 
   const [menu, setMenu] = useState(false);
+  const menuBottone = useRef<HTMLButtonElement>(null);
+  const menuLista = useRef<HTMLDivElement>(null);
+  // Menu da tastiera (revisione del 23/11): aprendolo il fuoco va alla prima voce, Esc lo chiude e torna al pulsante
+  const menuAperto = useRef(false);
+  useEffect(() => {
+    if (menu) menuLista.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus();
+    else if (menuAperto.current) menuBottone.current?.focus();
+    menuAperto.current = menu;
+    if (!menu) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [menu]);
   // Ogni cambio di schermata entra nella cronologia: il tasto Indietro del telefono torna alla schermata prima
   // Direzione dell'animazione tra le schermate (21/11): indietro se si torna a un passo precedente o col tasto del telefono
   const [direzione, setDirezione] = useState<'avanti' | 'indietro'>('avanti');
@@ -168,13 +181,13 @@ export default function App() {
           <span className="flex-1 truncate text-center font-titolo text-lg text-accento">
             {corrente && (inPasso || vistaReale === 'indice') && !ricevuta ? (bozza.nome.trim() || 'Nuovo personaggio') : 'Companion B20'}
           </span>
-          <button onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu} aria-haspopup="menu"
+          <button ref={menuBottone} onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu} aria-haspopup="menu"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-bordo text-testo-2">
             <IconaMenu />
           </button>
         </div>
         {inPasso && vistaReale === vista && !ricevuta && !bloccato && (
-          <button onClick={() => setVista('indice')} className="mt-2 block w-full text-left" aria-label={`Passo ${numero} di ${PASSI.length}: apri tutti i passi`}>
+          <button onClick={() => setVista('indice')} className="-mb-2 mt-0 block w-full py-2 text-left">
             <span className="mb-1 flex justify-between text-xs text-testo-2"><span>Passo {numero} di {PASSI.length}: {PASSI[numero - 1].titolo}</span><span className="text-accento">Tutti i passi</span></span>
             <span className="block h-1 rounded-full bg-bordo">
               <span className="block h-1 rounded-full bg-oro transition-[width]" style={{ width: `${(numero / PASSI.length) * 100}%` }} />
@@ -184,8 +197,14 @@ export default function App() {
         {menu && (
           <>
             <div className="fixed inset-0 z-20" onClick={() => setMenu(false)} aria-hidden="true" />
-            <div role="menu" className="absolute right-4 top-full z-30 mt-1 w-64 overflow-hidden rounded-xl border border-bordo bg-superficie shadow-lg"
-              onKeyDown={(e) => e.key === 'Escape' && setMenu(false)}>
+            <div role="menu" ref={menuLista} className="absolute right-4 top-full z-30 mt-1 w-64 overflow-hidden rounded-xl border border-bordo bg-superficie shadow-lg"
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+                e.preventDefault();
+                const voci = [...(menuLista.current?.querySelectorAll<HTMLElement>('[role=menuitem]') ?? [])];
+                const i = voci.indexOf(document.activeElement as HTMLElement);
+                voci[(i + (e.key === 'ArrowDown' ? 1 : voci.length - 1)) % voci.length]?.focus();
+              }}>
               <VoceMenu onClick={() => { setRicevuta(null); setTavoloRicevuto(null); setVista('home'); }}>Home</VoceMenu>
               <VoceMenu onClick={() => { setRicevuta(null); setVista('personaggi'); }}>I miei personaggi</VoceMenu>
               <VoceMenu onClick={() => { setRicevuta(null); setTavoloRicevuto(null); setVista('tavoli'); }}>I miei tavoli (master)</VoceMenu>
@@ -222,6 +241,13 @@ export default function App() {
       </header>
 
       <main className="flex-1 overflow-x-clip px-4 pb-28 pt-4">
+        {!salvato && (
+          <div role="alert" className="mb-3 rounded-xl border-2 border-attenzione bg-superficie p-3 text-sm text-testo">
+            <p className="font-medium text-attenzione">Le ultime modifiche non sono salvate</p>
+            <p className="mt-1">Lo spazio del browser per l'app è pieno (o sei in navigazione privata). Finché l'app resta aperta non perdi niente: scarica subito la copia di sicurezza, poi togli qualche ritratto o un personaggio che non usi.</p>
+            <button onClick={() => { setRicevuta(null); setVista('personaggi'); }} className="mt-2 min-h-11 w-full rounded-lg border border-accento text-accento">Vai a «I miei personaggi» per la copia</button>
+          </div>
+        )}
         <AvvisiMaster archivio={archivio} setArchivio={(f) => setArchivio(f)} avvisi={eventi.avvisi} togli={eventi.togliAvviso} aggiungi={eventi.aggiungiAvviso} />
         <div key={vistaReale} className={tavoloRicevuto || oggettoRicevuto || bottinoRicevuto ? '' : direzione === 'indietro' ? 'anim-indietro' : 'anim-avanti'}>
         {messaggio && (

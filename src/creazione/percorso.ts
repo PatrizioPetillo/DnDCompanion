@@ -98,6 +98,15 @@ export function comePersonaggio(b: Bozza): Personaggio | null {
 // mancanti: per «Avanti (3 da fare)»; cosaManca: le stesse cose in parole, per il foglio che si apre toccando Avanti
 export interface VocePasso { stato: StatoPasso; avvisi: Avviso[]; mancanti: number; cosaManca: string[] }
 
+// Bonus del background completi (SRD p. 83): +2 e +1 su due caratteristiche diverse, oppure +1 a tre.
+// Prima bastava averne scelto uno: con il solo +2 il passo risultava fatto (trovato nel giro delle 12 classi, 23/11).
+// Qui conta solo la forma: una caratteristica che il background non dà resta un avviso del motore (avvisa, non vieta).
+export function bonusCompleto(b: Bozza): boolean {
+  if (!b.background) return false;
+  const v = Object.values(b.bonusBackground).map(Number).sort();
+  return (v.length === 2 && v[0] === 1 && v[1] === 2) || (v.length === 3 && v.every((n) => n === 1));
+}
+
 export function statoPassi(b: Bozza, d: Dati = DATI): Record<IdPasso, VocePasso> {
   const r = Object.fromEntries(PASSI.map((p) => [p.id, { stato: 'da-fare' as StatoPasso, avvisi: [] as Avviso[], mancanti: 0, cosaManca: [] as string[] }])) as
     Record<IdPasso, VocePasso>;
@@ -107,7 +116,7 @@ export function statoPassi(b: Bozza, d: Dati = DATI): Record<IdPasso, VocePasso>
   const pg = comePersonaggio(b);
   // Quello che manca prima che esista un personaggio (classe, background e specie): il motore non lo vede ancora
   const classeMancanti = (b.classe ? 0 : 1) + scelteDiClasse(b, d).reduce((n, s) => n + Math.max(0, s.quantita - (b.scelte[s.id]?.length ?? 0)), 0);   // una per tendina
-  const bgMancanti = (b.background ? 0 : 1) + (Object.keys(b.bonusBackground).length ? 0 : 1) + ((b.scelte['origine.lingue'] ?? []).length >= 2 ? 0 : 1);
+  const bgMancanti = (b.background ? 0 : 1) + (bonusCompleto(b) ? 0 : 1) + ((b.scelte['origine.lingue'] ?? []).length >= 2 ? 0 : 1);
   const basi: Partial<Record<IdPasso, boolean>> = {
     classe: classeMancanti === 0, specie: !!b.specie,
     background: bgMancanti === 0,
@@ -164,7 +173,9 @@ function cosaManca(passo: IdPasso, b: Bozza, v: VocePasso, d: Dati = DATI): stri
   if (passo === 'background') {
     if (!b.background) out.push('Scegli il background');
     else {
-      if (!Object.keys(b.bonusBackground).length) out.push('Scegli i bonus alle caratteristiche (+2 e +1, oppure +1 a tutte e tre)');
+      if (!bonusCompleto(b)) out.push(Object.keys(b.bonusBackground).length
+        ? 'Completa i bonus alle caratteristiche: manca il +1 o il +2'
+        : 'Scegli i bonus alle caratteristiche (+2 e +1, oppure +1 a tutte e tre)');
       const l = (b.scelte['origine.lingue'] ?? []).length;
       if (l < 2) out.push(`Scegli le lingue: ${l} su 2`);
     }

@@ -40,7 +40,12 @@ export interface Blocco {
   contatori: { tipo: TipoScelta; etichetta: string; scelti: number; attesi: number; voci: Id[] }[];
   semprePreparati: Id[]; lanci?: string; capacita: { nome: string; testo: string }[];
   caratteristica?: { scelta: Id; valore: string };   // da scegliere qui (talenti e specie: INT, SAG o CAR)
+  listaDaScegliere?: Id;                              // Iniziato alla magia senza lista: si sceglie anche qui (SRD p. 87)
 }
+
+// Iniziato alla magia: la lista (Chierico, Druido o Mago) va scelta prima degli incantesimi. Senza lista l'elenco
+// era tutto l'SRD (trovato nel giro delle 12 classi, 23/11: un monaco umano poteva prendere Beffa crudele, del bardo).
+const iniziatoSenzaLista = (m: { id: Id; lista?: Id | null }) => m.id.startsWith('magic-initiate') && !m.lista;
 
 export function blocchiMagia(b: Bozza, d: Dati = DATI): Blocco[] {
   const s = scheda(b, d);
@@ -68,6 +73,7 @@ export function blocchiMagia(b: Bozza, d: Dati = DATI): Blocco[] {
       contatori, semprePreparati: m.semprePreparati.filter((x) => !(b.scelte[m.scelte.incantesimi ?? ''] ?? []).includes(x)),
       ...(lanci ? { lanci } : {}), capacita,
       ...(m.scelte.caratteristica ? { caratteristica: { scelta: m.scelte.caratteristica, valore: b.scelte[m.scelte.caratteristica]?.[0] ?? '' } } : {}),
+      ...(iniziatoSenzaLista(m) ? { listaDaScegliere: `${m.id}.lista` } : {}),
     };
   });
 }
@@ -96,7 +102,7 @@ function quanti(m: MagiaCalcolata, tipo: TipoScelta): number {
 export function opzioniIncantesimi(b: Bozza, magiaId: Id, tipo: TipoScelta, d: Dati = DATI) {
   const s = scheda(b, d);
   const m = s?.magia.find((x) => x.id === magiaId);
-  if (!s || !m) return [];
+  if (!s || !m || iniziatoSenzaLista(m)) return [];
   const presi = letti(b, m, tipo);
   const pieno = presi.length >= quanti(m, tipo);
   // Già dati da un'altra fonte: trucchetti conosciuti e incantesimi sempre preparati o preparati altrove

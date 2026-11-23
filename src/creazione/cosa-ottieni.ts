@@ -90,7 +90,8 @@ export function cosaOttieni(classeId: Id, d: Dati = DATI): CosaOttieni {
     if (t) parti.push(`${t} trucchetti`);
     if (conc.libro) parti.push(`un libro con ${conc.libro.iniziali} incantesimi`);
     const p = conc.preparati?.numero;
-    if (typeof p === 'number') parti.push(`${p} incantesimi preparati`);
+    const n1 = typeof p === 'number' ? p : p && 'perLivelli' in p ? p.perLivelli[0] : undefined;   // al 1° livello
+    if (n1 !== undefined) parti.push(`${n1} incantesimi preparati`);
     if (c.patto?.[1]) parti.push(`${c.patto[1].numero} slot del patto, che torna anche con il riposo breve`);
     else if (c.slot?.[1]) parti.push(`${c.slot[1][0]} slot di 1° livello`);
     magia = { nome: classeId === 'warlock' ? 'Magia del patto' : 'Incantesimi', pagina: PAGINA_INCANTESIMI[classeId] ?? 0,

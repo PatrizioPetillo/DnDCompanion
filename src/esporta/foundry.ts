@@ -94,7 +94,8 @@ export function attoreFoundry(pg: Bozza, dati: DatiFoundry, opzioni: { ora?: Dat
       if (a.level !== undefined && a.level !== null && a.level > livello) continue;
       if (a.classRestriction === 'secondary') continue;
       const c = a.configuration;
-      if (a.type === 'HitPoints') a.value = { 1: 'max' };
+      // PF: massimo al 1° livello; dopo, il tiro scritto o il valore medio (= il fisso dell'SRD, p. 23)
+      if (a.type === 'HitPoints') a.value = Object.fromEntries(Array.from({ length: livello }, (_, i) => [i + 1, i === 0 ? 'max' : (pg.tiriPf?.[i + 1] ?? 'avg')]));
       else if (a.type === 'Trait') {
         const grants = (c.grants as string[]) ?? [];
         grants.forEach((g) => usati.add(g));
@@ -122,8 +123,9 @@ export function attoreFoundry(pg: Bozza, dati: DatiFoundry, opzioni: { ora?: Dat
   for (const [k, v] of [['classe', pg.classe], ['specie', pg.specie], ['background', pg.background]] as const)
     if (v && !ix[k][v]) avvisi.push(`${k} non dell'SRD (${v}): in Foundry va aggiunto a mano`);
   // Classe (1° livello)
-  const classe = pg.classe ? metti(ix.classe[pg.classe], (d) => { d.system.levels = 1; }) : null;
-  if (classe) avanza(classe, 1, (pg.scelte?.[`${pg.classe}.abilita`] ?? []).map((k) => `skills:${ABILITA[k]}`));
+  const livelloPg = pg.livello ?? 1;
+  const classe = pg.classe ? metti(ix.classe[pg.classe], (d) => { d.system.levels = livelloPg; }) : null;
+  if (classe) avanza(classe, livelloPg, (pg.scelte?.[`${pg.classe}.abilita`] ?? []).map((k) => `skills:${ABILITA[k]}`));
   // Background: aumento delle caratteristiche già nei punteggi; il talento d'origine arriva dal suo avanzamento
   const bg = pg.background ? metti(ix.background[pg.background]) : null;
   if (bg) {

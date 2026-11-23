@@ -55,10 +55,11 @@ export const DADI_INCANTESIMI: Record<string, DadiIncantesimo> = {
 };
 
 // «1d10 fuoco», «2d4 + 3 PF», «1d4 + 1 forza (per dardo…)»
-export function testoDadi(id: string, mod: number): string | null {
+export function testoDadi(id: string, mod: number, extra = 0): string | null {
   const d = DADI_INCANTESIMI[id];
   if (!d) return null;
-  const piu = d.piuMod ? (mod >= 0 ? ` + ${mod}` : ` − ${-mod}`) : '';
+  const n = (d.piuMod ? mod : 0) + extra;
+  const piu = d.piuMod || extra ? (n >= 0 ? ` + ${n}` : ` − ${-n}`) : '';
   const cosa = d.cura ? 'PF' : d.temporanei ? 'PF temporanei' : d.tipo;
   return `${d.dadi}${piu} ${cosa}`;
 }

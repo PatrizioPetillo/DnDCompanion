@@ -34,7 +34,8 @@ export function daAttacco(a: Attacco): RichiestaTiro {
 }
 
 // Un incantesimo con i suoi dadi: trucchetto o di 1° con lo slot scelto (livelloSlot ≥ livello dell'incantesimo)
-export function daIncantesimo(id: Id, m: MagiaCalcolata, modCar: number, livelloSlot?: number): RichiestaTiro | null {
+// bonusDanni: aggiunte ai danni di un trucchetto (Deflagrazione agonizzante, 23/11)
+export function daIncantesimo(id: Id, m: MagiaCalcolata, modCar: number, livelloSlot?: number, bonusDanni = 0): RichiestaTiro | null {
   const i = DATI.incantesimi[id];
   const d = DADI_INCANTESIMI[id];
   if (!i || !d) return null;
@@ -48,7 +49,7 @@ export function daIncantesimo(id: Id, m: MagiaCalcolata, modCar: number, livello
   } else {
     const base = conSlot(d.dadi, id === 'ice-knife' ? undefined : d.perSlot, sopra);
     if (base) {
-      const e = d.piuMod ? { ...base, piu: base.piu + modCar } : base;
+      const e = { ...base, piu: base.piu + (d.piuMod ? modCar : 0) + bonusDanni };
       danni.push({ etichetta: d.cura ? 'Cura' : d.temporanei ? 'PF temporanei' : 'Danni', espressione: e, ...(d.tipo ? { tipo: d.tipo } : {}),
         ...(d.cura ? { cura: true } : {}), ...(d.temporanei ? { temporanei: true } : {}) });
     }

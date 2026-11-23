@@ -39,6 +39,7 @@ export type Valore =
   | { mod: Car; minimo?: number }
   | { competenza: true }
   | { perLivello: number }
+  | { perLivelli: number[] }                       // dalla tabella della classe: un valore per livello, dal 1° (23/11)
   | { tabella: Id };
 
 export interface Termine { etichetta: string; valore: number }
@@ -64,6 +65,10 @@ export type Effetto =
   | { tipo: 'opzioni'; scelta: Scelta; effetti: Record<Id, Effetto[]> }   // Ordine divino, suppliche…
   | { tipo: 'valoreClasse'; id: Id; nome: string; valore: string; srd: RifSRD }  // 1d6, +2…
   | { tipo: 'lingua'; ids: Id[] }
+  // 2° livello (23/11): Factotum del bardo, Movimento senza armatura del monaco, Deflagrazione agonizzante
+  | { tipo: 'mezzaCompetenzaAbilita'; etichetta: string }
+  | { tipo: 'velocitaSenzaArmatura'; valore: number; etichetta: string }
+  | { tipo: 'bonusDanniTrucchetto'; incantesimo: Id; car: Car; etichetta: string }
   | { tipo: 'nota'; testo: string };
 
 export interface FormulaCA {
@@ -103,7 +108,7 @@ export interface ConcessioneMagia {
   slot?: 'normali' | 'patto';
   cambio?: CambioIncantesimi;
   cambioTrucchetti?: CambioIncantesimi;
-  libro?: { iniziali: number };
+  libro?: { iniziali: number; perLivello?: number };   // il mago: 6 al 1° livello, +2 a ogni livello (p. 78)
   cdCondizionali?: { etichetta: string; bonus: number; srd: RifSRD }[];
   srd: RifSRD;
 }
@@ -217,7 +222,8 @@ export interface Personaggio {
   idea?: string;
   nome: string;
   tavolo?: Tavolo;
-  livello: 1;
+  livello: number;                                // 1-2 per ora (aumento di livello, 23/11)
+  tiriPf?: Record<number, number>;                // livello → dado vita tirato; senza: valore fisso (p. 23)
   classe: Id;
   sottoclasse?: Id;
   specie: Id;
@@ -336,6 +342,8 @@ export interface Scheda {
   slot: { normali: number[]; patto: { numero: number; livello: number } | null };
   risorse: { id: Id; nome: string; usi: number; recupero: Risorsa['recupero']; dettaglio?: string }[];
   valoriClasse: Record<Id, string>;
+  livello: number;
+  bonusDanniTrucchetti: Record<Id, Termine[]>;    // Deflagrazione agonizzante (23/11)
   lingue: Id[];
   attacchi: Attacco[];
   addestramentoArmi: string[];                    // semplici, marziali… (classe + capacità): per il negozio

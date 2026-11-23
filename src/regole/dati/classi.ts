@@ -1,5 +1,5 @@
-// Le 12 classi dell'SRD 5.2, solo il livello 1 (versione 1: sezione 7 del contesto).
-import type { Classe, Effetto, Scelta } from '../tipi';
+// Le 12 classi dell'SRD 5.2: il 1° livello e, dal 23/11, il 2° (aumento di livello, in fondo al file).
+import type { Classe, ConcessioneMagia, Effetto, Feature, Scelta } from '../tipi';
 import { ARMI, LINGUE_RARE, LINGUE_STANDARD, STRUMENTI_ARTIGIANO, STRUMENTI_MUSICALI, TUTTE_LE_ABILITA } from './base';
 
 const abilita = (id: string, quantita: number, opzioni: string[], pagina: number): Scelta =>
@@ -369,3 +369,136 @@ export const CLASSI: Record<string, Classe> = {
     ],
   },
 };
+
+// ───────── 2° livello (23/11/2026, aumento di livello: prima tappa) ─────────
+// Dalle tabelle delle classi e dalle capacità «Level 2» dell'SRD 5.2; valori attesi approvati da Patrizio il 23/11.
+// I numeri che crescono con il livello (preparati, slot, usi) sono in perLivelli: [1°, 2°]. Si allunga una tappa alla volta.
+
+// Forme della Forma selvatica al 2° livello: bestie di GS massimo 1/4 senza velocità di volo (p. 42), dall'elenco dei mostri dell'SRD
+export const FORME_SELVATICHE_GS_1_4 = ['elk', 'baboon', 'camel', 'goat', 'riding-horse', 'draft-horse', 'seahorse', 'boar', 'deer', 'weasel',
+  'giant-weasel', 'cat', 'crab', 'giant-crab', 'hyena', 'lizard', 'giant-lizard', 'wolf', 'mastiff', 'giant-centipede', 'mule', 'panther',
+  'piovra', 'piranha', 'pony', 'spider', 'giant-wolf-spider', 'frog', 'giant-frog', 'giant-fire-beetle', 'jackal', 'scorpion',
+  'constrictor-snake', 'venomous-snake', 'giant-venomous-snake', 'badger', 'giant-badger', 'rat', 'giant-rat'];
+
+const STILI = ['archery', 'defense', 'great-weapon-fighting', 'two-weapon-fighting'];
+// Stile di combattimento di paladino e ranger (p. 54, 59): un talento di stile, o i 2 trucchetti di un'altra lista
+const stileConTrucchetti = (classe: 'paladin' | 'ranger', opzione: string, nomeOpz: string, lista: 'cleric' | 'druid', car: 'CAR' | 'SAG', pagina: number): Effetto => ({
+  tipo: 'opzioni', scelta: { id: `${classe}.stile`, tipo: 'opzione', quantita: 1, opzioni: [...STILI, opzione], srd: { pagina } },
+  effetti: {
+    ...Object.fromEntries(STILI.map((t) => [t, [{ tipo: 'talento', talento: t } as Effetto]])),
+    [opzione]: [
+      { tipo: 'scelta', scelta: { id: `${classe}.${opzione === 'blessed-warrior' ? 'guerriero-benedetto' : 'guerriero-druidico'}`, tipo: 'trucchetto', quantita: 2, srd: { pagina } } },
+      { tipo: 'magia', concessione: {
+        id: opzione, nome: `Classe: ${nomeOpz}`, fonte: { tipo: 'classe', id: classe }, lista, caratteristica: car,
+        trucchetti: { quantita: 2, scelta: `${classe}.${opzione === 'blessed-warrior' ? 'guerriero-benedetto' : 'guerriero-druidico'}` },
+        puoUsareSlot: false, cambioTrucchetti: { quando: 'livello', quanti: 1, srd: { pagina } }, srd: { pagina } } },
+    ],
+  },
+});
+const SUPPLICHE_2: Record<string, Effetto[]> = {
+  'armor-of-shadows': [
+    { tipo: 'formulaCA', formula: { id: 'armatura-magica', nome: 'Armatura magica (Armatura delle ombre)', base: 13, caratteristiche: ['DES'], richiede: 'nessunaArmatura', srd: { pagina: 72 } } },
+    { tipo: 'nota', testo: 'Armatura delle ombre: Armatura magica su te stesso senza slot (SRD p. 72)' }],
+  'eldritch-mind': [{ tipo: 'nota', testo: 'Mente occulta: vantaggio ai TS di Costituzione per mantenere la concentrazione (SRD p. 72)' }],
+  'agonizing-blast': [{ tipo: 'bonusDanniTrucchetto', incantesimo: 'eldritch-blast', car: 'CAR', etichetta: 'Deflagrazione agonizzante (Carisma)' }],
+  'devils-sight': [{ tipo: 'nota', testo: 'Vista del diavolo: vedi normalmente nella luce fioca e nell\'oscurità, anche magica, entro 36 m (SRD p. 72)' }],
+  'eldritch-spear': [{ tipo: 'nota', testo: 'Lancia occulta: la gittata di Deflagrazione occulta aumenta di 9 m per livello da warlock (SRD p. 72)' }],
+  'fiendish-vigor': [{ tipo: 'nota', testo: 'Vigore immondo: lanci Vita falsata su te stesso senza slot; i PF temporanei sono il massimo del dado (SRD p. 72)' }],
+  'mask-of-many-faces': [{ tipo: 'nota', testo: 'Maschera dai molti volti: lanci Camuffare se stessi senza slot (SRD p. 73)' }],
+  'misty-visions': [{ tipo: 'nota', testo: 'Visioni nebbiose: lanci Immagine silenziosa senza slot (SRD p. 73)' }],
+};
+
+const LIVELLO_2: Record<string, Feature[]> = {
+  barbarian: [
+    { id: 'danger-sense', nome: 'Percezione del pericolo', nomeEn: 'Danger Sense', livello: 2, srd: { pagina: 29 }, effetti: [{ tipo: 'nota', testo: 'Vantaggio ai tiri salvezza su Destrezza, se non sei incapacitato (SRD p. 29)' }] },
+    { id: 'reckless-attack', nome: 'Attacco irruento', nomeEn: 'Reckless Attack', livello: 2, srd: { pagina: 29 }, effetti: [{ tipo: 'nota', testo: 'Al primo attacco del turno: vantaggio agli attacchi con la Forza fino al tuo turno successivo, ma chi ti attacca ha vantaggio (SRD p. 29)' }] },
+  ],
+  bard: [
+    { id: 'bard-expertise', nome: 'Maestria', nomeEn: 'Expertise', livello: 2, srd: { pagina: 32 }, effetti: [
+      { tipo: 'scelta', scelta: { id: 'bard.maestria', tipo: 'maestria', quantita: 2, srd: { pagina: 32 } } },
+      { tipo: 'maestria', abilita: { daScelta: 'bard.maestria' } }] },
+    { id: 'jack-of-all-trades', nome: 'Factotum', nomeEn: 'Jack of All Trades', livello: 2, srd: { pagina: 32 }, effetti: [{ tipo: 'mezzaCompetenzaAbilita', etichetta: 'Factotum (metà competenza)' }] },
+  ],
+  cleric: [
+    { id: 'channel-divinity', nome: 'Incanalare divinità', nomeEn: 'Channel Divinity', livello: 2, srd: { pagina: 37 }, effetti: [
+      { tipo: 'risorsa', risorsa: { id: 'channel-divinity', nome: 'Incanalare divinità', usi: 2, dettaglio: 'Scintilla divina o Scacciare non morti; CD degli incantesimi',
+        recupero: [{ riposo: 'breve', quanti: 1 }, { riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 37 } } }] },
+  ],
+  druid: [
+    { id: 'wild-shape', nome: 'Forma selvatica', nomeEn: 'Wild Shape', livello: 2, srd: { pagina: 42 }, effetti: [
+      { tipo: 'risorsa', risorsa: { id: 'wild-shape', nome: 'Forma selvatica', usi: 2, dettaglio: 'azione bonus; 4 forme di GS fino a 1/4 senza volo; PF temporanei pari al livello da druido',
+        recupero: [{ riposo: 'breve', quanti: 1 }, { riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 42 } } },
+      { tipo: 'scelta', scelta: { id: 'druid.forme', tipo: 'opzione', quantita: 4, opzioni: FORME_SELVATICHE_GS_1_4, srd: { pagina: 42 } } }] },
+    { id: 'wild-companion', nome: 'Compagno selvatico', nomeEn: 'Wild Companion', livello: 2, srd: { pagina: 43 }, effetti: [{ tipo: 'nota', testo: 'Con uno slot o un uso di Forma selvatica lanci Trova famiglio senza componenti materiali; il famiglio è un folletto e sparisce al riposo lungo (SRD p. 43)' }] },
+  ],
+  fighter: [
+    { id: 'action-surge', nome: 'Azione impetuosa', nomeEn: 'Action Surge', livello: 2, srd: { pagina: 48 }, effetti: [
+      { tipo: 'risorsa', risorsa: { id: 'action-surge', nome: 'Azione impetuosa', usi: 1, dettaglio: 'un\'azione in più nel tuo turno, non Magia',
+        recupero: [{ riposo: 'breve', quanti: 'tutti' }, { riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 48 } } }] },
+    { id: 'tactical-mind', nome: 'Mente tattica', nomeEn: 'Tactical Mind', livello: 2, srd: { pagina: 48 }, effetti: [{ tipo: 'nota', testo: 'Se fallisci una prova di caratteristica puoi spendere un uso di Recuperare energie per aggiungere 1d10; se fallisci comunque, l\'uso non si spende (SRD p. 48)' }] },
+  ],
+  monk: [
+    { id: 'monks-focus', nome: 'Concentrazione da monaco', nomeEn: 'Monk\'s Focus', livello: 2, srd: { pagina: 50 }, effetti: [
+      { tipo: 'risorsa', risorsa: { id: 'focus', nome: 'Punti concentrazione', usi: { perLivelli: [0, 2] }, dettaglio: 'Raffica di colpi, Difesa paziente, Passo del vento',
+        recupero: [{ riposo: 'breve', quanti: 'tutti' }, { riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 50 } } },
+      { tipo: 'cdSpeciale', id: 'monk-focus', nome: 'Classe: Concentrazione da monaco', caratteristica: 'SAG', srd: { pagina: 50 } }] },
+    { id: 'unarmored-movement', nome: 'Movimento senza armatura', nomeEn: 'Unarmored Movement', livello: 2, srd: { pagina: 51 }, effetti: [{ tipo: 'velocitaSenzaArmatura', valore: 10, etichetta: 'Movimento senza armatura' }] },
+    { id: 'uncanny-metabolism', nome: 'Metabolismo straordinario', nomeEn: 'Uncanny Metabolism', livello: 2, srd: { pagina: 51 }, effetti: [
+      { tipo: 'risorsa', risorsa: { id: 'uncanny-metabolism', nome: 'Metabolismo straordinario', usi: 1, dettaglio: 'tirando l\'iniziativa: tutti i punti concentrazione e PF pari al dado di Arti marziali + livello da monaco',
+        recupero: [{ riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 51 } } }] },
+  ],
+  paladin: [
+    { id: 'paladin-fighting-style', nome: 'Stile di combattimento', nomeEn: 'Fighting Style', livello: 2, srd: { pagina: 54 }, effetti: [stileConTrucchetti('paladin', 'blessed-warrior', 'Guerriero benedetto', 'cleric', 'CAR', 54)] },
+    { id: 'paladins-smite', nome: 'Punizione del paladino', nomeEn: 'Paladin\'s Smite', livello: 2, srd: { pagina: 54 }, effetti: [
+      { tipo: 'magia', concessione: {
+        id: 'paladins-smite', nome: 'Classe: Punizione del paladino', fonte: { tipo: 'classe', id: 'paladin' }, lista: 'paladin', caratteristica: 'CAR',
+        semprePreparati: ['divine-smite'], lanciGratuiti: { incantesimi: ['divine-smite'], usi: 1, recupero: 'lungo' }, puoUsareSlot: true, slot: 'normali', srd: { pagina: 54 } } }] },
+  ],
+  ranger: [
+    { id: 'deft-explorer', nome: 'Esploratore esperto', nomeEn: 'Deft Explorer', livello: 2, srd: { pagina: 59 }, effetti: [
+      { tipo: 'scelta', scelta: { id: 'ranger.maestria', tipo: 'maestria', quantita: 1, srd: { pagina: 59 } } },
+      { tipo: 'maestria', abilita: { daScelta: 'ranger.maestria' } },
+      { tipo: 'scelta', scelta: { id: 'ranger.lingue', tipo: 'lingua', quantita: 2, opzioni: Object.keys(LINGUE_STANDARD), srd: { pagina: 59 } } }] },
+    { id: 'ranger-fighting-style', nome: 'Stile di combattimento', nomeEn: 'Fighting Style', livello: 2, srd: { pagina: 59 }, effetti: [stileConTrucchetti('ranger', 'druidic-warrior', 'Guerriero druidico', 'druid', 'SAG', 59)] },
+  ],
+  rogue: [
+    { id: 'cunning-action', nome: 'Azione scaltra', nomeEn: 'Cunning Action', livello: 2, srd: { pagina: 62 }, effetti: [{ tipo: 'nota', testo: 'Scatto, Disimpegno o Nascondersi come azione bonus (SRD p. 62)' }] },
+  ],
+  sorcerer: [
+    { id: 'font-of-magic', nome: 'Fonte di magia', nomeEn: 'Font of Magic', livello: 2, srd: { pagina: 66 }, effetti: [
+      { tipo: 'risorsa', risorsa: { id: 'sorcery-points', nome: 'Punti stregoneria', usi: { perLivelli: [0, 2] }, dettaglio: 'uno slot di 1° costa 2 punti (azione bonus); uno slot speso dà punti pari al suo livello',
+        recupero: [{ riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 66 } } }] },
+    { id: 'metamagic', nome: 'Metamagia', nomeEn: 'Metamagic', livello: 2, srd: { pagina: 66 }, effetti: [
+      { tipo: 'scelta', scelta: { id: 'sorcerer.metamagia', tipo: 'opzione', quantita: 2, srd: { pagina: 66 },
+        opzioni: ['careful-spell', 'distant-spell', 'empowered-spell', 'extended-spell', 'heightened-spell', 'quickened-spell', 'seeking-spell', 'subtle-spell', 'transmuted-spell', 'twinned-spell'] } }] },
+  ],
+  warlock: [
+    { id: 'eldritch-invocations-2', nome: 'Suppliche occulte', nomeEn: 'Eldritch Invocations', livello: 2, srd: { pagina: 70 }, effetti: [
+      { tipo: 'opzioni', scelta: { id: 'warlock.suppliche-2', tipo: 'opzione', quantita: 2, opzioni: Object.keys(SUPPLICHE_2), srd: { pagina: 72 } }, effetti: SUPPLICHE_2 }] },
+    { id: 'magical-cunning', nome: 'Scaltrezza magica', nomeEn: 'Magical Cunning', livello: 2, srd: { pagina: 72 }, effetti: [
+      { tipo: 'risorsa', risorsa: { id: 'magical-cunning', nome: 'Scaltrezza magica', usi: 1, dettaglio: 'rito di 1 minuto: recuperi slot del patto fino alla metà del massimo, per eccesso',
+        recupero: [{ riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 72 } } }] },
+  ],
+  wizard: [
+    { id: 'scholar', nome: 'Studioso', nomeEn: 'Scholar', livello: 2, srd: { pagina: 78 }, effetti: [
+      { tipo: 'scelta', scelta: { id: 'wizard.studioso', tipo: 'maestria', quantita: 1, opzioni: ['arcana', 'history', 'investigation', 'medicine', 'nature', 'religion'], srd: { pagina: 78 } } },
+      { tipo: 'maestria', abilita: { daScelta: 'wizard.studioso' } }] },
+  ],
+};
+
+// Tabelle delle classi al 2° livello: incantesimi preparati, slot, patto (p. 31, 36, 41, 53, 57, 64, 71, 77)
+const PREPARATI: Record<string, number[]> = { bard: [4, 5], cleric: [4, 5], druid: [4, 5], paladin: [2, 3], ranger: [2, 3], sorcerer: [2, 4], warlock: [2, 3], wizard: [4, 5] };
+const SLOT: Record<string, Record<number, number[]>> = {
+  bard: { 1: [2], 2: [3] }, cleric: { 1: [2], 2: [3] }, druid: { 1: [2], 2: [3] }, sorcerer: { 1: [2], 2: [3] }, wizard: { 1: [2], 2: [3] },
+  paladin: { 1: [2], 2: [2] }, ranger: { 1: [2], 2: [2] },
+};
+for (const [id, c] of Object.entries(CLASSI)) {
+  c.features.push(...(LIVELLO_2[id] ?? []));
+  if (SLOT[id]) c.slot = SLOT[id];
+  for (const f of c.features) for (const e of f.effetti) if (e.tipo === 'magia' && e.concessione.fonte.tipo === 'classe' && e.concessione.id === id) {
+    const conc: ConcessioneMagia = e.concessione;
+    if (conc.preparati && PREPARATI[id]) conc.preparati = { ...conc.preparati, numero: { perLivelli: PREPARATI[id] } };
+    if (conc.libro) conc.libro = { ...conc.libro, perLivello: 2 };
+  }
+}
+CLASSI.warlock.patto = { 1: { numero: 1, livello: 1 }, 2: { numero: 2, livello: 1 } };

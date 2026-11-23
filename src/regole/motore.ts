@@ -8,6 +8,9 @@ import { DATI, NOME_LISTA, type Dati } from './dati';
 import { DUE_MANI_ARMI, GITTATA_ARMI } from './dati/oggetti';
 import { metri } from './misure';
 import { avvisiTavolo, coperto } from './tavolo';
+
+// Fin dove arrivano i dati delle classi (aumento di livello, 23/11): si alza una tappa alla volta
+export const LIVELLO_MASSIMO = 2;
 import {
   CARATTERISTICHE, type Avviso, type Car, type ConcessioneMagia, type Effetto, type FormulaCA, type Id,
   type Attacco, type LivelloAvviso, type MagiaCalcolata, type Numero, type Personaggio, type RifSRD, type Risorsa, type Scelta,
@@ -51,6 +54,9 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
 
   const livello = pg.livello;
   const PB = 2;                                           // p. 23, livelli 1-4
+  // Aumento di livello (23/11): i dati delle classi arrivano per ora fino al 2° livello
+  if (!Number.isInteger(livello) || livello < 1 || livello > LIVELLO_MASSIMO)
+    avvisa('livello-non-supportato', 'errore', `L'app calcola per ora i livelli da 1 a ${LIVELLO_MASSIMO}: il ${livello}° livello arriverà più avanti`, { pagina: 23 });
 
   // ───────── Punteggi (p. 21) e bonus del background (p. 83) ─────────
   const base = pg.punteggi.base;
@@ -104,6 +110,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     else if ('mod' in v) r = Math.max(mod[v.mod], v.minimo ?? -99);
     else if ('competenza' in v) r = PB;
     else if ('perLivello' in v) r = v.perLivello * livello;
+    else if ('perLivelli' in v) r = v.perLivelli[Math.min(livello, v.perLivelli.length) - 1] ?? 0;
     else r = 0;
     return min !== undefined ? Math.max(min, r) : r;
   };
@@ -216,6 +223,10 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   for (const v of effetti('bonusAbilita')) for (const a of v.effetto.abilita)
     bonusAb.set(a, [...(bonusAb.get(a) ?? []), { etichetta: v.effetto.etichetta, valore: valore(v.effetto.valore) }]);
 
+  // Factotum (p. 32): metà competenza, per difetto, alle prove di abilità senza competenza
+  const mezza = effetti('mezzaCompetenzaAbilita')[0];
+  if (mezza) for (const a of TUTTE_LE_ABILITA) if (!fontiAbilita.has(a))
+    bonusAb.set(a, [...(bonusAb.get(a) ?? []), { etichetta: mezza.effetto.etichetta, valore: Math.floor(PB / 2) }]);
   const abilita: Scheda['abilita'] = {};
   for (const a of TUTTE_LE_ABILITA) {
     const comp = fontiAbilita.has(a);
@@ -227,15 +238,28 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     };
   }
 
+  // Suppliche occulte (p. 72): non si prende due volte la stessa (tranne le ripetibili, non ancora nei dati)
+  const suppliche = [...scelte.keys()].filter((k) => k.startsWith('warlock.suppliche')).flatMap((k) => risposta(k));
+  for (const x of new Set(suppliche)) if (suppliche.filter((y) => y === x).length > 1)
+    avvisa(`supplica-doppia:${x}`, 'errore', 'Hai scelto due volte la stessa supplica occulta: scegline un\'altra', { pagina: 72 });
+
   const tiriSalvezza = Object.fromEntries(CARATTERISTICHE.map((c) => {
     const comp = classe.tiriSalvezza.includes(c);
     return [c, { totale: mod[c] + (comp ? PB : 0) + effettoMagico('ts').reduce((s, x) => s + x.e.bonus, 0), competente: comp }];
   })) as Scheda['tiriSalvezza'];
 
   // ───────── PF (p. 22) e iniziativa (p. 22, Allerta p. 87) ─────────
+  // Dal 2° livello (p. 23): a ogni livello il dado vita tirato (pg.tiriPf) o il valore fisso, + Costituzione, minimo 1
+  const fisso = classe.dadoVita / 2 + 1;
+  const livelliDopo = Array.from({ length: Math.max(0, livello - 1) }, (_, i) => i + 2).map((l) => {
+    const tiro = pg.tiriPf?.[l];
+    const dado = tiro !== undefined ? Math.max(1, Math.min(classe.dadoVita, Math.round(tiro))) : fisso;
+    return { etichetta: `${l}° livello (${tiro !== undefined ? `tiro ${dado}` : `fisso ${fisso}`} + Costituzione)`, valore: Math.max(1, dado + mod.COS) };
+  });
   const pf = numero([
     { etichetta: `Dado vita (d${classe.dadoVita})`, valore: classe.dadoVita },
     { etichetta: 'Costituzione', valore: mod.COS },
+    ...livelliDopo,
     ...effetti('pfMassimi').map((v) => ({ etichetta: v.effetto.etichetta, valore: v.effetto.perLivello * livello })),
   ]);
   const iniziativa = numero([
@@ -311,9 +335,10 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
         lanciabili.add(sp);
       }
     }
+    const nLibro = c.libro ? c.libro.iniziali + (c.libro.perLivello ?? 0) * (livello - 1) : 0;
     if (c.libro) {
-      if (libro.length < c.libro.iniziali) avvisa(`libro-incompleto:${c.id}`, 'info', `Il libro contiene ${c.libro.iniziali} incantesimi di 1° livello (${libro.length} su ${c.libro.iniziali})`, { pagina: 78 });
-      if (libro.length > c.libro.iniziali) avvisa(`libro-troppi:${c.id}`, 'attenzione', `Al livello 1 il libro parte con ${c.libro.iniziali} incantesimi`, { pagina: 78 });
+      if (libro.length < nLibro) avvisa(`libro-incompleto:${c.id}`, 'info', `Al ${livello}° livello il libro contiene ${nLibro} incantesimi (${libro.length} su ${nLibro})`, { pagina: 78 });
+      if (libro.length > nLibro) avvisa(`libro-troppi:${c.id}`, 'attenzione', `Al ${livello}° livello il libro ha ${nLibro} incantesimi: 6 al 1° livello e 2 in più a ogni livello`, { pagina: 78 });
       for (const sp of libro) { controllaIncantesimo(`${c.id}.libro`, sp, lista, 'max'); lanciabili.add(sp); }
     }
 
@@ -332,7 +357,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
       ...(c.cambio ? { cambio: c.cambio } : {}), ...(c.cambioTrucchetti ? { cambioTrucchetti: c.cambioTrucchetti } : {}),
       fonte: c.fonte, lista,
       scelte: { ...(typeof c.caratteristica === 'string' ? {} : { caratteristica: c.caratteristica.daScelta }), ...(c.trucchetti?.scelta ? { trucchetti: c.trucchetti.scelta } : {}), ...(c.incantesimiScelti ? { incantesimi: c.incantesimiScelti.scelta } : {}) },
-      libro: c.libro ? { iniziali: c.libro.iniziali, scelti: libro } : null,
+      libro: c.libro ? { iniziali: nLibro, scelti: libro } : null,
       preparatiDa: c.preparati?.da ?? null,
       livelloMax,
       incantesimiQuanti: c.incantesimiScelti ? scelte.get(c.incantesimiScelti.scelta)?.quantita ?? 1 : 0,
@@ -568,7 +593,9 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   // Armatura pesante con Forza sotto il requisito: -10 piedi (p. 92), solo se la indossi (21/11)
   const forzaBassa = !!armaturaIndossata?.forza && punteggi.FOR.totale < armaturaIndossata.forza;
   if (forzaBassa) avvisa(`armatura-forza:${indossata}`, 'attenzione', `${d.oggetti[indossata!].nome} richiede Forza ${armaturaIndossata!.forza}: con meno la tua velocità cala di ${metri(10)}`, { pagina: 92 });
-  const velocita = (vel.length ? Math.max(...vel.map((v) => v.effetto.valore)) : specie.velocita) - (forzaBassa ? 10 : 0);
+  const libero = !indossata && !haScudo;
+  const velocita = (vel.length ? Math.max(...vel.map((v) => v.effetto.valore)) : specie.velocita) - (forzaBassa ? 10 : 0)
+    + (libero ? effetti('velocitaSenzaArmatura').reduce((s, v) => s + v.effetto.valore, 0) : 0);   // Movimento senza armatura (p. 51)
   // Svantaggio alla Furtività con le armature che lo hanno (p. 92), solo se indossate
   if (armaturaIndossata?.svantaggioFurtivita) abilita.stealth.svantaggio = `Svantaggio: ${d.oggetti[indossata!].nome}`;
 
@@ -593,6 +620,11 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     slot: { normali: classe.slot?.[livello] ?? [], patto: classe.patto?.[livello] ?? null },
     risorse,
     valoriClasse: Object.fromEntries(effetti('valoreClasse').map((v) => [v.effetto.id, v.effetto.valore])),
+    livello,
+    bonusDanniTrucchetti: effetti('bonusDanniTrucchetto').reduce<Record<Id, Termine[]>>((acc, v) => {
+      acc[v.effetto.incantesimo] = [...(acc[v.effetto.incantesimo] ?? []), { etichetta: v.effetto.etichetta, valore: mod[v.effetto.car] }];
+      return acc;
+    }, {}),
     lingue,
     attacchi, addestramentoArmi: [...addestramentoArmi], addestramentoArmature: [...addestramento], strumenti, inventario: inventarioVoci, monete,
     avvisi,

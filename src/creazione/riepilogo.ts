@@ -75,7 +75,8 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
         const modCar = m.caratteristica ? s.modificatori[m.caratteristica] : 0;
         const tiro = i.tiro?.tipo === 'attacco' ? `${segno(m.attacco?.totale ?? 0)} per colpire`
           : i.tiro?.tipo === 'ts' ? `TS ${NOME_CAR[i.tiro.car]} CD ${m.cd?.totale}` : 'colpisce sempre';
-        return { id: `${m.id}:${t}`, nome: i.nome, fonte: m.nome, tiro, dadi: testoDadi(t, modCar)!, ...(DADI_INCANTESIMI[t].nota ? { nota: DADI_INCANTESIMI[t].nota } : {}) };
+        const extra = (s.bonusDanniTrucchetti?.[t] ?? []).reduce((x, b) => x + b.valore, 0);   // Deflagrazione agonizzante
+        return { id: `${m.id}:${t}`, nome: i.nome, fonte: m.nome, tiro, dadi: testoDadi(t, modCar, extra)!, ...(DADI_INCANTESIMI[t].nota ? { nota: DADI_INCANTESIMI[t].nota } : {}) };
       })),
       risorse: s.risorse.map((r) => ({ id: r.id, nome: r.nome, usi: r.usi, recupero: recupero(r.recupero), ...(r.dettaglio ? { dettaglio: r.dettaglio } : {}) })),
       altro,

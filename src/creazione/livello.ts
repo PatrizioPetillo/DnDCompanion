@@ -11,6 +11,9 @@ export const pfFisso = (dadoVita: number) => dadoVita / 2 + 1;   // SRD p. 23
 
 // Cosa porta il livello, in una riga per capacità (testi nostri dall'SRD 5.2, pagina accanto)
 const RIGHE: Record<string, string> = {
+  'ability-score-improvement-4': 'Prendi l\'Aumento dei punteggi (+2 a una caratteristica o +1 a due, massimo 20) oppure un altro talento per cui hai i requisiti.',
+  'barbarian-weapon-mastery-4': 'Padroneggi un\'arma in più: scegli quale.',
+  'fighter-weapon-mastery-4': 'Padroneggi un\'arma in più: scegli quale.',
   'bard-expertise': 'Competenza doppia in 2 abilità in cui hai competenza.',
   'jack-of-all-trades': 'Metà del bonus di competenza alle prove di abilità in cui non hai competenza.',
   'channel-divinity': 'Due usi: Scintilla divina (cura o danni) o Scacciare non morti; uno torna con il riposo breve.',

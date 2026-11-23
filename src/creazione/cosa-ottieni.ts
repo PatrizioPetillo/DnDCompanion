@@ -86,7 +86,8 @@ export function cosaOttieni(classeId: Id, d: Dati = DATI): CosaOttieni {
   if (conc) {
     const car = typeof conc.caratteristica === 'string' ? NOME_CAR[conc.caratteristica] : 'a scelta';
     const parti: string[] = [];
-    const t = typeof conc.trucchetti?.quantita === 'number' ? conc.trucchetti.quantita : 0;
+    const q = conc.trucchetti?.quantita;
+    const t = typeof q === 'number' ? q : q && 'perLivelli' in q ? q.perLivelli[0] : 0;   // al 1° livello
     if (t) parti.push(`${t} trucchetti`);
     if (conc.libro) parti.push(`un libro con ${conc.libro.iniziali} incantesimi`);
     const p = conc.preparati?.numero;

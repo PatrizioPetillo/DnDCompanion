@@ -94,3 +94,54 @@ describe('Cresce da solo', () => {
     expect(nuovoLivello(salvato(L.L2_BARBARO), {})!.cresce).toContain('Ira: 2 → 3');
   });
 });
+
+describe('Sali di livello: dal 3° al 4° (talento)', () => {
+  it('tutti i personaggi di prova al 3° salgono al 4° senza scelte mancanti', async () => {
+    const L = await import('./livelli-prova');
+    for (const [nome, pg] of Object.entries(L).filter(([k]) => k.startsWith('L3_'))) {
+      const b = salvato(pg as object);
+      const s = riempi(b);
+      expect(completo(b, s, null, false), nome).toBe(true);
+      const nuova = bozzaNuova(b, s, null);
+      expect(nuova.livello, nome).toBe(4);
+      expect(mancanti(nuova), nome).toEqual([]);
+      expect(calcolaScheda(comePersonaggio(nuova)!).avvisi.filter((a) => a.livello === 'errore' && !a.accettato).map((a) => a.id), nome).toEqual([]);
+    }
+  });
+  it('la tendina del talento: Aumento per primo, gli stili solo a chi ha Stile di combattimento, Lottatore con FOR o DES 13, «un altro talento» in fondo', async () => {
+    const L = await import('./livelli-prova');
+    const talento = (pg: object) => nuovoLivello(salvato(pg), {})!.capacita.flatMap((c) => c.tendine).find((t) => t.chiave === 'scelta:talento-4')!;
+    const mago = talento(L.L3_TRAVIS);
+    expect(mago.opzioni[0].id).toBe('ability-score-improvement');
+    expect(mago.opzioni.at(-1)!.id).toBe('talento-libero');
+    expect(mago.opzioni.find((o) => o.id === 'archery')?.motivo).toBe('serve Stile di combattimento');
+    expect(talento(L.L3_GUERRIERO).opzioni.find((o) => o.id === 'archery')?.disattivata).toBe(false);
+    expect(talento(L.L3_GUERRIERO).opzioni.find((o) => o.id === 'grappler')?.disattivata).toBe(false);
+    // il talento d'origine del background, non ripetibile, è spento
+    expect(talento(L.L3_LADRO).opzioni.find((o) => o.id === 'alert')?.motivo).toBe('ce l\'hai già');
+  });
+  it('Aumento: le caratteristiche a 20 sono spente; «un altro talento» chiede il nome e lascia un avviso', async () => {
+    const L = await import('./livelli-prova');
+    const b = salvato(L.L3_TRAVIS);
+    const r = nuovoLivello(b, { 'scelta:talento-4': ['ability-score-improvement'] })!;
+    const a = r.capacita.flatMap((c) => c.tendine).find((t) => t.tipo === 'aumento')!;
+    expect(a.chiave).toBe('scelta:ability-score-improvement.aumento');
+    expect(a.punteggi?.INT).toBe(17);
+    const forte = { ...b, punteggi: { ...b.punteggi, base: { ...b.punteggi.base, COS: 20 } } } as Bozza;
+    const r20 = nuovoLivello(forte, { 'scelta:talento-4': ['ability-score-improvement'] })!;
+    expect(r20.capacita.flatMap((c) => c.tendine).find((t) => t.tipo === 'aumento')!.opzioni.find((o) => o.id === 'COS')?.motivo).toBe('è già a 20');
+    const s = riempi(b, { 'scelta:talento-4': ['talento-libero'] });
+    expect(s['scelta:talento-4.nome']).toEqual([]);           // il nome non si riempie da solo
+    expect(completo(b, s, null, false)).toBe(false);
+    const s2 = { ...s, 'scelta:talento-4.nome': ['Robusto'] };
+    expect(completo(b, s2, null, false)).toBe(true);
+    const sch = calcolaScheda(comePersonaggio(bozzaNuova(b, s2, null))!);
+    expect(sch.avvisi.find((x) => x.id === 'talento-personalizzato:talento-4')?.messaggio).toMatch(/^Robusto/);
+  });
+  it('Padronanza in più: le armi già padroneggiate sono spente', async () => {
+    const L = await import('./livelli-prova');
+    const t = nuovoLivello(salvato(L.L3_BARBARO), {})!.capacita.flatMap((c) => c.tendine).find((x) => x.chiave === 'scelta:barbarian.padronanza-4')!;
+    expect(t.opzioni.find((o) => o.id === 'greataxe')?.motivo).toBe('la padroneggi già');
+    expect(t.opzioni.find((o) => o.id === 'javelin')?.disattivata).toBe(false);
+  });
+});

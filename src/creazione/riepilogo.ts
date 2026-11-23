@@ -130,6 +130,9 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
         ...specie.tratti.map((t) => `${t.nome} (${specie.nome})`),
         ...(lignaggio ? [`${lignaggio.nome} (${specie.nome})`] : []),
         ...(bg.talentoLibero ? [`Talento: ${bg.talentoLibero.nome} (personalizzato: ${bg.talentoLibero.nota})`] : []),
+        // «Un altro talento» scritto a mano al 4°, 8°… livello: non calcolato
+        ...Object.keys(pg.scelte).filter((k) => /^talento-\d+$/.test(k) && Number(k.slice(8)) <= pg.livello && pg.scelte[k][0] === 'talento-libero')
+          .map((k) => `Talento: ${(pg.scelte[`${k}.nome`] ?? [])[0] || 'senza nome'} (${k.slice(8)}° livello, non calcolato)`),
         // Il talento che dà magia prende il nome della sua fonte: «Iniziato alla magia (Chierico)»
         ...s.talenti.map((t, i) => {
           const volta = s.talenti.slice(0, i).filter((x) => x === t).length;

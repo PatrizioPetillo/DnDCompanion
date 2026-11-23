@@ -12,6 +12,8 @@ import { DATI } from '../regole';
 import { classiFacili, RIGA_TALENTO, STILI_DI_GIOCO } from '../creazione/consigli';
 import { Consiglio } from './Consiglio';
 import { Tendina } from './Tendina';
+import { Gruppo } from './NuovoLivello';
+import { tendineTalento } from '../creazione/talento-livello';
 import { Fascia, immagine } from './Illustrazione';
 
 const DIFFICOLTA = { facile: 'facile', media: 'media', impegnativa: 'impegnativa' };
@@ -71,7 +73,15 @@ export function PassoClasse({ bozza, scegli, cambia }: { bozza: Bozza; scegli: (
               {scelta && scelte.length > 0 && (
                 <div className="space-y-3 border-t border-bordo px-4 pb-4 pt-3">
                   <h3 className="text-sm font-medium text-testo">Le tue scelte</h3>
-                  {scelte.map((s) => Array.from({ length: s.quantita }, (_, i) => {
+                  {scelte.map((s) => /^talento-\d+$/.test(s.id) ? (
+                    <div key={s.id} className="space-y-2">
+                      {tendineTalento(bozza, s.id, DATI, true).map((t) => {
+                        const id = t.chiave.slice('scelta:'.length);
+                        return <Gruppo key={t.chiave} t={{ ...t, titolo: t.titolo === 'Talento' ? `${s.titolo}: talento` : t.titolo }} valori={bozza.scelte[id] ?? []}
+                          cambia={(v) => cambia({ ...bozza, scelte: { ...bozza.scelte, [id]: t.tipo === 'testo' || t.tipo === 'aumento' ? v : v.filter(Boolean) } })} />;
+                      })}
+                    </div>
+                  ) : Array.from({ length: s.quantita }, (_, i) => {
                     const presi = bozza.scelte[s.id] ?? [];
                     const valore = presi[i] ?? '';
                     const altri = presi.filter((_, k) => k !== i);

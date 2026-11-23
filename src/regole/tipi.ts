@@ -190,7 +190,7 @@ export interface Background extends Elemento {
 export type CategoriaTalento = 'origine' | 'generale' | 'stileCombattimento' | 'donoEpico';
 export interface Talento extends Elemento {
   categoria: CategoriaTalento;
-  prerequisito?: { livello?: number; feature?: Id };
+  prerequisito?: { livello?: number; feature?: Id; caratteristica?: { tra: Car[]; minimo: number } };
   ripetibile: false | { condizione?: 'listaDiversa' };
   effetti: Effetto[];
 }

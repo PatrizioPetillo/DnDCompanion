@@ -29,7 +29,7 @@ const NOMI_OPZIONI: Record<Id, string> = {
 };
 const NON_QUI = new Set(['abilita', 'maestria', 'trucchetto', 'incantesimo']);
 
-function nome(s: Scelta, o: Id, d: Dati): string {
+export function nome(s: Scelta, o: Id, d: Dati): string {
   if (s.tipo === 'maestriaArma') return ARMI[o] ? `${ARMI[o].nome} · ${ARMI[o].padronanza}` : o;
   if (s.tipo === 'strumento') return STRUMENTI_MUSICALI[o] ?? STRUMENTI_ARTIGIANO[o] ?? o;
   if (s.tipo === 'lingua') return NOME_LINGUA[o] ?? o;

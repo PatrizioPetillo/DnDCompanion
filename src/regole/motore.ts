@@ -10,6 +10,7 @@ import { metri } from './misure';
 import { avvisiTavolo, coperto } from './tavolo';
 
 import { LIVELLO_MASSIMO } from './livelli';
+import { TALENTO_LIBERO } from './dati/classi';
 export { LIVELLO_MASSIMO };
 import {
   CARATTERISTICHE, type Avviso, type Car, type ConcessioneMagia, type Effetto, type FormulaCA, type Id,
@@ -91,6 +92,22 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     if (punteggi[c].totale > 20) avvisa(`massimo-20:${c}`, 'errore', `${NOME_CAR[c]} non può superare 20 con il bonus del background`, { pagina: 83 });
     mod[c] = modificatore(punteggi[c].totale);
   }
+  // Talenti dei livelli (4°, 8°…): Aumento dei punteggi (+2 a una o +1 a due) e Lottatore (+1 FOR o DES), massimo 20 (p. 87).
+  // Si applicano qui, prima di tutto il resto; i requisiti di caratteristica si controllano sui punteggi di prima.
+  const punteggiPrima = Object.fromEntries(CARATTERISTICHE.map((c) => [c, punteggi[c].totale])) as Record<Car, number>;
+  const giaPresi: Record<Id, number> = {};
+  for (const k of Object.keys(pg.scelte).filter((x) => /^talento-\d+$/.test(x) && Number(x.slice(8)) <= livello).sort((a, b) => Number(a.slice(8)) - Number(b.slice(8)))) {
+    const t = pg.scelte[k][0];
+    if (t !== 'ability-score-improvement' && t !== 'grappler') continue;
+    const istanza = giaPresi[t] ? `${t}@${k}` : t;
+    giaPresi[t] = (giaPresi[t] ?? 0) + 1;
+    const cars = (pg.scelte[`${istanza}.${t === 'grappler' ? 'caratteristica' : 'aumento'}`] ?? []).filter((c): c is Car => (CARATTERISTICHE as string[]).includes(c));
+    for (const c of cars) {
+      punteggi[c] = numero([...punteggi[c].termini, { etichetta: d.talenti[t].nome, valore: 1 }]);
+      if (punteggi[c].totale > 20) avvisa(`aumento-oltre-20:${c}`, 'errore', `${NOME_CAR[c]} non può superare 20 con ${d.talenti[t].nome}`, { pagina: 87 });
+      mod[c] = modificatore(punteggi[c].totale);
+    }
+  }
   // Oggetti magici attivi (21/11): caratteristiche fissate (Amuleto della salute: COS 19, se era più bassa)
   const magici = oggettiAttivi(pg.oggettiMagici, d);
   const effettoMagico = <T extends EffettoMagico['tipo']>(tipo: T) =>
@@ -121,11 +138,17 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const fonteScelta = new Map<Id, string>();   // da dove viene ogni scelta: per dire al giocatore cosa manca e dove
   const talenti: Id[] = [];
   const parametriFissi: Record<Id, Id> = {};
-  const risposta = (id: Id): Id[] => (parametriFissi[id] ? [parametriFissi[id]] : pg.scelte[id] ?? []);
+  const risposta = (id: Id): Id[] => (parametriFissi[id] ? [parametriFissi[id]] : (pg.scelte[id] ?? []).filter(Boolean));
 
   // Un talento ripetibile preso una seconda volta (es. Iniziato alla Magia da Versatile, p. 87) diventa
   // un'«istanza» con id proprio: «magic-initiate@human-versatile». Così le sue scelte non si mescolano con la prima.
   const aggiungiTalento = (id: Id, fonte: string, parametri: Record<Id, Id> = {}, daScelta?: Id) => {
+    // «Un altro talento» scritto a mano (4° livello, scelta di Patrizio): non calcolato, con avviso come per i background
+    if (id === TALENTO_LIBERO) {
+      const nome = (pg.scelte[`${daScelta}.nome`] ?? [])[0]?.trim() || 'Un talento fuori dall\'SRD';
+      avvisa(`talento-personalizzato:${daScelta}`, 'attenzione', `${nome} (${fonte}) non è nell'SRD: l'app non ne calcola gli effetti, controllali tu sul manuale`, { pagina: 87 });
+      return;
+    }
     const t = d.talenti[id];
     if (!t) { avvisa(`talento-sconosciuto:${id}`, 'errore', `Talento sconosciuto: ${id}`); return; }
     if (talenti.includes(id) && !t.ripetibile) {
@@ -134,6 +157,11 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     }
     if (t.prerequisito?.livello && livello < t.prerequisito.livello)
       avvisa(`prerequisito:${id}`, 'errore', `${t.nome} richiede il livello ${t.prerequisito.livello}`, { pagina: 87 });
+    const req = t.prerequisito?.caratteristica;
+    if (req && !req.tra.some((c) => punteggiPrima[c] >= req.minimo))
+      avvisa(`prerequisito:${id}:caratteristica`, 'errore', `${t.nome} richiede ${req.tra.map((c) => NOME_CAR[c]).join(' o ')} ${req.minimo} o più`, { pagina: 87 });
+    if (t.prerequisito?.feature && !classe.features.some((f) => f.livello <= livello && f.id.endsWith(t.prerequisito!.feature!)))
+      avvisa(`prerequisito:${id}:capacita`, 'errore', `${t.nome} si può prendere solo con la capacità Stile di combattimento`, { pagina: 87 });
     const volte = talenti.filter((x) => x === id).length;
     talenti.push(id);
     const istanza = volte === 0 ? id : `${id}@${daScelta ? daScelta.replace(/\./g, '-') : volte + 1}`;

@@ -586,25 +586,58 @@ const LIVELLO_3: Record<string, Feature[]> = {
   ],
 };
 
+// ───────── 4° livello (23/11/2026): Aumento dei punteggi o un altro talento ─────────
+// Valori attesi approvati da Patrizio il 23/11 (file «Valori attesi 4° livello»). Si sceglie un talento di qualsiasi categoria
+// con i requisiti (p. 87), oppure «un altro talento» scritto a mano (fuori dall'SRD, non calcolato, con avviso: scelta di Patrizio).
+export const TALENTO_LIBERO = 'talento-libero';
+const aumento4 = (pagina: number): Feature => ({ id: 'ability-score-improvement-4', nome: 'Aumento dei punteggi di caratteristica', nomeEn: 'Ability Score Improvement', livello: 4, srd: { pagina }, effetti: [
+  { tipo: 'scelta', scelta: { id: 'talento-4', tipo: 'talento', quantita: 1, srd: { pagina: 87 } } },
+  { tipo: 'talento', talento: { daScelta: 'talento-4' } }] });
+const padronanza4 = (classe: string, pagina: number): Feature[] => {
+  const l1 = CLASSI[classe].features.flatMap((f) => f.effetti).find((e) => e.tipo === 'scelta' && e.scelta.tipo === 'maestriaArma');
+  const opzioni = l1 && l1.tipo === 'scelta' ? l1.scelta.opzioni : undefined;
+  return [{ id: `${classe}-weapon-mastery-4`, nome: 'Padronanza d\'armi', nomeEn: 'Weapon Mastery', livello: 4, srd: { pagina }, effetti: [
+    { tipo: 'scelta', scelta: { id: `${classe}.padronanza-4`, tipo: 'maestriaArma', quantita: 1, ...(opzioni ? { opzioni } : {}), srd: { pagina } } }] }];
+};
+// Forme del 4° livello: GS fino a 1/2, senza volo (tabella Beast Shapes, p. 42)
+export const FORME_SELVATICHE_GS_1_2 = [...FORME_SELVATICHE_GS_1_4, 'giant-goat', 'warhorse', 'giant-seahorse', 'crocodile', 'ape', 'black-bear', 'reef-shark'];
+const LIVELLO_4: Record<string, () => Feature[]> = {
+  barbarian: () => [aumento4(29), ...padronanza4('barbarian', 28)],
+  bard: () => [aumento4(32)], cleric: () => [aumento4(37)], paladin: () => [aumento4(54)], ranger: () => [aumento4(59)],
+  rogue: () => [aumento4(62)], sorcerer: () => [aumento4(66)], warlock: () => [aumento4(72)], wizard: () => [aumento4(78)],
+  druid: () => [aumento4(43), { id: 'wild-shape-4', nome: 'Forma selvatica: forme', nomeEn: 'Wild Shape', livello: 4, srd: { pagina: 42 }, effetti: [
+    { tipo: 'scelta', scelta: { id: 'druid.forme-4', tipo: 'opzione', quantita: 2, opzioni: FORME_SELVATICHE_GS_1_2, srd: { pagina: 42 } } },
+    nota('Al 4° livello: 6 forme conosciute, GS fino a 1/2, senza volo (SRD p. 42)')] }],
+  fighter: () => [aumento4(48), ...padronanza4('fighter', 47)],
+  monk: () => [aumento4(51), { id: 'slow-fall', nome: 'Caduta lenta', nomeEn: 'Slow Fall', livello: 4, srd: { pagina: 51 }, effetti: [
+    nota('Reazione quando cadi: riduci i danni della caduta di 5 volte il tuo livello da monaco (SRD p. 51)')] }],
+};
+
 // Tabelle delle classi fino al 3° livello: incantesimi preparati, slot, patto (p. 31, 36, 41, 53, 57, 64, 71, 77)
-const PREPARATI: Record<string, number[]> = { bard: [4, 5, 6], cleric: [4, 5, 6], druid: [4, 5, 6], paladin: [2, 3, 4], ranger: [2, 3, 4], sorcerer: [2, 4, 6], warlock: [2, 3, 4], wizard: [4, 5, 6] };
+const PREPARATI: Record<string, number[]> = { bard: [4, 5, 6, 7], cleric: [4, 5, 6, 7], druid: [4, 5, 6, 7], paladin: [2, 3, 4, 5], ranger: [2, 3, 4, 5], sorcerer: [2, 4, 6, 7], warlock: [2, 3, 4, 5], wizard: [4, 5, 6, 7] };
+// Trucchetti conosciuti per livello (tabelle delle classi)
+const TRUCCHETTI: Record<string, number[]> = { bard: [2, 2, 2, 3], cleric: [3, 3, 3, 4], druid: [2, 2, 2, 3], sorcerer: [4, 4, 4, 5], warlock: [2, 2, 2, 3], wizard: [3, 3, 3, 4] };
 const SLOT: Record<string, Record<number, number[]>> = {
-  bard: { 1: [2], 2: [3], 3: [4, 2] }, cleric: { 1: [2], 2: [3], 3: [4, 2] }, druid: { 1: [2], 2: [3], 3: [4, 2] }, sorcerer: { 1: [2], 2: [3], 3: [4, 2] }, wizard: { 1: [2], 2: [3], 3: [4, 2] },
-  paladin: { 1: [2], 2: [2], 3: [3] }, ranger: { 1: [2], 2: [2], 3: [3] },
+  bard: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] }, cleric: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] }, druid: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] },
+  sorcerer: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] }, wizard: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] },
+  paladin: { 1: [2], 2: [2], 3: [3], 4: [3] }, ranger: { 1: [2], 2: [2], 3: [3], 4: [3] },
 };
 for (const [id, c] of Object.entries(CLASSI)) {
-  c.features.push(...(LIVELLO_2[id] ?? []), ...(LIVELLO_3[id] ?? []));
+  c.features.push(...(LIVELLO_2[id] ?? []), ...(LIVELLO_3[id] ?? []), ...(LIVELLO_4[id]?.() ?? []));
   if (SLOT[id]) c.slot = SLOT[id];
   for (const f of c.features) for (const e of f.effetti) if (e.tipo === 'magia' && e.concessione.fonte.tipo === 'classe' && e.concessione.id === id) {
     const conc: ConcessioneMagia = e.concessione;
     if (conc.preparati && PREPARATI[id]) conc.preparati = { ...conc.preparati, numero: { perLivelli: PREPARATI[id] } };
     if (conc.libro) conc.libro = { ...conc.libro, perLivello: 2 };
+    if (conc.trucchetti && TRUCCHETTI[id]) conc.trucchetti = { ...conc.trucchetti, quantita: { perLivelli: TRUCCHETTI[id] } };
   }
 }
-CLASSI.warlock.patto = { 1: { numero: 1, livello: 1 }, 2: { numero: 2, livello: 1 }, 3: { numero: 2, livello: 2 } };
+CLASSI.warlock.patto = { 1: { numero: 1, livello: 1 }, 2: { numero: 2, livello: 1 }, 3: { numero: 2, livello: 2 }, 4: { numero: 2, livello: 2 } };
 // Usi che crescono con il livello (tabelle p. 28, 49, 64): Ira, punti concentrazione, punti stregoneria
-for (const f of [...CLASSI.barbarian.features, ...CLASSI.monk.features, ...CLASSI.sorcerer.features]) for (const e of f.effetti) if (e.tipo === 'risorsa') {
+for (const f of [...CLASSI.barbarian.features, ...CLASSI.monk.features, ...CLASSI.sorcerer.features, ...CLASSI.fighter.features]) for (const e of f.effetti) if (e.tipo === 'risorsa') {
   if (e.risorsa.id === 'rage') e.risorsa.usi = { perLivelli: [2, 2, 3] };
-  if (e.risorsa.id === 'focus') e.risorsa.usi = { perLivelli: [0, 2, 3] };
-  if (e.risorsa.id === 'sorcery-points') e.risorsa.usi = { perLivelli: [0, 2, 3] };
+  if (e.risorsa.id === 'focus') e.risorsa.usi = { perLivelli: [0, 2, 3, 4] };
+  if (e.risorsa.id === 'sorcery-points') e.risorsa.usi = { perLivelli: [0, 2, 3, 4] };
+  if (e.risorsa.id === 'second-wind') e.risorsa.usi = { perLivelli: [2, 2, 2, 3] };
+  if (e.risorsa.id === 'rage') e.risorsa.usi = { perLivelli: [2, 2, 3, 3] };
 }

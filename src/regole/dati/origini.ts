@@ -82,10 +82,15 @@ export const TALENTI: Record<string, Talento> = {
   },
   'ability-score-improvement': {
     id: 'ability-score-improvement', nome: 'Aumento dei punteggi di caratteristica', nomeEn: 'Ability Score Improvement', srd: { pagina: 87 },
-    categoria: 'generale', prerequisito: { livello: 4 }, ripetibile: {}, effetti: [],
+    categoria: 'generale', prerequisito: { livello: 4 }, ripetibile: {},
+    // +2 a una caratteristica (la stessa due volte) o +1 a due; massimo 20 (p. 87). Applicato nei punteggi dal motore.
+    effetti: [{ tipo: 'scelta', scelta: { id: 'ability-score-improvement.aumento', tipo: 'caratteristica', quantita: 2, opzioni: ['FOR', 'DES', 'COS', 'INT', 'SAG', 'CAR'], srd: { pagina: 87 } } }],
   },
   grappler: {
-    id: 'grappler', nome: 'Lottatore', nomeEn: 'Grappler', srd: { pagina: 87 }, categoria: 'generale', prerequisito: { livello: 4 }, ripetibile: false, effetti: [],
+    id: 'grappler', nome: 'Lottatore', nomeEn: 'Grappler', srd: { pagina: 87 }, categoria: 'generale', prerequisito: { livello: 4, caratteristica: { tra: ['FOR', 'DES'], minimo: 13 } }, ripetibile: false,
+    // +1 a Forza o Destrezza, massimo 20 (applicato nei punteggi); requisito Forza o Destrezza 13 (p. 87)
+    effetti: [{ tipo: 'scelta', scelta: { id: 'grappler.caratteristica', tipo: 'caratteristica', quantita: 1, opzioni: ['FOR', 'DES'], srd: { pagina: 87 } } },
+      { tipo: 'nota', testo: 'Lottatore: con un colpo senz\'armi dell\'azione Attacco puoi usare insieme danni e lotta (1 volta per turno); vantaggio agli attacchi contro chi afferri; muovi chi afferri, se è della tua taglia o più piccolo, senza spendere movimento in più (SRD p. 87)' }],
   },
   archery: {
     id: 'archery', nome: 'Tiro', nomeEn: 'Archery', srd: { pagina: 87 }, categoria: 'stileCombattimento', prerequisito: { feature: 'fighting-style' }, ripetibile: false,

@@ -8,7 +8,41 @@ import { calcolaScheda, DATI } from '../regole';
 import { SceltaPf } from './SaliDiLivello';
 import { Tendina } from './Tendina';
 
-function Gruppo({ t, valori, cambia }: { t: Tendine; valori: string[]; cambia: (v: string[]) => void }) {
+// L'Aumento dei punteggi (p. 87), come il bonus del background: due pulsanti e le tendine; le caratteristiche a 20 restano spente
+function Aumento({ t, valori, cambia }: { t: Tendine; valori: string[]; cambia: (v: string[]) => void }) {
+  const [modo, setModo] = useState<'due' | 'uno'>(valori.length === 2 && valori[0] && valori[0] !== valori[1] ? 'uno' : 'due');
+  const p = t.punteggi ?? {};
+  const opz = (max: number, altra?: string) => t.opzioni.map((o) => (p[o.id] > max ? { ...o, disattivata: true, motivo: p[o.id] >= 20 ? 'è già a 20' : 'supererebbe 20' }
+    : o.id === altra ? { ...o, disattivata: true, motivo: 'già scelta' } : { ...o, disattivata: false, motivo: undefined }));
+  return (
+    <div className="space-y-2">
+      <div role="radiogroup" aria-label="Aumento dei punteggi" className="grid grid-cols-2 gap-2">
+        {(['due', 'uno'] as const).map((m) => (
+          <button key={m} role="radio" aria-checked={modo === m} onClick={() => { setModo(m); cambia([]); }}
+            className={`min-h-11 rounded-lg text-base ${modo === m ? 'border-2 border-accento text-accento' : 'border border-bordo text-testo'}`}>
+            {m === 'due' ? '+2 a una' : '+1 a due'}</button>
+        ))}
+      </div>
+      {modo === 'due'
+        ? <Tendina etichetta="+2" valore={valori[0] ?? ''} opzioni={opz(18)} cambia={(id) => cambia(id ? [id, id] : [])} />
+        : [0, 1].map((i) => (
+          <Tendina key={i} etichetta={`+1 (${i + 1} di 2)`} valore={valori[i] ?? ''} opzioni={opz(19, valori[1 - i])}
+            cambia={(id) => { const v = [valori[0] ?? '', valori[1] ?? '']; v[i] = id; cambia(v); }} />
+        ))}
+    </div>
+  );
+}
+
+export function Gruppo({ t, valori, cambia }: { t: Tendine; valori: string[]; cambia: (v: string[]) => void }) {
+  if (t.tipo === 'aumento') return <Aumento t={t} valori={valori} cambia={cambia} />;
+  if (t.tipo === 'testo') return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium text-testo">{t.titolo}</span>
+      <input value={valori[0] ?? ''} onChange={(e) => cambia([e.target.value])} placeholder="Come si chiama sul manuale"
+        className={`h-12 w-full rounded-lg border px-3 text-base text-testo ${valori[0]?.trim() ? 'border-bordo bg-sfondo' : 'border-attenzione bg-attenzione/10'}`} />
+      <span className="mt-1 block text-sm text-testo-2">Non è nell'SRD: l'app non ne calcola gli effetti, li segni tu. Il master lo vedrà tra gli avvisi.</span>
+    </label>
+  );
   return (
     <div className="space-y-2">
       {Array.from({ length: t.quante }, (_, i) => (
@@ -32,7 +66,10 @@ export function NuovoLivello({ bozza, conferma, annulla }: { bozza: Bozza; confe
   const pg = comePersonaggio(bozza);
   const cos = pg ? calcolaScheda(pg).modificatori.COS : 0;
   const metti = (k: string, v: string[]) => setScelte((s) => ({ ...s, [k]: v }));
-  const pronto = completo(bozza, scelte, tiro, usaTiro);
+  // Solo le scelte delle tendine visibili: se cambi talento, quelle del talento di prima non restano nella scheda
+  const chiavi = new Set([...r.capacita.flatMap((c) => c.tendine), ...r.magia].map((t) => t.chiave));
+  const valide = Object.fromEntries(Object.entries(scelte).filter(([k]) => chiavi.has(k)));
+  const pronto = completo(bozza, valide, tiro, usaTiro);
   return (
     <section ref={cima} tabIndex={-1} aria-labelledby="titolo-livello" className="mb-4 scroll-mt-28 space-y-4 rounded-2xl border-2 border-accento bg-superficie p-4">
       <h2 id="titolo-livello" className="font-titolo text-xl text-accento">{r.livello}° livello</h2>
@@ -58,7 +95,7 @@ export function NuovoLivello({ bozza, conferma, annulla }: { bozza: Bozza; confe
       )}
       <div className="grid grid-cols-[1fr_2fr] gap-2 pt-1">
         <button onClick={annulla} className="h-12 rounded-xl border border-bordo text-base text-testo">Annulla</button>
-        <button disabled={!pronto} onClick={() => conferma(bozzaNuova(bozza, scelte, usaTiro || regolaPf(bozza) === 'tiro' ? tiro : null))}
+        <button disabled={!pronto} onClick={() => conferma(bozzaNuova(bozza, valide, usaTiro || regolaPf(bozza) === 'tiro' ? tiro : null))}
           className="h-12 rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo">
           {pronto ? `Passa al ${r.livello}° livello` : 'Completa le scelte'}</button>
       </div>

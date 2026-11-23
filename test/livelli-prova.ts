@@ -48,3 +48,22 @@ export const L3_STREGONE = sali(L2_STREGONE, 3, {}, prep(L2_STREGONE, 'sorcerer'
 export const L3_WARLOCK = sali(L2_WARLOCK, 3, {}, prep(L2_WARLOCK, 'warlock', 'misty-step'));
 export const L3_TRAVIS = sali(L2_TRAVIS, 3, {}, prep(L2_TRAVIS, 'wizard', 'scorching-ray'), [...L2_TRAVIS.incantesimi.libro!, 'misty-step', 'web', 'scorching-ray', 'shatter']);
 export const L3_TRAVIS_SAGGIO = sali(L2_TRAVIS_SAGGIO, 3, {}, prep(L2_TRAVIS_SAGGIO, 'wizard', 'scorching-ray'), [...L2_TRAVIS_SAGGIO.incantesimi.libro!, 'misty-step', 'web', 'scorching-ray', 'shatter']);
+
+// ───── 4° livello (file «Valori attesi 4° livello», approvato il 23/11) ─────
+const asi = (...c: string[]) => ({ 'talento-4': ['ability-score-improvement'], 'ability-score-improvement.aumento': c });
+const tr = (pg: Personaggio, id: string, ...ids: string[]) => ({ [id]: [...(pg.scelte[id] ?? []), ...ids] });
+export const L4_BARBARO = sali(L3_BARBARO, 4, { ...asi('FOR', 'COS'), 'barbarian.padronanza-4': ['javelin'] });
+export const L4_BARDO = sali(L3_BARDO, 4, { ...asi('CAR', 'DES'), ...tr(L3_BARDO, 'bard.trucchetti', 'mage-hand') }, prep(L3_BARDO, 'bard', 'invisibility'));
+export const L4_CHIERICO = sali(L3_CHIERICO, 4, { ...asi('SAG', 'COS'), ...tr(L3_CHIERICO, 'cleric.trucchetti', 'spare-the-dying') }, prep(L3_CHIERICO, 'cleric', 'prayer-of-healing'));
+export const L4_DRUIDO = sali(L3_DRUIDO, 4, { ...asi('SAG', 'COS'), 'druid.forme-4': ['black-bear', 'ape'], ...tr(L3_DRUIDO, 'druid.trucchetti', 'resistance') }, prep(L3_DRUIDO, 'druid', 'barkskin'));
+export const L4_GUERRIERO = sali(L3_GUERRIERO, 4, { 'talento-4': ['grappler'], 'grappler.caratteristica': ['FOR'], 'fighter.padronanza-4': ['longsword'] });
+export const L4_MONACO = sali(L3_MONACO, 4, asi('DES', 'SAG'));
+export const L4_PALADINO = sali(L3_PALADINO, 4, asi('FOR', 'CAR'), prep(L3_PALADINO, 'paladin', 'command'));
+export const L4_RANGER = sali(L3_RANGER, 4, { 'talento-4': ['alert'] }, prep(L3_RANGER, 'ranger', 'goodberry'));
+export const L4_LADRO = sali(L3_LADRO, 4, asi('DES', 'INT'));
+export const L4_STREGONE = sali(L3_STREGONE, 4, { ...asi('CAR', 'CAR'), ...tr(L3_STREGONE, 'sorcerer.trucchetti', 'mage-hand') }, prep(L3_STREGONE, 'sorcerer', 'shatter'));
+export const L4_WARLOCK = sali(L3_WARLOCK, 4, { ...asi('CAR', 'COS'), ...tr(L3_WARLOCK, 'warlock.trucchetti', 'mage-hand') }, prep(L3_WARLOCK, 'warlock', 'hold-person'));
+export const L4_TRAVIS = sali(L3_TRAVIS, 4, { ...asi('INT', 'COS'), ...tr(L3_TRAVIS, 'wizard.trucchetti', 'prestidigitation') }, prep(L3_TRAVIS, 'wizard', 'shatter'),
+  [...L3_TRAVIS.incantesimi.libro!, 'invisibility', 'hold-person']);
+export const L4_TRAVIS_SAGGIO = sali(L3_TRAVIS_SAGGIO, 4, { ...asi('INT', 'COS'), ...tr(L3_TRAVIS_SAGGIO, 'wizard.trucchetti', 'prestidigitation') }, prep(L3_TRAVIS_SAGGIO, 'wizard', 'shatter'),
+  [...L3_TRAVIS_SAGGIO.incantesimi.libro!, 'invisibility', 'hold-person']);

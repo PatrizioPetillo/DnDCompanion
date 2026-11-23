@@ -7,13 +7,15 @@ import { ABILITA } from '../regole/dati/base';
 import type { Id, MagiaCalcolata } from '../regole/tipi';
 import { calcolaScheda } from '../regole';
 import { scelteDiClasse } from './classe';
+import { tendineTalento } from './talento-livello';
 import { capacitaDelLivello, prossimoLivello, regolaPf } from './livello';
 import type { Opzione } from './opzioni';
 import { comePersonaggio, type Bozza } from './percorso';
 
 // Le tendine scelte, per chiave: 'scelta:<id>', 'trucchetti:<scelta>', 'preparati:<concessione>', 'libro'
 export type Scelte = Record<string, string[]>;
-export interface Tendine { chiave: string; titolo: string; quante: number; opzioni: Opzione[] }
+// tipo 'aumento': i due pulsanti «+2 a una» / «+1 a due» (punteggi: quelli di prima); tipo 'testo': un nome scritto a mano
+export interface Tendine { chiave: string; titolo: string; quante: number; opzioni: Opzione[]; tipo?: 'aumento' | 'testo'; punteggi?: Record<string, number> }
 export interface Capacita { id: Id; nome: string; testo?: string; pagina?: number; tendine: Tendine[] }
 
 // La bozza al livello nuovo, con le scelte fatte finora
@@ -24,7 +26,7 @@ export function bozzaNuova(b: Bozza, scelte: Scelte, tiro: number | null): Bozza
   let libro = b.incantesimi.libro;
   for (const [k, v] of Object.entries(scelte)) {
     const val = v.filter(Boolean);
-    if (k.startsWith('scelta:')) sc[k.slice(7)] = val;
+    if (k.startsWith('scelta:')) sc[k.slice(7)] = val;   // «+1 a due» con una sola scelta fatta resta incompleta: lo dice completo()
     else if (k.startsWith('trucchetti:')) { const id = k.slice(11); sc[id] = [...(b.scelte[id] ?? []), ...val]; }
     else if (k.startsWith('preparati:')) { const id = k.slice(10); prep[id] = [...(b.incantesimi.preparati[id] ?? []), ...val]; }
     else if (k === 'libro') libro = [...(b.incantesimi.libro ?? []), ...val];
@@ -46,9 +48,16 @@ export function nuovoLivello(b: Bozza, scelte: Scelte, d: Dati = DATI): { livell
 
   // Capacità della classe a quel livello, con le scelte (tranne la magia)
   const daClasse = scelteDiClasse(prova, d, n);
+  const giaPadroneggiate = Object.entries(b.scelte).filter(([k]) => /(maestria-armi|padronanza-\d+)$/.test(k)).flatMap(([, v]) => v);
   const capacita: Capacita[] = capacitaDelLivello(b, n, d).map((c, i) => {
     const f = classe.features.filter((x) => x.livello === n)[i];
-    const tendine: Tendine[] = daClasse.filter((s) => s.feature === f.id).map((s) => ({ chiave: `scelta:${s.id}`, titolo: s.titolo, quante: s.quantita, opzioni: s.opzioni }));
+    const tendine: Tendine[] = daClasse.filter((s) => s.feature === f.id).flatMap((s) => (/^talento-\d+$/.test(s.id) ? tendineTalento(prova, s.id, d)
+      : [{ chiave: `scelta:${s.id}`, titolo: s.titolo, quante: s.quantita,
+        // Padronanza d'armi in più (4° livello): le armi che padroneggi già restano spente
+        opzioni: /\.padronanza-\d+$/.test(s.id) ? s.opzioni.map((o) => (giaPadroneggiate.includes(o.id) ? { ...o, disattivata: true, motivo: 'la padroneggi già' } : o))
+          // Forme selvatiche in più (4° livello): quelle che conosci già restano spente
+          : /^druid\.forme-\d+$/.test(s.id) ? s.opzioni.map((o) => ((b.scelte['druid.forme'] ?? []).includes(o.id) ? { ...o, disattivata: true, motivo: 'la conosci già' } : o))
+          : s.opzioni }]));
     // Abilità nuove (Conoscenza primordiale, Competenze bonus): quelle in cui non hai già la competenza
     for (const e of f.effetti) if (e.tipo === 'scelta' && e.scelta.tipo === 'abilita' && scheda) {
       const mie = scelte[`scelta:${e.scelta.id}`] ?? [];
@@ -120,5 +129,5 @@ export function completo(b: Bozza, scelte: Scelte, tiro: number | null, usaTiro:
   const r = nuovoLivello(b, scelte);
   if (!r) return false;
   if ((regolaPf(b) === 'tiro' || usaTiro) && tiro === null) return false;
-  return [...r.capacita.flatMap((c) => c.tendine), ...r.magia].every((t) => (scelte[t.chiave] ?? []).filter(Boolean).length === t.quante);
+  return [...r.capacita.flatMap((c) => c.tendine), ...r.magia].every((t) => (scelte[t.chiave] ?? []).filter((v) => v.trim()).length === t.quante);
 }

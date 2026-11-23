@@ -19,6 +19,14 @@ import { Separatore } from './PassoMagia';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 
 // ───────── «I miei tavoli» ─────────
+// Sotto il nome nell'elenco (23/11, richiesta di Patrizio): i personaggi al tavolo; senza, la prima frase delle note
+export function sottotitoloTavolo(v: { tavolo: Tavolo; gruppo?: MembroGruppo[] }): string {
+  const nomi = (v.gruppo ?? []).map((m) => m.bozza.nome.trim() || 'Senza nome');
+  if (nomi.length) return nomi.join(', ');
+  const frase = (v.tavolo.note ?? '').trim().split(/(?<=[.!?])\s|\n/)[0]?.trim();
+  return frase || 'Ancora nessun personaggio';
+}
+
 export function ElencoTavoli({ archivio, apri, crea }: { archivio: Archivio; apri: (id: string) => void; crea: () => void }) {
   const voci = tavoli(archivio);
   return (
@@ -41,8 +49,11 @@ export function ElencoTavoli({ archivio, apri, crea }: { archivio: Archivio; apr
           {voci.map((v) => (
             <li key={v.id} className="border-b border-bordo last:border-b-0">
               <button onClick={() => apri(v.id)} className="block min-h-16 w-full px-4 py-3 text-left">
-                <span className="block text-base font-medium text-testo">{v.tavolo.nome || 'Tavolo senza nome'}</span>
-                <span className="block truncate text-sm text-testo-2">{descriviTavolo(v.tavolo, DATI).join(' · ')}</span>
+                <span className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate text-base font-medium text-testo">{v.tavolo.nome || 'Tavolo senza nome'}</span>
+                  <span className="shrink-0 text-sm text-testo-2">Livello {v.tavolo.livello}</span>
+                </span>
+                <span className="block truncate text-sm text-testo-2">{sottotitoloTavolo(v)}</span>
               </button>
             </li>
           ))}

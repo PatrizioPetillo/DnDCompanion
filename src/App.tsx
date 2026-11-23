@@ -340,7 +340,8 @@ export default function App() {
             incontri={tv.incontri} salvaIncontro={(i) => setArchivio((a: Archivio) => salvaIncontro(a, tv.id, i))}
             togliIncontro={(id) => setArchivio((a: Archivio) => togliIncontro(a, tv.id, id))}
             cambia={(t) => setArchivio((a: Archivio) => aggiornaTavolo(a, tv.id, t))}
-            elimina={() => { setArchivio(eliminaTavolo(archivio, tv.id)); setVista('tavoli'); }} />;
+            elimina={() => { setArchivio(eliminaTavolo(archivio, tv.id)); setVista('tavoli'); }}
+            torna={() => setVista('tavoli')} salvato={salvato} />;
         })()}
         {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && !bottinoRicevuto && vistaReale === 'informazioni' && <Informazioni />}
         {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && !bottinoRicevuto && vistaReale === 'personaggi' && (

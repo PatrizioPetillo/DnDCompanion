@@ -53,9 +53,11 @@ export function ElencoTavoli({ archivio, apri, crea }: { archivio: Archivio; apr
 }
 
 // ───────── Il tavolo, come lo prepara il master: si salva a ogni tocco ─────────
-export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [], apriMembro, togliMembro, oggetti = [], salvaOggetto, togliOggetto, incontri = [], salvaIncontro, togliIncontro }: {
+export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, salvato = true, mieiElementi, membri = [], apriMembro, togliMembro, oggetti = [], salvaOggetto: salvaOggettoG, togliOggetto: togliOggettoG, incontri = [], salvaIncontro: salvaIncontroG, togliIncontro: togliIncontroG }: {
   tavolo: Tavolo;
   cambia: (t: Tavolo) => void;
+  torna?: () => void;          // 23/11: torna all'elenco dei tavoli
+  salvato?: boolean;           // false = la memoria del telefono ha rifiutato la scrittura
   elimina: () => void;
   mieiElementi: Elementi;
   membri?: MembroGruppo[];
@@ -69,6 +71,15 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
   togliIncontro?: (id: string) => void;
 }) {
   const [stato, setStato] = useState<string | null>(null);
+  // 23/11: ogni modifica si salva subito; la riga «Salvato» lo conferma per un attimo
+  const [appena, setAppena] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const segna = () => { setAppena(true); clearTimeout(timer.current); timer.current = setTimeout(() => setAppena(false), 1800); };
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const conSegno = <A extends unknown[]>(f?: (...a: A) => void) => f && ((...a: A) => { f(...a); segna(); });
+  const cambia = conSegno(cambiaGrezzo)!;
+  const salvaOggetto = conSegno(salvaOggettoG), togliOggetto = conSegno(togliOggettoG);
+  const salvaIncontro = conSegno(salvaIncontroG), togliIncontro = conSegno(togliIncontroG);
   const [regole, setRegole] = useState(!tavolo.nome.trim());   // un tavolo nuovo si apre sulle regole
   const escludi = tavolo.fonti.escludi ?? [];
   const alterna = (id: Id) => cambia({ ...tavolo, fonti: { srd: true, escludi: escludi.includes(id) ? escludi.filter((x) => x !== id) : [...escludi, id] } });
@@ -125,6 +136,16 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
 
   return (
     <section>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        {torna ? (
+          <button onClick={torna} className="-ml-2 flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm text-accento">
+            <span aria-hidden="true">←</span> I miei tavoli
+          </button>
+        ) : <span />}
+        <p role="status" className={`text-sm ${!salvato ? 'font-medium text-attenzione' : appena ? 'text-accento' : 'text-testo-2'}`}>
+          {!salvato ? 'Non salvato: memoria piena' : appena ? '✓ Salvato' : 'Si salva da solo'}
+        </p>
+      </div>
       <h1 className="mb-1 font-titolo text-2xl text-accento">{tavolo.nome || 'Nuovo tavolo'}</h1>
       {tavolo.nome.trim() && <p className="mb-3 text-sm text-testo-2">{descriviTavolo(tavolo, DATI).join(' · ')}</p>}
 

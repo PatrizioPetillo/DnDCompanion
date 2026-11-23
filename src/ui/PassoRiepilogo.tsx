@@ -24,6 +24,7 @@ import { Monete } from './Monete';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 import { NuovoLivello } from './NuovoLivello';
 import { Famiglio } from './Famiglio';
+import { semplici, Tendina } from './Tendina';
 import { puoAvereFamiglio } from '../creazione/famiglio';
 
 type Scheda = 'combattimento' | 'abilita' | 'magia' | 'zaino' | 'chi';
@@ -106,6 +107,14 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         {vistaScheda === 'combattimento' && <Combattimento r={r} tavolo={tavolo} scheda={scheda} />}
         {vistaScheda === 'abilita' && <Abilita r={r} scheda={scheda} tavolo={tavolo} />}
         {vistaScheda === 'magia' && (tavolo ? <MagiaTavolo {...tavolo} /> : <Magia r={r} />)}
+        {vistaScheda === 'magia' && bozza.scelte['druid.terra'] && !ricevuta && (
+          // Circolo della terra (SRD p. 46): la terra si sceglie a ogni riposo lungo e cambia gli incantesimi sempre preparati
+          <div className="mt-4 rounded-2xl border border-bordo bg-superficie p-4">
+            <Tendina etichetta="Terra del Circolo (si cambia a ogni riposo lungo)" valore={bozza.scelte['druid.terra'][0] ?? ''}
+              opzioni={semplici([['arid', 'Arida'], ['polar', 'Polare'], ['temperate', 'Temperata'], ['tropical', 'Tropicale']].map(([id, nome]) => ({ id, nome })))}
+              cambia={(id) => id && cambia({ ...bozza, scelte: { ...bozza.scelte, 'druid.terra': [id] } })} />
+          </div>
+        )}
         {vistaScheda === 'magia' && puoAvereFamiglio(bozza, scheda) && <Famiglio bozza={bozza} cambia={ricevuta ? undefined : cambia} />}
         {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} bozza={bozza} cambia={ricevuta ? undefined : cambia} restituibile={!ricevuta && !bloccata} />}
         {vistaScheda === 'chi' && <ChiE r={r} bozza={bozza} cambia={cambia} ricevuta={ricevuta || bloccata}

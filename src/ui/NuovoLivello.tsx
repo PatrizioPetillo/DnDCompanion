@@ -38,6 +38,12 @@ export function NuovoLivello({ bozza, conferma, annulla }: { bozza: Bozza; confe
       <h2 id="titolo-livello" className="font-titolo text-xl text-accento">{r.livello}° livello</h2>
       <SceltaPf livello={r.livello} dadoVita={classe.dadoVita} cos={cos} regola={regolaPf(bozza)} tiro={tiro}
         cambia={(t, usa) => { setTiro(t); setUsaTiro(usa); }} />
+      {r.cresce.length > 0 && (
+        <div className="border-t border-bordo pt-3">
+          <p className="text-base font-medium text-testo">Cresce da solo</p>
+          <ul className="mt-1 space-y-0.5 text-sm text-testo">{r.cresce.map((c) => <li key={c}>{c}</li>)}</ul>
+        </div>
+      )}
       {r.capacita.map((c) => (
         <div key={c.id} className="space-y-2 border-t border-bordo pt-3">
           <p className="text-base text-testo"><strong>{c.nome}.</strong> {c.testo}{c.pagina ? <span className="text-xs text-testo-2"> SRD p. {c.pagina}</span> : null}</p>

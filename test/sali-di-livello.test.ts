@@ -6,6 +6,7 @@ import { contatoreMaestria, scegliMaestria } from '../src/creazione/caratteristi
 import { comePersonaggio, statoPassi, type Bozza } from '../src/creazione/percorso';
 import { calcolaScheda, DATI } from '../src/regole';
 import { avvisiTavolo, tavoloVuoto, validaTavolo } from '../src/regole/tavolo';
+import { LIVELLO_MASSIMO } from '../src/regole/livelli';
 import * as P from './personaggi';
 
 const salvato = (pg: object): Bozza => ({ ...(pg as Bozza), conclusoIl: '2026-11-23T10:00:00.000Z' });
@@ -13,7 +14,8 @@ const salvato = (pg: object): Bozza => ({ ...(pg as Bozza), conclusoIl: '2026-11
 describe('Sali di livello', () => {
   it('fino al livello massimo, poi più niente', () => {
     expect(prossimoLivello(salvato(P.TRAVIS))).toBe(2);
-    expect(prossimoLivello({ ...salvato(P.TRAVIS), livello: 2 })).toBeNull();
+    expect(prossimoLivello({ ...salvato(P.TRAVIS), livello: 2 })).toBe(3);
+    expect(prossimoLivello({ ...salvato(P.TRAVIS), livello: LIVELLO_MASSIMO })).toBeNull();
     expect(scriviTiroPf({ ...salvato(P.TRAVIS), livello: 2, tiriPf: { 2: 3 } }, 2, null).tiriPf).toBeUndefined();
   });
   it('le scelte nuove compaiono nei passi: Classe (Metamagia) e Caratteristiche (Maestria del mago)', () => {

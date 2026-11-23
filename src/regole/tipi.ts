@@ -69,6 +69,7 @@ export type Effetto =
   | { tipo: 'mezzaCompetenzaAbilita'; etichetta: string }
   | { tipo: 'velocitaSenzaArmatura'; valore: number; etichetta: string }
   | { tipo: 'bonusDanniTrucchetto'; incantesimo: Id; car: Car; etichetta: string }
+  | { tipo: 'libroExtra'; quanti: number; etichetta: string }          // Invocatore sapiente (3° livello)
   | { tipo: 'nota'; testo: string };
 
 export interface FormulaCA {

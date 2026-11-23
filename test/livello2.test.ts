@@ -5,32 +5,8 @@ import { calcolaScheda } from '../src/regole';
 import type { Personaggio } from '../src/regole/tipi';
 import * as P from './personaggi';
 
-const al2 = (pg: Personaggio, scelte: Record<string, string[]> = {}, preparati: Record<string, string[]> = {}, libro?: string[]): Personaggio => ({
-  ...pg, livello: 2, scelte: { ...pg.scelte, ...scelte },
-  incantesimi: { ...pg.incantesimi, ...(libro ? { libro } : {}), preparati: { ...pg.incantesimi.preparati, ...preparati } },
-});
-const errori = (pg: Personaggio) => calcolaScheda(pg).avvisi.filter((a) => !a.accettato).filter((a) => a.livello === 'errore' || (a.livello === 'info' && /^(scelta-mancante|preparati-mancanti|libro-incompleto)/.test(a.id)));
-const risorsa = (pg: Personaggio, id: string) => calcolaScheda(pg).risorse.find((r) => r.id === id);
-const magia = (pg: Personaggio, id: string) => calcolaScheda(pg).magia.find((m) => m.id === id)!;
-
-const BARBARO = al2(P.BARBARO);
-const BARDO = al2(P.BARDO, { 'bard.maestria': ['performance', 'persuasion'] }, { bard: [...P.BARDO.incantesimi.preparati.bard, 'thunderwave'] });
-const CHIERICO = al2(P.CHIERICO, {}, { cleric: [...P.CHIERICO.incantesimi.preparati.cleric, 'command'] });
-const DRUIDO = al2(P.DRUIDO, { 'druid.forme': ['rat', 'riding-horse', 'spider', 'wolf'] }, { druid: [...P.DRUIDO.incantesimi.preparati.druid, 'healing-word'] });
-const GUERRIERO = al2(P.GUERRIERO);
-const MONACO = al2(P.MONACO);
-const PALADINO = al2(P.PALADINO, { 'paladin.stile': ['blessed-warrior'], 'paladin.guerriero-benedetto': ['guidance', 'sacred-flame'] },
-  { paladin: [...P.PALADINO.incantesimi.preparati.paladin, 'shield-of-faith'] });
-const RANGER = al2(P.RANGER, { 'ranger.maestria': ['stealth'], 'ranger.lingue': ['draconic', 'dwarvish'], 'ranger.stile': ['archery'] },
-  { ranger: [...P.RANGER.incantesimi.preparati.ranger, 'ensnaring-strike'] });
-const LADRO = al2(P.LADRO);
-const STREGONE = al2(P.STREGONE, { 'sorcerer.metamagia': ['quickened-spell', 'twinned-spell'] },
-  { sorcerer: [...P.STREGONE.incantesimi.preparati.sorcerer, 'magic-missile', 'chromatic-orb'] });
-const WARLOCK = al2(P.WARLOCK, { 'warlock.suppliche-2': ['agonizing-blast', 'devils-sight'] }, { warlock: [...P.WARLOCK.incantesimi.preparati.warlock, 'hellish-rebuke'] });
-const TRAVIS = al2(P.TRAVIS, { 'wizard.studioso': ['arcana'] }, { wizard: [...P.TRAVIS.incantesimi.preparati.wizard, 'magic-missile'] },
-  [...P.TRAVIS.incantesimi.libro!, 'magic-missile', 'sleep']);
-const TRAVIS_SAGGIO = al2(P.TRAVIS_SAGGIO, { 'wizard.studioso': ['arcana'] }, { wizard: [...(P.TRAVIS_SAGGIO.incantesimi.preparati.wizard ?? []), 'magic-missile'] },
-  [...(P.TRAVIS_SAGGIO.incantesimi.libro ?? []), 'magic-missile', 'sleep']);
+import { errori, magia, risorsa, sali, L2_BARBARO as BARBARO, L2_BARDO as BARDO, L2_CHIERICO as CHIERICO, L2_DRUIDO as DRUIDO, L2_GUERRIERO as GUERRIERO, L2_MONACO as MONACO, L2_PALADINO as PALADINO, L2_RANGER as RANGER, L2_LADRO as LADRO, L2_STREGONE as STREGONE, L2_WARLOCK as WARLOCK, L2_TRAVIS as TRAVIS, L2_TRAVIS_SAGGIO as TRAVIS_SAGGIO } from './livelli-prova';
+const al2 = (pg: Personaggio, scelte: Record<string, string[]> = {}, preparati: Record<string, string[]> = {}, libro?: string[]) => sali(pg, 2, scelte, preparati, libro);
 
 describe('2° livello: PF con il valore fisso (SRD p. 23)', () => {
   it.each([
@@ -158,9 +134,6 @@ describe('2° livello: capacità nuove', () => {
     expect(errori(al2(P.TRAVIS, { 'wizard.studioso': ['stealth'] }, TRAVIS.incantesimi.preparati, TRAVIS.incantesimi.libro)).length).toBeGreaterThan(0);
   });
 
-  it('oltre il 2° livello: errore finché i dati non ci sono', () => {
-    expect(calcolaScheda({ ...TRAVIS, livello: 3 }).avvisi.some((a) => a.id === 'livello-non-supportato')).toBe(true);
-  });
 });
 
 describe('2° livello: la scheda e i dadi', () => {

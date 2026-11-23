@@ -61,3 +61,36 @@ describe('Sali di livello in una schermata', () => {
     expect(calcolaScheda(comePersonaggio(bozzaNuova(salvato(P.GUERRIERO), {}, 4))!).pf.totale).toBe(12 + 4 + 2);
   });
 });
+
+describe('Sali di livello: dal 2° al 3°', () => {
+  it('tutti i personaggi di prova al 2° salgono al 3° senza scelte mancanti', async () => {
+    const L = await import('./livelli-prova');
+    for (const [nome, pg] of Object.entries(L).filter(([k]) => k.startsWith('L2_'))) {
+      const b = salvato(pg as object);
+      const s = riempi(b);
+      expect(completo(b, s, null, false), nome).toBe(true);
+      const nuova = bozzaNuova(b, s, null);
+      expect(nuova.livello, nome).toBe(3);
+      expect(mancanti(nuova), nome).toEqual([]);
+    }
+  });
+  it('bardo: 3 competenze bonus tra quelle che non ha; druido: tendina della terra', async () => {
+    const L = await import('./livelli-prova');
+    const r = nuovoLivello(salvato(L.L2_BARDO), {})!;
+    const t = r.capacita.flatMap((c) => c.tendine).find((x) => x.chiave === 'scelta:bard.competenze-bonus')!;
+    expect(t.quante).toBe(3);
+    expect(t.opzioni.find((o) => o.id === 'persuasion')?.motivo).toBe('hai già la competenza');
+    const dr = nuovoLivello(salvato(L.L2_DRUIDO), {})!;
+    expect(dr.capacita.flatMap((c) => c.tendine).find((x) => x.chiave === 'scelta:druid.terra')?.opzioni.map((o) => o.nome)).toEqual(['Arida', 'Polare', 'Temperata', 'Tropicale']);
+  });
+});
+
+describe('Cresce da solo', () => {
+  it('ladro al 3°: Attacco furtivo; mago al 3°: slot; warlock: patto', async () => {
+    const L = await import('./livelli-prova');
+    expect(nuovoLivello(salvato(L.L2_LADRO), {})!.cresce).toContain('Attacco furtivo: 1d6 → 2d6');
+    expect(nuovoLivello(salvato(L.L2_TRAVIS), {})!.cresce).toEqual(expect.arrayContaining(['Slot di 1° livello: 3 → 4', 'Slot di 2° livello: 0 → 2']));
+    expect(nuovoLivello(salvato(L.L2_WARLOCK), {})!.cresce).toContain('Slot del patto: 2 di 1° → 2 di 2°');
+    expect(nuovoLivello(salvato(L.L2_BARBARO), {})!.cresce).toContain('Ira: 2 → 3');
+  });
+});

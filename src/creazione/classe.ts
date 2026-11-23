@@ -3,7 +3,7 @@
 // Le abilità e la Maestria si scelgono nelle Caratteristiche; i trucchetti nella Magia.
 import { DATI } from '../regole';
 import type { Dati } from '../regole/dati';
-import { ARMI, NOME_LINGUA, STRUMENTI_ARTIGIANO, STRUMENTI_MUSICALI } from '../regole/dati/base';
+import { ABILITA, ARMI, NOME_LINGUA, STRUMENTI_ARTIGIANO, STRUMENTI_MUSICALI } from '../regole/dati/base';
 import type { Id, Scelta } from '../regole/tipi';
 import type { Opzione } from './opzioni';
 import type { Bozza } from './percorso';
@@ -21,6 +21,8 @@ const NOMI_OPZIONI: Record<Id, string> = {
   'seeking-spell': 'Incantesimo cercante', 'subtle-spell': 'Incantesimo sottile', 'transmuted-spell': 'Incantesimo trasmutato',
   'twinned-spell': 'Incantesimo raddoppiato',
   archery: 'Tiro', defense: 'Difesa', 'great-weapon-fighting': 'Combattere con armi possenti', 'two-weapon-fighting': 'Combattere con due armi',
+  arid: 'Arida', polar: 'Polare', temperate: 'Temperata', tropical: 'Tropicale',   // Circolo della terra (3° livello)
+  'colossus-slayer': 'Uccisore di colossi', 'horde-breaker': 'Fendente contro orde',   // Preda del cacciatore (nomi da verificare)
   'blessed-warrior': 'Guerriero benedetto (2 trucchetti da chierico)', 'druidic-warrior': 'Guerriero druidico (2 trucchetti da druido)',
   // forme della Forma selvatica: i nomi dell'elenco dei mostri dell'SRD 5.2.1 italiano
   'elk': 'Alce', 'baboon': 'Babbuino', 'camel': 'Cammello', 'goat': 'Capra', 'riding-horse': 'Cavallo da galoppo', 'draft-horse': 'Cavallo da tiro', 'seahorse': 'Cavalluccio marino', 'boar': 'Cinghiale', 'deer': 'Daino', 'weasel': 'Faina', 'giant-weasel': 'Faina gigante', 'cat': 'Gatto', 'crab': 'Granchio', 'giant-crab': 'Granchio gigante', 'hyena': 'Iena', 'lizard': 'Lucertola', 'giant-lizard': 'Lucertola gigante', 'wolf': 'Lupo', 'mastiff': 'Mastino', 'giant-centipede': 'Millepiedi gigante', 'mule': 'Mulo', 'panther': 'Pantera', 'piovra': 'Piovra', 'piranha': 'Piranha', 'pony': 'Pony', 'spider': 'Ragno', 'giant-wolf-spider': 'Ragno lupo gigante', 'frog': 'Rana', 'giant-frog': 'Rana gigante', 'giant-fire-beetle': 'Scarabeo di fuoco gigante', 'jackal': 'Sciacallo', 'scorpion': 'Scorpione', 'constrictor-snake': 'Serpente stritolatore', 'venomous-snake': 'Serpente velenoso', 'giant-venomous-snake': 'Serpente velenoso gigante', 'badger': 'Tasso', 'giant-badger': 'Tasso gigante', 'rat': 'Topo', 'giant-rat': 'Topo gigante',
@@ -31,6 +33,7 @@ function nome(s: Scelta, o: Id, d: Dati): string {
   if (s.tipo === 'maestriaArma') return ARMI[o] ? `${ARMI[o].nome} · ${ARMI[o].padronanza}` : o;
   if (s.tipo === 'strumento') return STRUMENTI_MUSICALI[o] ?? STRUMENTI_ARTIGIANO[o] ?? o;
   if (s.tipo === 'lingua') return NOME_LINGUA[o] ?? o;
+  if (s.tipo === 'abilita') return ABILITA[o]?.nome ?? o;
   if (s.tipo === 'talento') return d.talenti[o]?.nome ?? o;
   return NOMI_OPZIONI[o] ?? o;
 }
@@ -46,8 +49,10 @@ export function scelteDiClasse(b: Bozza, d: Dati = DATI, soloLivello?: number): 
   for (const f of classe.features.filter((x) => (soloLivello ? x.livello === soloLivello : x.livello <= (b.livello ?? 1)))) for (const e of f.effetti) {   // fino al livello del personaggio (23/11)
     if (e.tipo !== 'scelta' && e.tipo !== 'opzioni') continue;
     const s = e.scelta;
-    if (NON_QUI.has(s.tipo)) continue;
-    const ids = s.opzioni ?? (s.filtro && 'categoriaTalento' in s.filtro
+    // le abilità di classe dal 3° livello (Conoscenza primordiale, Competenze bonus) qui, quando si crea a un livello alto;
+    // in «Sali di livello» le gestisce nuovo-livello.ts
+    if (NON_QUI.has(s.tipo) && !(s.tipo === 'abilita' && f.livello > 1 && !soloLivello)) continue;
+    const ids = s.opzioni ?? (s.tipo === 'abilita' ? Object.keys(ABILITA) : null) ?? (s.filtro && 'categoriaTalento' in s.filtro
       ? Object.values(d.talenti).filter((t) => t.categoria === (s.filtro as { categoriaTalento: string }).categoriaTalento).map((t) => t.id) : []);
     out.push({
       // Il titolo è il nome del privilegio, tranne quando la scelta non è il privilegio stesso: gli strumenti del bardo

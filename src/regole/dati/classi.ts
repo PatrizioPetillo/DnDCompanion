@@ -486,14 +486,114 @@ const LIVELLO_2: Record<string, Feature[]> = {
   ],
 };
 
-// Tabelle delle classi al 2° livello: incantesimi preparati, slot, patto (p. 31, 36, 41, 53, 57, 64, 71, 77)
-const PREPARATI: Record<string, number[]> = { bard: [4, 5], cleric: [4, 5], druid: [4, 5], paladin: [2, 3], ranger: [2, 3], sorcerer: [2, 4], warlock: [2, 3], wizard: [4, 5] };
+// ───────── 3° livello (23/11/2026): sottoclassi dell'SRD, una per classe ─────────
+// Valori attesi approvati da Patrizio il 23/11 (file «Valori attesi 3° livello»). Le capacità di sottoclasse hanno «sottoclasse» nel nome.
+const nota = (testo: string): Effetto => ({ tipo: 'nota', testo });
+const sempre = (id: string, nome: string, classe: string, lista: string, car: 'SAG' | 'CAR' | 'INT', ids: string[], pagina: number, extra: Partial<ConcessioneMagia> = {}): Effetto => ({
+  tipo: 'magia', concessione: { id, nome, fonte: { tipo: 'classe', id: classe }, lista, caratteristica: car, semprePreparati: ids, puoUsareSlot: true, slot: 'normali', srd: { pagina }, ...extra } });
+const TERRE: Record<string, { nome: string; trucchetto: string; incantesimi: string[] }> = {
+  arid: { nome: 'Arida', trucchetto: 'fire-bolt', incantesimi: ['blur', 'burning-hands'] },
+  polar: { nome: 'Polare', trucchetto: 'ray-of-frost', incantesimi: ['fog-cloud', 'hold-person'] },
+  temperate: { nome: 'Temperata', trucchetto: 'shocking-grasp', incantesimi: ['misty-step', 'sleep'] },
+  tropical: { nome: 'Tropicale', trucchetto: 'acid-splash', incantesimi: ['ray-of-sickness', 'web'] },
+};
+const LIVELLO_3: Record<string, Feature[]> = {
+  barbarian: [
+    { id: 'primal-knowledge', nome: 'Conoscenza primordiale', nomeEn: 'Primal Knowledge', livello: 3, srd: { pagina: 29 }, effetti: [
+      { tipo: 'scelta', scelta: { id: 'barbarian.conoscenza', tipo: 'abilita', quantita: 1, opzioni: ['animal-handling', 'athletics', 'intimidation', 'nature', 'perception', 'survival'], srd: { pagina: 29 } } },
+      nota('Con l\'Ira attiva, le prove di Acrobazia, Intimidire, Percezione, Furtività e Sopravvivenza si possono fare con la Forza (SRD p. 29)')] },
+    { id: 'frenzy', nome: 'Frenesia (Cammino del berserker)', nomeEn: 'Frenzy', livello: 3, srd: { pagina: 30 }, effetti: [
+      nota('Con Attacco irruento e Ira attiva: il primo bersaglio colpito nel turno con un attacco di Forza subisce tanti d6 in più quanto il bonus ai danni dell\'Ira (SRD p. 30)')] },
+  ],
+  bard: [
+    { id: 'bonus-proficiencies', nome: 'Competenze bonus (Collegio della sapienza)', nomeEn: 'Bonus Proficiencies', livello: 3, srd: { pagina: 35 }, effetti: [
+      { tipo: 'scelta', scelta: { id: 'bard.competenze-bonus', tipo: 'abilita', quantita: 3, srd: { pagina: 35 } } }] },
+    { id: 'cutting-words', nome: 'Parole taglienti (Collegio della sapienza)', nomeEn: 'Cutting Words', livello: 3, srd: { pagina: 35 }, effetti: [
+      nota('Reazione, spendendo un\'Ispirazione bardica: sottrai il dado al tiro di danni, alla prova o al tiro per colpire riuscito di una creatura entro 18 m (SRD p. 35)')] },
+  ],
+  cleric: [
+    { id: 'disciple-of-life', nome: 'Discepolo della vita (Dominio della vita)', nomeEn: 'Disciple of Life', livello: 3, srd: { pagina: 40 }, effetti: [
+      nota('Un incantesimo lanciato con uno slot che fa recuperare PF ne fa recuperare 2 + il livello dello slot in più (SRD p. 40)')] },
+    { id: 'life-domain-spells', nome: 'Incantesimi del Dominio della vita', nomeEn: 'Life Domain Spells', livello: 3, srd: { pagina: 40 }, effetti: [
+      sempre('life-domain', 'Classe: Dominio della vita', 'cleric', 'cleric', 'SAG', ['aid', 'bless', 'cure-wounds', 'lesser-restoration'], 40)] },
+    { id: 'preserve-life', nome: 'Preservare vita (Dominio della vita)', nomeEn: 'Preserve Life', livello: 3, srd: { pagina: 40 }, effetti: [
+      nota('Un uso di Incanalare divinità: 5 PF per livello da chierico, divisi tra creature sanguinanti entro 9 m, fino a metà dei loro PF massimi (SRD p. 40)')] },
+  ],
+  druid: [
+    { id: 'circle-of-the-land-spells', nome: 'Incantesimi del Circolo della terra', nomeEn: 'Circle of the Land Spells', livello: 3, srd: { pagina: 46 }, effetti: [
+      { tipo: 'opzioni', scelta: { id: 'druid.terra', tipo: 'opzione', quantita: 1, opzioni: Object.keys(TERRE), srd: { pagina: 46 } },
+        effetti: Object.fromEntries(Object.entries(TERRE).map(([k, t]) => [k, [sempre('circle-of-the-land', `Classe: Circolo della terra (${t.nome.toLowerCase()})`, 'druid', 'druid', 'SAG', t.incantesimi, 46, { trucchettiFissi: [t.trucchetto] })]])) }] },
+    { id: 'lands-aid', nome: 'Ausilio dalla terra (Circolo della terra)', nomeEn: 'Land\'s Aid', livello: 3, srd: { pagina: 46 }, effetti: [
+      nota('Un uso di Forma selvatica: sfera di 3 m entro 18 m, TS su Costituzione contro la CD degli incantesimi, 2d6 necrotici (metà se riesce); una creatura recupera 2d6 PF (SRD p. 46)')] },
+  ],
+  fighter: [
+    { id: 'improved-critical', nome: 'Critico migliorato (Campione)', nomeEn: 'Improved Critical', livello: 3, srd: { pagina: 49 }, effetti: [
+      { tipo: 'valoreClasse', id: 'critico', nome: 'Colpo critico con', valore: '19-20', srd: { pagina: 49 } }] },
+    { id: 'remarkable-athlete', nome: 'Atleta straordinario (Campione)', nomeEn: 'Remarkable Athlete', livello: 3, srd: { pagina: 49 }, effetti: [
+      nota('Vantaggio all\'iniziativa e alle prove di Forza (Atletica); dopo un colpo critico ti muovi di metà velocità senza attacchi di opportunità (SRD p. 49)')] },
+  ],
+  monk: [
+    { id: 'deflect-attacks', nome: 'Devia attacchi', nomeEn: 'Deflect Attacks', livello: 3, srd: { pagina: 51 }, effetti: [
+      nota('Reazione, se ti colpisce un attacco con danni contundenti, perforanti o taglienti: riduci i danni di 1d10 + Destrezza + livello da monaco; a 0, con 1 punto concentrazione rimandi il colpo (SRD p. 51)')] },
+    { id: 'open-hand-technique', nome: 'Tecnica della mano aperta', nomeEn: 'Open Hand Technique', livello: 3, srd: { pagina: 52 }, effetti: [
+      nota('Con Raffica di colpi, a ogni colpo: niente attacchi di opportunità, spinta di 4,5 m (TS su Forza) o prono (TS su Destrezza) (SRD p. 52)')] },
+  ],
+  paladin: [
+    { id: 'paladin-channel-divinity', nome: 'Incanalare divinità', nomeEn: 'Channel Divinity', livello: 3, srd: { pagina: 54 }, effetti: [
+      { tipo: 'risorsa', risorsa: { id: 'paladin-channel-divinity', nome: 'Incanalare divinità', usi: 2, dettaglio: 'Senso divino o Arma consacrata; CD degli incantesimi',
+        recupero: [{ riposo: 'breve', quanti: 1 }, { riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 54 } } }] },
+    { id: 'oath-of-devotion-spells', nome: 'Incantesimi del Giuramento di devozione', nomeEn: 'Oath of Devotion Spells', livello: 3, srd: { pagina: 56 }, effetti: [
+      sempre('oath-of-devotion', 'Classe: Giuramento di devozione', 'paladin', 'paladin', 'CAR', ['protection-from-evil-and-good', 'shield-of-faith'], 56)] },
+    { id: 'sacred-weapon', nome: 'Arma consacrata (Giuramento di devozione)', nomeEn: 'Sacred Weapon', livello: 3, srd: { pagina: 56 }, effetti: [
+      nota('Un uso di Incanalare divinità con l\'azione Attacco: per 10 minuti + Carisma (minimo +1) ai tiri per colpire con l\'arma da mischia impugnata, danni anche radiosi, luce (SRD p. 56)')] },
+  ],
+  ranger: [
+    { id: 'hunters-lore', nome: 'Sapienza del cacciatore', nomeEn: 'Hunter\'s Lore', livello: 3, srd: { pagina: 61 }, effetti: [
+      nota('Sul bersaglio del Marchio del cacciatore conosci immunità, resistenze e vulnerabilità (SRD p. 61)')] },
+    { id: 'hunters-prey', nome: 'Preda del cacciatore', nomeEn: 'Hunter\'s Prey', livello: 3, srd: { pagina: 61 }, effetti: [
+      { tipo: 'opzioni', scelta: { id: 'ranger.preda', tipo: 'opzione', quantita: 1, opzioni: ['colossus-slayer', 'horde-breaker'], srd: { pagina: 61 } }, effetti: {
+        'colossus-slayer': [nota('Uccisore di colossi: +1d8 danni, una volta per turno, a chi non ha tutti i PF; si cambia a ogni riposo (SRD p. 61)')],
+        'horde-breaker': [nota('Fendente contro orde: una volta per turno un altro attacco con la stessa arma a una creatura diversa entro 1,5 m dal bersaglio; si cambia a ogni riposo (SRD p. 61)')],
+      } }] },
+  ],
+  rogue: [
+    { id: 'steady-aim', nome: 'Mira ferma', nomeEn: 'Steady Aim', livello: 3, srd: { pagina: 62 }, effetti: [
+      nota('Azione bonus: vantaggio al prossimo attacco del turno se non ti sei mosso; poi velocità 0 fino a fine turno (SRD p. 62)'),
+      { tipo: 'valoreClasse', id: 'sneak-attack', nome: 'Attacco furtivo', valore: '2d6', srd: { pagina: 62 } }] },
+    { id: 'fast-hands', nome: 'Mani veloci (Ladro)', nomeEn: 'Fast Hands', livello: 3, srd: { pagina: 64 }, effetti: [
+      nota('Azione bonus: Rapidità di mano (serrature, trappole, borseggio) o Usare un oggetto (SRD p. 64)')] },
+    { id: 'second-story-work', nome: 'Lavoro al secondo piano (Ladro)', nomeEn: 'Second-Story Work', livello: 3, srd: { pagina: 64 }, effetti: [
+      nota('Velocità di scalata pari alla velocità; la distanza del salto con la Destrezza (SRD p. 64)')] },
+  ],
+  sorcerer: [
+    { id: 'draconic-resilience', nome: 'Resilienza draconica (Stregoneria draconica)', nomeEn: 'Draconic Resilience', livello: 3, srd: { pagina: 69 }, effetti: [
+      { tipo: 'pfMassimi', perLivello: 1, etichetta: 'Resilienza draconica' },
+      { tipo: 'formulaCA', formula: { id: 'resilienza-draconica', nome: 'Resilienza draconica', base: 10, caratteristiche: ['DES', 'CAR'], richiede: 'nessunaArmatura', srd: { pagina: 69 } } }] },
+    { id: 'draconic-spells', nome: 'Incantesimi draconici', nomeEn: 'Draconic Spells', livello: 3, srd: { pagina: 70 }, effetti: [
+      sempre('draconic-spells', 'Classe: Stregoneria draconica', 'sorcerer', 'sorcerer', 'CAR', ['alter-self', 'chromatic-orb', 'command', 'dragons-breath'], 70)] },
+  ],
+  warlock: [
+    { id: 'dark-ones-blessing', nome: 'Benedizione dell\'oscuro (Patrono immondo)', nomeEn: 'Dark One\'s Blessing', livello: 3, srd: { pagina: 76 }, effetti: [
+      nota('Quando un nemico va a 0 PF (per mano tua, o di altri entro 3 m), ottieni PF temporanei pari a Carisma + livello da warlock, minimo 1 (SRD p. 76)')] },
+    { id: 'fiend-spells', nome: 'Incantesimi del Patrono immondo', nomeEn: 'Fiend Spells', livello: 3, srd: { pagina: 76 }, effetti: [
+      sempre('fiend-spells', 'Classe: Patrono immondo', 'warlock', 'warlock', 'CAR', ['burning-hands', 'command', 'scorching-ray', 'suggestion'], 76, { slot: 'patto' })] },
+  ],
+  wizard: [
+    { id: 'evocation-savant', nome: 'Invocatore sapiente', nomeEn: 'Evocation Savant', livello: 3, srd: { pagina: 82 }, effetti: [
+      { tipo: 'libroExtra', quanti: 2, etichetta: 'Invocatore sapiente: 2 incantesimi di invocazione fino al 2° livello, gratis' }] },
+    { id: 'potent-cantrip', nome: 'Trucchetto potente (Invocatore)', nomeEn: 'Potent Cantrip', livello: 3, srd: { pagina: 82 }, effetti: [
+      nota('Se il bersaglio evita un tuo trucchetto che fa danni (attacco mancato o TS riuscito) subisce comunque metà danni, senza altri effetti (SRD p. 82)')] },
+  ],
+};
+
+// Tabelle delle classi fino al 3° livello: incantesimi preparati, slot, patto (p. 31, 36, 41, 53, 57, 64, 71, 77)
+const PREPARATI: Record<string, number[]> = { bard: [4, 5, 6], cleric: [4, 5, 6], druid: [4, 5, 6], paladin: [2, 3, 4], ranger: [2, 3, 4], sorcerer: [2, 4, 6], warlock: [2, 3, 4], wizard: [4, 5, 6] };
 const SLOT: Record<string, Record<number, number[]>> = {
-  bard: { 1: [2], 2: [3] }, cleric: { 1: [2], 2: [3] }, druid: { 1: [2], 2: [3] }, sorcerer: { 1: [2], 2: [3] }, wizard: { 1: [2], 2: [3] },
-  paladin: { 1: [2], 2: [2] }, ranger: { 1: [2], 2: [2] },
+  bard: { 1: [2], 2: [3], 3: [4, 2] }, cleric: { 1: [2], 2: [3], 3: [4, 2] }, druid: { 1: [2], 2: [3], 3: [4, 2] }, sorcerer: { 1: [2], 2: [3], 3: [4, 2] }, wizard: { 1: [2], 2: [3], 3: [4, 2] },
+  paladin: { 1: [2], 2: [2], 3: [3] }, ranger: { 1: [2], 2: [2], 3: [3] },
 };
 for (const [id, c] of Object.entries(CLASSI)) {
-  c.features.push(...(LIVELLO_2[id] ?? []));
+  c.features.push(...(LIVELLO_2[id] ?? []), ...(LIVELLO_3[id] ?? []));
   if (SLOT[id]) c.slot = SLOT[id];
   for (const f of c.features) for (const e of f.effetti) if (e.tipo === 'magia' && e.concessione.fonte.tipo === 'classe' && e.concessione.id === id) {
     const conc: ConcessioneMagia = e.concessione;
@@ -501,4 +601,10 @@ for (const [id, c] of Object.entries(CLASSI)) {
     if (conc.libro) conc.libro = { ...conc.libro, perLivello: 2 };
   }
 }
-CLASSI.warlock.patto = { 1: { numero: 1, livello: 1 }, 2: { numero: 2, livello: 1 } };
+CLASSI.warlock.patto = { 1: { numero: 1, livello: 1 }, 2: { numero: 2, livello: 1 }, 3: { numero: 2, livello: 2 } };
+// Usi che crescono con il livello (tabelle p. 28, 49, 64): Ira, punti concentrazione, punti stregoneria
+for (const f of [...CLASSI.barbarian.features, ...CLASSI.monk.features, ...CLASSI.sorcerer.features]) for (const e of f.effetti) if (e.tipo === 'risorsa') {
+  if (e.risorsa.id === 'rage') e.risorsa.usi = { perLivelli: [2, 2, 3] };
+  if (e.risorsa.id === 'focus') e.risorsa.usi = { perLivelli: [0, 2, 3] };
+  if (e.risorsa.id === 'sorcery-points') e.risorsa.usi = { perLivelli: [0, 2, 3] };
+}

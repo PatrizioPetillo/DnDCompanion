@@ -335,7 +335,8 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
         lanciabili.add(sp);
       }
     }
-    const nLibro = c.libro ? c.libro.iniziali + (c.libro.perLivello ?? 0) * (livello - 1) : 0;
+    // 6 al 1° livello, +2 a ogni livello (p. 78), + quelli gratis dell'Invocatore sapiente (p. 82)
+    const nLibro = c.libro ? c.libro.iniziali + (c.libro.perLivello ?? 0) * (livello - 1) + effetti('libroExtra').reduce((x, v) => x + v.effetto.quanti, 0) : 0;
     if (c.libro) {
       if (libro.length < nLibro) avvisa(`libro-incompleto:${c.id}`, 'info', `Al ${livello}° livello il libro contiene ${nLibro} incantesimi (${libro.length} su ${nLibro})`, { pagina: 78 });
       if (libro.length > nLibro) avvisa(`libro-troppi:${c.id}`, 'attenzione', `Al ${livello}° livello il libro ha ${nLibro} incantesimi: 6 al 1° livello e 2 in più a ogni livello`, { pagina: 78 });
@@ -604,6 +605,14 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const bonusAtt = effettoMagico('attaccoIncantesimi').map(({ o, e }) => ({ etichetta: o.nome, valore: e.bonus }));
   const bonusCd = effettoMagico('cdIncantesimi').map(({ o, e }) => ({ etichetta: o.nome, valore: e.bonus }));
   for (const m of magia) { m.attacco = conTermini(m.attacco, bonusAtt); m.cd = conTermini(m.cd, bonusCd); }
+
+  // Incantesimi sempre preparati che erano già tra i preparati, o dati da due fonti (3° livello, sottoclassi): avviso (p. 104)
+  const fontiSempre = new Map<Id, string[]>();
+  for (const m of magia) for (const sp of m.semprePreparati) fontiSempre.set(sp, [...(fontiSempre.get(sp) ?? []), m.nome]);
+  for (const m of magia) for (const sp of m.preparati?.scelti ?? []) if (fontiSempre.has(sp))
+    avvisa(`gia-sempre-preparato:${sp}:${m.id}`, 'attenzione', `${d.incantesimi[sp]?.nome ?? sp} è già sempre preparato (${fontiSempre.get(sp)![0].replace(/^Classe: /, '')}): puoi preparare un altro incantesimo al suo posto`, { pagina: 104 });
+  for (const [sp, f] of fontiSempre) if (f.length > 1)
+    avvisa(`gia-sempre-preparato:${sp}`, 'attenzione', `${d.incantesimi[sp]?.nome ?? sp} è sempre preparato da due fonti (${f.map((x) => x.replace(/^\w+: /, '')).join(' e ')}): dove lo hai scelto tu, puoi sceglierne un altro`, { pagina: 104 });
 
   // Regole del tavolo (sezione 5.1): i suoi avvisi, e le eccezioni concesse in anticipo dal master
   if (pg.tavolo) avvisi.push(...avvisiTavolo(pg, pg.tavolo, d));

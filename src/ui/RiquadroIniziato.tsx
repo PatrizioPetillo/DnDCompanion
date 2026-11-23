@@ -39,7 +39,7 @@ export function RiquadroIniziato({ bozza, cambia, istanza }: { bozza: Bozza; cam
 
       <p className="mb-1 text-sm font-medium text-testo">Lista</p>
       {fissata ? (
-        <p className="mb-3 text-base text-testo">{NOME_LISTA[fissata]} <span className="text-sm text-testo-2">(data dal {bg?.nome})</span></p>
+        <p className="mb-3 text-base text-testo">{NOME_LISTA[fissata]} <span className="text-sm text-testo-2">(la dà il background {bg?.nome})</span></p>
       ) : (
         <div className="mb-3 grid grid-cols-3 gap-2">
           {LISTE.map((l) => (

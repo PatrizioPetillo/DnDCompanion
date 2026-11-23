@@ -10,7 +10,41 @@ export const SCUOLA: Record<string, string> = {
   evocation: 'invocazione', illusion: 'illusione', necromancy: 'necromanzia', transmutation: 'trasmutazione',
 };
 
-type Testi = Record<Id, { testo: string; superiori?: string; potenziato?: string }>;
+interface Tabella { titolo?: string; colonne: string[]; righe: string[][] }
+type Testi = Record<Id, { testo: string; superiori?: string; potenziato?: string; tabelle?: Tabella[] }>;
+
+// Il testo dell'SRD con i suoi paragrafi (riga vuota), gli elenchi puntati («• ») e le tabelle al posto di «[[tabelle]]» (23/11)
+function TestoSrd({ testo, tabelle = [], prima }: { testo: string; tabelle?: Tabella[]; prima?: string }) {
+  return (
+    <>
+      {testo.split('\n\n').map((par, k) => {
+        if (par.trim() === '[[tabelle]]') return tabelle.map((t, j) => <TabellaSrd key={`t${j}`} t={t} />);
+        const [testa, ...voci] = par.split('\n• ');
+        return (
+          <div key={k}>
+            <p>{k === 0 && prima ? <><strong>{prima}</strong> </> : null}{testa.replace(/^• /, '')}</p>
+            {voci.length > 0 && <ul className="mt-1 list-disc space-y-1 pl-5">{voci.map((v) => <li key={v}>{v}</li>)}</ul>}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function TabellaSrd({ t }: { t: Tabella }) {
+  // Con tante colonne (Teletrasporto: 5) testo più piccolo e numeri su una riga, così sta nei 360 px del telefono
+  const fitta = t.colonne.length > 3;
+  const cella = `${fitta ? 'px-1' : 'px-2'} py-1`;
+  return (
+    <div className="overflow-x-auto">
+      {t.titolo && <p className="mb-1 text-sm font-medium text-testo">{t.titolo}</p>}
+      <table className={`w-full border-collapse ${fitta ? 'text-xs' : 'text-sm'}`}>
+        <thead><tr>{t.colonne.map((c) => <th key={c} scope="col" className={`border-b border-bordo ${cella} text-left align-bottom font-medium text-testo-2`}>{c}</th>)}</tr></thead>
+        <tbody>{t.righe.map((r, i) => <tr key={i} className="even:bg-sfondo">{r.map((c, j) => <td key={j} className={`${cella} align-top text-testo ${c.length <= 6 ? 'whitespace-nowrap' : ''}`}>{c}</td>)}</tr>)}</tbody>
+      </table>
+    </div>
+  );
+}
 let cache: Testi | null = null;
 
 export function FoglioDalBasso({ titolo, chiudi, children }: { titolo: React.ReactNode; chiudi: () => void; children: React.ReactNode }) {
@@ -80,9 +114,9 @@ export function SchedaIncantesimo({ id, chiudi }: { id: Id; chiudi: () => void }
       <div className="mt-3 space-y-2 text-base leading-relaxed text-testo">
         {!testi && <p className="text-testo-2">Carico il testo…</p>}
         {testi && !t?.testo && <p className="text-testo-2">Testo non disponibile: vedi l'SRD{i.srd ? `, p. ${i.srd.pagina}` : ''}.</p>}
-        {t?.testo && <p>{t.testo}</p>}
-        {t?.potenziato && <p><strong>Trucchetto potenziato.</strong> {t.potenziato}</p>}
-        {t?.superiori && <p><strong>Con uno slot di livello superiore.</strong> {t.superiori}</p>}
+        {t?.testo && <TestoSrd testo={t.testo} tabelle={t.tabelle} />}
+        {t?.potenziato && <TestoSrd testo={t.potenziato} prima="Trucchetto potenziato." />}
+        {t?.superiori && <TestoSrd testo={t.superiori} prima="Con uno slot di livello superiore." />}
       </div>
       <p className="mt-4 text-xs text-testo-2">Testo dall'SRD 5.2.1 in italiano, licenza CC-BY-4.0.</p>
     </FoglioDalBasso>

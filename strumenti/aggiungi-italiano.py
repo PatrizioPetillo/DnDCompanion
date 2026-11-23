@@ -1,7 +1,10 @@
 # Aggiunge a src/regole/dati/incantesimi.json i dati italiani presi dall'SRD 5.2.1 in italiano (CC-BY-4.0).
 # I testi completi vanno in incantesimi-testi.json (caricato a richiesta).
-# Uso:  pdftotext -raw IT_SRD_CC_v5.2.1.pdf it_raw.txt
-#       python3 strumenti/aggiungi-italiano.py it_raw.txt
+# Uso:  python3 strumenti/colonne-it.py IT_SRD_CC_v5.2.1.pdf 121 201 it_col.txt   (testo in ordine di lettura, 23/11)
+#       python3 strumenti/aggiungi-italiano.py it_col.txt
+# Le tabelle (10 incantesimi) sono trascritte a mano in strumenti/tabelle_incantesimi.py.
+# Nel testo: «¶» davanti ai titoli (nomi degli incantesimi e schede delle statistiche), riga vuota tra i paragrafi.
+# Prima si usava «pdftotext -raw», che mescolava le due colonne in alcune pagine.
 # Abbina ogni incantesimo inglese al suo italiano per livello, scuola, classi, rituale, concentrazione,
 # componenti e gittata; i pochi casi uguali su tutto sono risolti a mano (vedi MANUALI).
 import json, re, sys
@@ -9,6 +12,9 @@ from pathlib import Path
 
 DATI = Path(__file__).resolve().parent.parent / 'src/regole/dati/incantesimi.json'
 righe = open(sys.argv[1], encoding='utf-8').read().replace('\xad', '').split('\n')
+# «‖» = riga in GillSans: intestazione dell'incantesimo o tabella. Nell'intestazione si toglie, nel testo diventa «[[tabelle]]».
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tabelle_incantesimi import T as TABELLE
 
 SC = {'abiurazione': 'abjuration', 'ammaliamento': 'enchantment', 'divinazione': 'divination', 'evocazione': 'conjuration',
       'invocazione': 'evocation', 'illusione': 'illusion', 'necromanzia': 'necromancy', 'trasmutazione': 'transmutation'}
@@ -29,9 +35,11 @@ def pulisci(linee):
     t = re.sub(r'(\w)-\n(\w)', r'\1\2', t)                 # parole spezzate a fine riga
     t = re.sub(r'\n(?=(Utilizzo di uno slot incantesimo di livello superiore|Trucchetto potenziato)\.)', '\n\n', t)
     t = re.sub(r'(?<!\n)\n(?!\n)', ' ', t)
+    t = re.sub(r'\n{3,}', '\n\n', t)
+    t = re.sub(r'\s*•\s*', '\n• ', t)                     # gli elenchi puntati: una voce per riga
     return re.sub(r' {2,}', ' ', t).strip()
 
-inizio = max(i for i, l in enumerate(righe) if l.strip() == 'Descrizioni degli incantesimi')
+inizio = max(i for i, l in enumerate(righe) if l.strip() == '¶Descrizioni degli incantesimi')
 it, i = [], inizio + 1
 while i < len(righe):
     l = righe[i].strip()
@@ -39,7 +47,7 @@ while i < len(righe):
     if not (m1 or m0):
         i += 1
         continue
-    nome = righe[i - 1].strip()
+    nome = righe[i - 1].strip().lstrip('¶')
     scuola, liv, cl = (SC[m1.group(1).lower()], int(m1.group(2)), m1.group(3)) if m1 else (SC[m0.group(1).lower()], 0, m0.group(2))
     j = i
     while ')' not in cl:
@@ -49,7 +57,7 @@ while i < len(righe):
     # Intestazione: i quattro campi (a volte su più righe, a volte «Componente:» al singolare)
     campi, k, chiave = {}, j + 1, None
     while k < len(righe):
-        t = righe[k].strip()
+        t = righe[k].strip().lstrip('‖')
         if rx1.match(t) or rx0.match(t):
             break
         mm = re.match(r'^(Tempo di lancio|Gittata|Component[ei]|Durata): (.*)$', t)
@@ -61,12 +69,21 @@ while i < len(righe):
         elif chiave == 'Durata':
             break                                            # finita l'intestazione: comincia il testo
         k += 1
+    # campi su più righe: niente spazi doppi né parole spezzate («incan- tesimo»)
+    campi = {c: re.sub(r'(\w)- (\w)', r'\1\2', re.sub(r'\s+', ' ', v)).strip() for c, v in campi.items()}
     testo = []
     while k < len(righe):
         t = righe[k].strip()
         if rx1.match(t) or rx0.match(t):
             testo = testo[:-1]                               # l'ultima riga era il nome del successivo
             break
+        if t.startswith('¶'):                                # un titolo che non è un incantesimo: la scheda delle statistiche
+            break                                            # di una creatura evocata (Oggetto animato, Cavalcatura ultraterrena…)
+        if t.startswith('‖'):                                # una tabella: al suo posto un segnaposto, una volta sola
+            if '[[tabelle]]' not in testo:
+                testo += ['', '[[tabelle]]', '']
+            k += 1
+            continue
         testo.append(t)
         k += 1
     it.append(dict(nome=nome, livello=liv, scuola=scuola, liste=classi, campi=campi, testo=pulisci(testo)))
@@ -109,6 +126,11 @@ for e in en:
 for k, v in MANUALI.items():
     abbinati[k] = per_nome[v]
 mancano = [e['id'] for e in en if e['id'] not in abbinati]
+# Ogni tabella trascritta deve avere il suo posto nel testo, e ogni segnaposto la sua tabella
+for e in en:
+    if e['id'] in abbinati:
+        ha = '[[tabelle]]' in abbinati[e['id']]['testo']
+        assert ha == (e['id'] in TABELLE), f"tabella senza posto o posto senza tabella: {e['id']}"
 assert not mancano and len({v['nome'] for v in abbinati.values()}) == len(en), f'non abbinati: {mancano}'
 
 CAR = {'Forza': 'FOR', 'Destrezza': 'DES', 'Costituzione': 'COS', 'Intelligenza': 'INT', 'Saggezza': 'SAG', 'Carisma': 'CAR'}
@@ -134,7 +156,8 @@ for e in en:
         'componenti': x['campi'].get('Componenti', ''), 'durata': x['campi'].get('Durata', ''),
     }
     testi[e['id']] = {'testo': base.strip(), **({'superiori': superiori.strip()} if superiori else {}),
-                      **({'potenziato': potenziato.strip()} if potenziato else {})}
+                      **({'potenziato': potenziato.strip()} if potenziato else {}),
+                      **({'tabelle': TABELLE[e['id']]} if e['id'] in TABELLE else {})}
     if tiro: e['tiro'] = tiro
     if danni: e['danni'] = danni
 

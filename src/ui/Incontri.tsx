@@ -1,12 +1,15 @@
 // Incontri del master (21/11): prepara i nemici, vede subito la difficoltà per il suo gruppo, poi tira l'iniziativa.
-// Nessun bestiario: nome, grado di sfida, quanti, bonus all'iniziativa e PF li scrive il master (SRD p. 202, 253, 13).
-import { useState } from 'react';
+// Dal 23/11 c'è l'elenco dei mostri dell'SRD, solo i numeri; per gli altri il master scrive i suoi (SRD p. 202, 253, 13).
+import { useEffect, useState } from 'react';
 import type { Incontro, MembroGruppo } from '../archivio/archivio';
 import { calcolaScheda } from '../regole';
 import {
   budgetGruppo, cambiaPf, cambiaTiro, difficolta, GRADI, NOME_DIFFICOLTA, nomeGrado, peNemici, prossimoTurno, SPIEGA_DIFFICOLTA,
-  sposta, tiraIniziativa, totale, turnoPrecedente, type Combattimento, type Nemico,
+  cambiaCondizioneNemico, sposta, tiraIniziativa, totale, turnoPrecedente, type Combattimento, type Nemico,
 } from '../creazione/incontri';
+import { caricaMostri, cercaMostri, daMostro, type Mostro } from '../creazione/mostri';
+import { CONDIZIONI, type IdCondizione } from '../partita/condizioni';
+import { semplici, Tendina } from './Tendina';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 
 const nuovoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -78,6 +81,7 @@ function SchedaIncontro({ inc, pg, salva, chiudi, togli }: {
 }
 
 function Prepara({ inc, pg, metti, togli }: { inc: Incontro; pg: { id: string; nome: string; livello: number; bonus: number }[]; metti: (o: Partial<Incontro>) => void; togli: () => void }) {
+  const [elenco, setElenco] = useState(false);
   const b = budget(inc, pg);
   const tot = peNemici(inc.nemici);
   const d = difficolta(tot, b);
@@ -130,6 +134,9 @@ function Prepara({ inc, pg, metti, togli }: { inc: Incontro; pg: { id: string; n
                 <button onClick={() => nemico(n.id, { quanti: Math.min(50, n.quanti + 1) })} aria-label="Uno in più" className="h-11 w-11 rounded-full border border-bordo">+</button>
               </span>
             </div>
+            {n.mostro && (
+              <p className="text-xs text-testo-2">Dall'SRD · CA {n.ca}{n.immunita?.length ? ` · immune a: ${n.immunita.map(nomeCond).join(', ')}` : ''}</p>
+            )}
             <div className="grid grid-cols-3 gap-2 text-xs text-testo-2">
               <label className="block">GS
                 <select value={n.gs} onChange={(e) => nemico(n.id, { gs: e.target.value })} className={`mt-1 w-full ${campo}`}>
@@ -142,9 +149,19 @@ function Prepara({ inc, pg, metti, togli }: { inc: Incontro; pg: { id: string; n
             </div>
           </div>
         ))}
-        <button onClick={() => metti({ nemici: [...inc.nemici, { id: nuovoId(), nome: '', gs: '1/4', quanti: 1, iniziativa: 0 }] })}
-          className="min-h-12 w-full rounded-xl border border-bordo text-base text-testo">+ Aggiungi un nemico</button>
-        <p className="text-xs text-testo-2">GS e bonus all'iniziativa sono nella scheda del mostro, nel tuo manuale.</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => setElenco(true)} className="min-h-12 rounded-xl border border-accento text-base text-accento">+ Dall'SRD</button>
+          <button onClick={() => metti({ nemici: [...inc.nemici, { id: nuovoId(), nome: '', gs: '1/4', quanti: 1, iniziativa: 0 }] })}
+            className="min-h-12 rounded-xl border border-bordo text-base text-testo">+ Scritto da te</button>
+        </div>
+        <p className="text-xs text-testo-2">Dall'SRD i numeri si riempiono da soli. Per un mostro di un altro manuale, scrivi GS e bonus all'iniziativa dalla sua scheda.</p>
+        {elenco && <ElencoMostri chiudi={() => setElenco(false)} scegli={(m) => {
+          // lo stesso mostro già nell'incontro: uno in più, invece di una riga nuova
+          const c = inc.nemici.find((x) => x.mostro === m.id);
+          metti({ nemici: c ? inc.nemici.map((x) => (x.id === c.id ? { ...x, quanti: Math.min(50, x.quanti + 1) } : x))
+            : [...inc.nemici, { id: nuovoId(), quanti: 1, ...daMostro(m) }] });
+          setElenco(false);
+        }} />}
       </div>
 
       <button disabled={!inc.nemici.length && !pg.length} onClick={() => metti({ combattimento: tiraIniziativa(pg, inc.nemici) })}
@@ -170,6 +187,7 @@ function Combattendo({ c, cambia, fine }: { c: Combattimento; cambia: (c: Combat
                 <span className="w-9 text-center text-lg font-medium text-testo">{totale(x)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-base text-testo">{x.quanti && x.quanti > 1 ? `${x.quanti} × ` : ''}{x.nome}{ora ? ' · tocca a lui' : ''}</span>
+                  {x.ca && <span className="block text-xs text-testo-2">CA {x.ca}</span>}
                   <label className="flex items-center gap-1 text-xs text-testo-2">d20
                     <input inputMode="numeric" value={x.tiro} aria-label={`d20 di ${x.nome}`} onChange={(e) => cambia(cambiaTiro(c, x.id, Number(e.target.value) || 1))}
                       className="h-8 w-11 rounded border border-bordo bg-sfondo text-center text-sm text-testo" /> {segno(x.bonus)}</label>
@@ -179,6 +197,7 @@ function Combattendo({ c, cambia, fine }: { c: Combattimento; cambia: (c: Combat
                   <button onClick={() => cambia(sposta(c, i, 1))} disabled={i === c.ordine.length - 1} aria-label={`Sposta ${x.nome} giù`} className="h-8 w-11 text-testo-2 disabled:opacity-30">▼</button>
                 </span>
               </div>
+              {x.tipo === 'nemico' && <CondizioniNemico x={x} cambia={(k, cond, si) => cambia(cambiaCondizioneNemico(c, x.id, k, cond, si))} />}
               {x.pf && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {x.pf.map((v, k) => (
@@ -200,6 +219,76 @@ function Combattendo({ c, cambia, fine }: { c: Combattimento; cambia: (c: Combat
       </div>
       <p className="text-xs text-testo-2">Parità: tra mostri e personaggi decidi tu, tra personaggi decidono i giocatori (SRD p. 13). Usa le frecce.</p>
       <button onClick={fine} className="min-h-11 w-full text-sm text-attenzione">Fine del combattimento</button>
+    </div>
+  );
+}
+
+const nomeCond = (id: IdCondizione) => CONDIZIONI.find((c) => c.id === id)?.nome.toLowerCase() ?? id;
+
+// L'elenco dei mostri dell'SRD: ricerca per nome (anche inglese) e grado di sfida. Solo i numeri della scheda.
+function ElencoMostri({ chiudi, scegli }: { chiudi: () => void; scegli: (m: Mostro) => void }) {
+  const [tutti, setTutti] = useState<Mostro[] | null>(null);
+  const [q, setQ] = useState('');
+  const [gs, setGs] = useState('');
+  useEffect(() => { void caricaMostri().then(setTutti); }, []);
+  const lista = tutti ? cercaMostri(tutti, q, gs) : [];
+  const gradi = tutti ? GRADI.filter((g) => g !== '0*' && tutti.some((m) => m.gs === g)) : [];
+  return (
+    <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="text-lg font-medium text-testo">Mostri dell'SRD</h2>}>
+      <div className="space-y-3">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cerca (anche in inglese)" aria-label="Cerca un mostro"
+          className="h-12 w-full rounded-lg border border-bordo bg-sfondo px-3 text-base text-testo" />
+        <Tendina etichetta="Grado di sfida" valore={gs || 'tutti'} opzioni={semplici([{ id: 'tutti', nome: 'Tutti' }, ...gradi.map((g) => ({ id: g, nome: g }))])} cambia={(v) => setGs(v === 'tutti' ? '' : v)} />
+        {!tutti ? <p className="text-sm text-testo-2">Carico l'elenco…</p> : (
+          <>
+            <p className="text-xs text-testo-2">{lista.length} mostri · tocca per aggiungerlo all'incontro</p>
+            <ul className="overflow-hidden rounded-xl border border-bordo">
+              {lista.slice(0, 80).map((m) => (
+                <li key={m.id} className="border-b border-bordo last:border-b-0">
+                  <button onClick={() => scegli(m)} className="w-full px-3 py-2 text-left">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="text-base text-testo">{m.nome}</span>
+                      <span className="shrink-0 text-sm text-testo-2">GS {m.gs}</span>
+                    </span>
+                    <span className="block text-xs text-testo-2">{m.tipo}</span>
+                    <span className="block text-xs text-testo">CA {m.ca} · PF {m.pf} ({m.dadiPf}) · Iniziativa {m.iniziativa >= 0 ? '+' : '−'}{Math.abs(m.iniziativa)}{m.srd?.pagina ? ` · SRD p. ${m.srd.pagina}` : ' · SRD 5.2.1'}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {lista.length > 80 && <p className="text-xs text-testo-2">Ne vedi 80: scrivi qualche lettera del nome o scegli il grado di sfida.</p>}
+          </>
+        )}
+        <p className="text-xs text-testo-2">Azioni e tratti sono nella scheda del mostro nell'SRD: qui ci sono solo i numeri che servono all'incontro.</p>
+      </div>
+    </FoglioDalBasso>
+  );
+}
+
+// Le condizioni di un nemico in combattimento: una tendina per aggiungerle, le immunità spente
+function CondizioniNemico({ x, cambia }: { x: { nome: string; quanti?: number; immunita?: IdCondizione[]; condizioni?: IdCondizione[][] }; cambia: (k: number, c: IdCondizione, si: boolean) => void }) {
+  const quanti = x.quanti ?? 1;
+  return (
+    <div className="mt-2 space-y-2">
+      {Array.from({ length: quanti }, (_, k) => {
+        const segnate = x.condizioni?.[k] ?? [];
+        return (
+          <div key={k} className="flex flex-wrap items-center gap-1">
+            {quanti > 1 && <span className="w-6 text-xs text-testo-2">{k + 1}:</span>}
+            {segnate.map((id) => (
+              <button key={id} onClick={() => cambia(k, id, false)} aria-label={`Togli ${nomeCond(id)} da ${x.nome}${quanti > 1 ? ` ${k + 1}` : ''}`}
+                className="min-h-11 rounded-full border border-attenzione px-3 text-sm text-attenzione">{nomeCond(id)} ×</button>
+            ))}
+            <select value="" aria-label={`Aggiungi una condizione a ${x.nome}${quanti > 1 ? ` ${k + 1}` : ''}`} onChange={(e) => e.target.value && cambia(k, e.target.value as IdCondizione, true)}
+              className="h-11 rounded-lg border border-bordo bg-sfondo px-2 text-sm text-testo-2">
+              <option value="">+ Condizione</option>
+              {CONDIZIONI.filter((c) => !segnate.includes(c.id)).map((c) => (
+                <option key={c.id} value={c.id} disabled={x.immunita?.includes(c.id)}>{c.nome}{x.immunita?.includes(c.id) ? ' (immune)' : ''}</option>
+              ))}
+            </select>
+          </div>
+        );
+      })}
     </div>
   );
 }

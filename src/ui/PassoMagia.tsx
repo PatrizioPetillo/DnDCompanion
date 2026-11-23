@@ -49,8 +49,8 @@ export function BloccoMagia({ blocco: b, bozza, cambia, soloScelte }: {
   const contatore = aperto ? b.contatori.find((c) => c.tipo === aperto) : undefined;
   return (
     <div className="space-y-3">
-      {b.caratteristica && (
-        // La caratteristica di un talento o di una specie si sceglie anche qui: senza, CD e attacco non esistono
+      {b.caratteristica && !soloScelte && (
+        // La caratteristica di un talento o di una specie si sceglie anche qui; nel riquadro di Iniziato ci sono già i pulsanti (23/11: era doppia)
         <Tendina etichetta="Caratteristica per questi incantesimi" valore={b.caratteristica.valore}
           opzioni={(['INT', 'SAG', 'CAR'] as const).map((c) => ({ id: c, nome: NOME_CAR[c], disattivata: false }))}
           cambia={(v) => cambia({ ...bozza, scelte: { ...bozza.scelte, [b.caratteristica!.scelta]: v ? [v] : [] } })} />

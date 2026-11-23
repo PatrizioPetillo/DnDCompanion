@@ -1,5 +1,5 @@
-// Incontri del master (21/11): difficoltà e ordine dell'iniziativa, senza bestiario.
-// Il master scrive i nemici (nome, grado di sfida, quanti, bonus all'iniziativa); i personaggi arrivano dal gruppo.
+// Incontri del master (21/11): difficoltà e ordine dell'iniziativa. Dal 23/11 i nemici si prendono anche dall'elenco
+// dei mostri dell'SRD (creazione/mostri.ts), che riempie i numeri; gli altri li scrive il master. I personaggi arrivano dal gruppo.
 // Regole: difficoltà SRD p. 202 (budget di PE per personaggio), PE per grado di sfida p. 253, iniziativa p. 13.
 
 // PE per grado di sfida (SRD p. 253). Il GS 0 vale 0 o 10 PE: il master sceglie quale.
@@ -18,7 +18,10 @@ const BUDGET: [number, number, number][] = [
   [2900, 4900, 6200], [3300, 5400, 7800], [3800, 6100, 9800], [4500, 7200, 11700], [5000, 8700, 14200], [5500, 10700, 17200], [6400, 13200, 22000],
 ];
 
-export interface Nemico { id: string; nome: string; gs: string; quanti: number; iniziativa: number; pf?: number }
+import type { IdCondizione } from '../partita/condizioni';
+
+// mostro, ca e immunità ci sono quando il nemico viene dall'elenco dell'SRD
+export interface Nemico { id: string; nome: string; gs: string; quanti: number; iniziativa: number; pf?: number; ca?: number; mostro?: string; immunita?: IdCondizione[] }
 export interface Budget { basso: number; moderato: number; alto: number }
 
 // L'SRD moltiplica il budget del livello del gruppo per il numero di personaggi.
@@ -54,7 +57,11 @@ export const SPIEGA_DIFFICOLTA: Record<Difficolta, string> = {
 
 // ───────── Iniziativa (SRD p. 13) ─────────
 // Un gruppo di creature identiche tira una volta sola: stessa iniziativa per tutti. In caso di parità decide il master.
-export interface Combattente { id: string; nome: string; tipo: 'pg' | 'nemico'; bonus: number; tiro: number; quanti?: number; pf?: number[]; pfMax?: number }
+// condizioni: una lista per ogni nemico del gruppo (come i PF); le immunità vengono dalla scheda del mostro
+export interface Combattente {
+  id: string; nome: string; tipo: 'pg' | 'nemico'; bonus: number; tiro: number; quanti?: number; pf?: number[]; pfMax?: number;
+  ca?: number; immunita?: IdCondizione[]; condizioni?: IdCondizione[][];
+}
 export interface Combattimento { ordine: Combattente[]; turno: number; round: number }
 
 export const d20 = () => 1 + Math.floor(Math.random() * 20);
@@ -65,6 +72,8 @@ export function tiraIniziativa(pg: { id: string; nome: string; bonus: number }[]
     ...nemici.filter((n) => n.quanti > 0).map((n) => ({
       id: `n:${n.id}`, nome: n.nome || 'Nemico', tipo: 'nemico' as const, bonus: n.iniziativa, tiro: dado(), quanti: n.quanti,
       ...(n.pf ? { pf: Array.from({ length: n.quanti }, () => n.pf!), pfMax: n.pf } : {}),
+      ...(n.ca ? { ca: n.ca } : {}), ...(n.immunita?.length ? { immunita: n.immunita } : {}),
+      condizioni: Array.from({ length: n.quanti }, () => [] as IdCondizione[]),
     })),
   ];
   return { ordine: ordina(ordine), turno: 0, round: 1 };
@@ -100,4 +109,14 @@ export function cambiaTiro(c: Combattimento, id: string, tiro: number): Combatti
 }
 export function cambiaPf(c: Combattimento, id: string, istanza: number, pf: number): Combattimento {
   return { ...c, ordine: c.ordine.map((x) => (x.id !== id || !x.pf ? x : { ...x, pf: x.pf.map((v, k) => (k === istanza ? Math.max(0, Math.min(x.pfMax ?? 9999, pf)) : v)) })) };
+}
+
+// Le condizioni dei nemici (23/11): il master le segna e le toglie; a una condizione da cui è immune non si arriva.
+export function cambiaCondizioneNemico(c: Combattimento, id: string, istanza: number, cond: IdCondizione, metti: boolean): Combattimento {
+  return { ...c, ordine: c.ordine.map((x) => {
+    if (x.id !== id || x.tipo !== 'nemico') return x;
+    if (metti && x.immunita?.includes(cond)) return x;
+    const tutte = x.condizioni ?? Array.from({ length: x.quanti ?? 1 }, () => [] as IdCondizione[]);
+    return { ...x, condizioni: tutte.map((l, k) => (k !== istanza ? l : metti ? (l.includes(cond) ? l : [...l, cond]) : l.filter((y) => y !== cond))) };
+  }) };
 }

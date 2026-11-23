@@ -49,7 +49,7 @@ export function Personaggi({ archivio, apri, crea, creaPronto, duplica, elimina,
         </div>
       )}
 
-      <ul className="overflow-hidden rounded-xl border border-bordo bg-superficie empty:hidden">
+      <ul className="riquadro overflow-hidden rounded-xl border bg-superficie empty:hidden">
         {voci.map((v) => (
           <li key={v.id} className="flex items-center border-b border-bordo last:border-b-0">
             <button onClick={() => apri(v.id)} className="flex min-h-20 min-w-0 flex-1 items-center gap-3 py-3 pl-3 text-left">

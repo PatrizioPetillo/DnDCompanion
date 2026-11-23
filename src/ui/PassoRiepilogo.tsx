@@ -14,7 +14,7 @@ import { calcolaScheda, DATI } from '../regole';
 import type { StatoPartita } from '../partita/partita';
 import type { Elementi } from '../creazione/personalizzati';
 import { Avatar, riduciRitratto } from './Avatar';
-import { Fascia, immagine } from './Illustrazione';
+import { Fascia, immagine, sfumatura } from './Illustrazione';
 import { iniziali } from '../archivio/archivio';
 import { condizioniPerTiro, CondizioniTavolo, NomeRisorsa, MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
 import { Borsa, Libro } from './Zaino';
@@ -423,9 +423,9 @@ function Creazione({ il, riapri, apriSali, livello }: Salvato) {
 // (personaggio pronto: la figura intera, presa dall'alto)
 function FasciaRitratto({ src, posizione = '50% 30%' }: { src: string; posizione?: string }) {
   return (
-    <div aria-hidden="true" className="relative overflow-hidden rounded-xl" style={{ height: 180 }}>
+    <div aria-hidden="true" className="relative overflow-hidden rounded-xl" style={{ height: 200 }}>
       <img src={src} alt="" className="h-full w-full object-cover" style={{ objectPosition: posizione }} />
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 55%, var(--color-sfondo))' }} />
+      <div className="absolute inset-0" style={{ background: sfumatura(40, 'var(--color-sfondo)') }} />
     </div>
   );
 }

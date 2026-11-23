@@ -17,9 +17,10 @@
   color-scheme: light;
 }
 :root[data-tema='notte'] {
-  --sfondo: #1A1512;
-  --superficie: #2B2320;
-  --bordo: #4A3D33;
+  /* 23/11: un po' più caldo e meno nero, come gli sfondi delle illustrazioni */
+  --sfondo: #201914;
+  --superficie: #2E241D;
+  --bordo: #54432F;
   --testo: #F3E9D2;
   --testo-2: #BFB096;
   --accento: #C9A253;
@@ -47,6 +48,12 @@
 }
 
 html, body { background: var(--sfondo); color: var(--testo); }
+/* 23/11 («colori troppo digitali»): una luce calda appena accennata al centro, niente texture (sezione 4) */
+body { background-image: radial-gradient(ellipse 120% 70% at 50% 0%, var(--luce) 0%, transparent 70%); background-attachment: fixed; }
+:root { --luce: rgba(255, 250, 235, .55); --ombra: 0 1px 2px rgba(110, 60, 20, .10), 0 4px 14px rgba(110, 60, 20, .08); }
+:root[data-tema='notte'] { --luce: rgba(176, 138, 62, .10); --ombra: 0 1px 2px rgba(0, 0, 0, .35), 0 6px 18px rgba(0, 0, 0, .25); }
+/* Riquadri importanti (personaggi pronti, elenco dei personaggi, guide): bordo d'ottone sottile e ombra calda */
+.riquadro { border-color: color-mix(in srgb, var(--oro) 45%, var(--bordo)); box-shadow: var(--ombra); }
 /* Campi e tendine (21/11): il bordo chiaro dei riquadri è troppo tenue per un controllo; quelli evidenziati restano come sono */
 select.border-bordo, input.border-bordo, textarea.border-bordo { border-color: var(--campo); }
 /* Il fuoco della tastiera non finisce sotto la barra in alto o i pulsanti in basso (WCAG 2.2, 2.4.11) */

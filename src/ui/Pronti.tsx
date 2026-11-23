@@ -46,7 +46,7 @@ export function SceltaPronti({ elenco, livelloFisso, scegli, daZero, chiudi }: {
           const src = proprio ?? immagine('classi', p.classe);
           return (
             <li key={p.id}>
-              <button onClick={() => scegli(p, livello)} className="flex w-full gap-3 rounded-xl border border-bordo bg-superficie p-3 text-left">
+              <button onClick={() => scegli(p, livello)} className="riquadro flex w-full gap-3 rounded-xl border bg-superficie p-3 text-left">
                 {src
                   ? <img src={src} alt="" className="h-16 w-16 shrink-0 rounded-full border border-bordo object-cover" style={{ objectPosition: proprio ? '50% 50%' : '50% 25%' }} />
                   : <span className="h-16 w-16 shrink-0 rounded-full border border-bordo" />}

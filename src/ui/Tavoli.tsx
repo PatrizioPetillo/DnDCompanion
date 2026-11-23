@@ -48,7 +48,7 @@ export function ElencoTavoli({ archivio, apri, crea }: { archivio: Archivio; apr
           <button onClick={crea} className="mt-3 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Crea un tavolo</button>
         </div>
       ) : (
-        <ul className="overflow-hidden rounded-xl border border-bordo bg-superficie">
+        <ul className="riquadro overflow-hidden rounded-xl border bg-superficie">
           {voci.map((v) => (
             <li key={v.id} className="border-b border-bordo last:border-b-0">
               <button onClick={() => apri(v.id)} className="block min-h-16 w-full px-4 py-3 text-left">

@@ -16,7 +16,7 @@ function Logo({ src, nome }: { src: string; nome: string }) {
 // Le guide (19/11): ognuna con la sua icona, apre un foglio dal basso
 function VoceGuida({ guida, apri }: { guida: Guida; apri: () => void }) {
   return (
-    <button onClick={apri} className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-oro/60 bg-superficie px-4 py-3 text-left">
+    <button onClick={apri} className="flex min-h-16 w-full items-center gap-3 riquadro rounded-xl border bg-superficie px-4 py-3 text-left">
       <span className="text-oro"><IconaGuida id={guida.id} /></span>
       <span className="min-w-0 flex-1">
         <span className="block font-titolo text-base text-accento">{guida.titolo}</span>
@@ -47,7 +47,7 @@ export function Home({ personaggi, apriPersonaggi, apriTavoli, apriInformazioni 
       <button onClick={apriTavoli} className="mt-3 h-12 w-full max-w-80 rounded-xl border border-bordo text-base text-testo">I miei tavoli (per il master)</button>
       <div className="mt-8 w-full max-w-80 space-y-3">
         {GUIDE.map((g) => <VoceGuida key={g.id} guida={g} apri={() => setGuida(g)} />)}
-        <button onClick={() => setCompendio(true)} className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-oro/60 bg-superficie px-4 py-3 text-left">
+        <button onClick={() => setCompendio(true)} className="flex min-h-16 w-full items-center gap-3 riquadro rounded-xl border bg-superficie px-4 py-3 text-left">
           <span className="text-oro"><IconaCompendio /></span>
           <span className="min-w-0 flex-1">
             <span className="block font-titolo text-base text-accento">Incantesimi</span>

@@ -41,7 +41,9 @@ export async function leggiLink(hash: string): Promise<ReturnType<typeof importa
 const PREFISSO_TAVOLO = '#tavolo=';
 
 export async function creaLinkTavolo(t: Tavolo, base: string): Promise<string> {
-  const json = JSON.stringify({ formato: 'companion-b20-tavolo', versione: 1, tavolo: t });
+  // il segreto del canale resta al master
+  const pubblico: Tavolo = t.canale ? { ...t, canale: { id: t.canale.id, chiave: t.canale.chiave } } : t;
+  const json = JSON.stringify({ formato: 'companion-b20-tavolo', versione: 1, tavolo: pubblico });
   const compresso = await trasforma(new TextEncoder().encode(json), new CompressionStream('deflate-raw'));
   return `${base.split('#')[0]}${PREFISSO_TAVOLO}${base64url(compresso)}`;
 }

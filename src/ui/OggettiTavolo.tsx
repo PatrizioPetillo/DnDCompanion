@@ -2,6 +2,9 @@
 // Il giocatore vede com'è fatto; cosa fa si scopre con lo sblocco (dal servizio, o dal QR al tavolo).
 // La maledizione resta qui: non entra mai nel link (anche un riposo breve non la rivela, SRD p. 102).
 import { useState } from 'react';
+import { semplici, Tendina } from './Tendina';
+import { daOggettoSrd, OGGETTI_SRD_PER_MASTER } from '../creazione/oggetti-master';
+import { OGGETTI_MAGICI } from '../regole/dati/oggetti-magici';
 import type { OggettoDelMaster, VoceElenco } from '../archivio/archivio';
 import type { Velo } from '../regole/tipi';
 import { Avatar } from './Avatar';
@@ -79,6 +82,16 @@ function Modulo({ iniziale, chiudi, salva }: { iniziale: OggettoDelMaster | null
     cariche: s?.cariche ?? 0, maledizione: iniziale?.maledizione ?? '',
   });
   const campo = 'w-full rounded-lg border border-bordo bg-sfondo px-3 text-base text-testo';
+  const [srd, setSrd] = useState('');
+  const [variante, setVariante] = useState('');
+  const daSrd = (id: string, v?: string) => {
+    setSrd(id); setVariante(v ?? '');
+    const p = id ? daOggettoSrd(id, v) : null;
+    if (!p) return;
+    setF((x) => ({ ...x, nome: p.nome, descrizione: p.descrizione, sintonia: p.sintonia, cariche: p.cariche,
+      ca: p.bonus.ca ?? 0, ts: p.bonus.ts ?? 0, att: p.bonus.attaccoIncantesimi ?? 0, cd: p.bonus.cdIncantesimi ?? 0 }));
+  };
+  const varianti = srd ? OGGETTI_MAGICI[srd]?.varianti ?? [] : [];
   const testo = (k: 'nome' | 'apparente', et: string, aiuto?: string) => (
     <label className="block"><span className="mb-1 block text-sm font-medium text-testo">{et}</span>
       {aiuto && <span className="mb-1 block text-xs text-testo-2">{aiuto}</span>}
@@ -109,6 +122,18 @@ function Modulo({ iniziale, chiudi, salva }: { iniziale: OggettoDelMaster | null
     <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="text-lg font-medium text-testo">{iniziale ? 'Modifica l\'oggetto' : 'Un oggetto per il tavolo'}</h2>}>
       <div className="space-y-3">
         {iniziale?.datoIl && <p className="rounded-lg border border-attenzione p-2 text-sm text-testo">L'hai già dato: se cambi qualcosa, rimanda il link al giocatore.</p>}
+        {!iniziale && (
+          <div className="space-y-2 rounded-xl border border-bordo bg-sfondo p-3">
+            <Tendina etichetta="Parti da un oggetto dell'SRD (facoltativo)" valore={srd}
+              opzioni={semplici(OGGETTI_SRD_PER_MASTER().map((o) => ({ id: o.id, nome: o.nome })))}
+              cambia={(id) => daSrd(id)} />
+            {varianti.length > 0 && (
+              <Tendina etichetta="Quale" valore={variante || varianti[0].id} opzioni={semplici(varianti.map((v) => ({ id: v.id, nome: `${v.nome} · ${v.rarita}` })))}
+                cambia={(v) => daSrd(srd, v)} />
+            )}
+            <p className="text-xs text-testo-2">Riempie nome, effetto, sintonia, cariche e bonus. Poi scrivi come appare: è quello che il giocatore vede subito.</p>
+          </div>
+        )}
         {testo('nome', 'Nome vero', 'Lo vede il giocatore dopo l\'identificazione')}
         {testo('apparente', 'Come appare', 'Quello che il giocatore vede subito, per esempio «Anello d\'osso inciso»')}
         {area('aspetto', 'Aspetto', 'Com\'è fatto: lo vede subito')}

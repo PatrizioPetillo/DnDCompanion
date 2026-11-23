@@ -55,6 +55,7 @@ export function Personaggi({ archivio, apri, crea, duplica, elimina, importa, sc
                 </span>
                 <span className="block truncate text-sm text-testo">{v.specie} · {v.classe}</span>
                 <span className="block truncate text-xs italic text-testo-2/70">{v.origine}</span>
+                {v.tavolo && <span className="block truncate text-xs text-accento">Al tavolo «{v.tavolo}»</span>}
                 {!v.pronto && <span className="mt-1 inline-block rounded-full border border-attenzione/60 px-2 text-xs text-attenzione">In creazione</span>}
               </span>
             </button>

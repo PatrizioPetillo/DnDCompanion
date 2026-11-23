@@ -8,6 +8,7 @@ import type { Avviso, EccezioneTavolo, Id, MetodoPunteggi, Personaggio, Tavolo }
 export const NOME_METODO: Record<MetodoPunteggi, string> = { pointBuy27: 'Point buy', serieStandard: 'Serie standard', tiri: 'Tiri dei dadi' };
 export const NOME_ECCEZIONE: Record<EccezioneTavolo, string> = {
   'lingue-rare': 'Lingue rare a scelta', 'allineamenti-malvagi': 'Allineamenti malvagi', 'talenti-fuori-srd': 'Talenti fuori dall\'SRD',
+  'componenti-non-consumate': 'Componenti con costo che non si consumano (servono solo quelle consumate)',
 };
 
 export const tavoloVuoto = (): Tavolo => ({
@@ -26,8 +27,10 @@ export function ammesso(t: Tavolo, id: Id): boolean {
 }
 
 // L'avviso è coperto da un'eccezione del tavolo?
-export function coperto(t: Tavolo, a: Avviso): boolean {
+export function coperto(t: Tavolo, a: Avviso, d?: Dati): boolean {
   const e = t.eccezioni ?? [];
+  // Regola della casa: le componenti con costo che non si consumano non servono; quelle consumate sì (scelta B di Patrizio, 23/11)
+  if (e.includes('componenti-non-consumate') && a.id.startsWith('materiale:') && d) return !d.incantesimi[a.id.slice(10)]?.componenti.M?.consumato;
   if (e.includes('allineamenti-malvagi') && a.id === 'allineamento-malvagio') return true;
   if (e.includes('talenti-fuori-srd') && a.id === 'talento-personalizzato') return true;
   if (e.includes('lingue-rare') && a.id.startsWith('scelta-non-valida:')) return !!LINGUE_RARE[a.id.split(':').pop()!];
@@ -70,6 +73,8 @@ export function validaTavolo(x: unknown, d: Dati): Tavolo | null {
     schema: 1, nome: t.nome.slice(0, 80), regole: 'srd-5.2', livello: 1, metodiPunteggi: metodi, fonti: { srd: true, escludi }, eccezioni,
     ...(Object.keys(background).length || Object.keys(specie).length ? { elementi: { background, ...(Object.keys(specie).length ? { specie } : {}) } } : {}),
     ...(typeof t.note === 'string' && t.note.trim() ? { note: t.note.slice(0, 2000) } : {}),
+    // del canale entrano solo id e chiave: il segreto del master non deve mai arrivare a un giocatore
+    ...(t.canale && /^[A-Za-z0-9_-]{22}$/.test(t.canale.id) && /^[A-Za-z0-9_-]{43}$/.test(t.canale.chiave) ? { canale: { id: t.canale.id, chiave: t.canale.chiave } } : {}),
   };
 }
 

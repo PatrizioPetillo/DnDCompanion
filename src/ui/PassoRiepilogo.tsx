@@ -3,6 +3,7 @@
 // La stessa scheda diventerà quella da usare al tavolo (slot, riposi, risorse).
 import { useState } from 'react';
 import { comePersonaggio, type IdPasso } from '../creazione/percorso';
+import { Restituisci } from './PassoEquipaggiamento';
 import { accettaAvviso, avvisiRiepilogo, riepilogo, type Riepilogo } from '../creazione/riepilogo';
 import type { Bozza } from '../creazione/percorso';
 import { metri } from '../regole/misure';
@@ -97,7 +98,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         {vistaScheda === 'combattimento' && <Combattimento r={r} tavolo={tavolo} />}
         {vistaScheda === 'abilita' && <Abilita r={r} />}
         {vistaScheda === 'magia' && (tavolo ? <MagiaTavolo {...tavolo} /> : <Magia r={r} />)}
-        {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} bozza={bozza} cambia={ricevuta ? undefined : cambia} />}
+        {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} bozza={bozza} cambia={ricevuta ? undefined : cambia} restituibile={!ricevuta && !bloccata} />}
         {vistaScheda === 'chi' && <ChiE r={r} bozza={bozza} cambia={cambia} ricevuta={ricevuta || bloccata}
           salvato={bloccata ? { il: bozza.conclusoIl!, riapri } : undefined} />}
       </div>
@@ -274,7 +275,7 @@ function Magia({ r }: { r: Riepilogo }) {
 }
 
 // Zaino: il libro degli incantesimi e la borsa per componenti si aprono (richiesta del 19/11)
-function Zaino({ r, scheda, tavolo, bozza, cambia }: { r: Riepilogo; scheda: SchedaCalcolata; tavolo: PropsTavolo | null; bozza: Bozza; cambia?: (b: Bozza) => void }) {
+function Zaino({ r, scheda, tavolo, bozza, cambia, restituibile = false }: { r: Riepilogo; scheda: SchedaCalcolata; tavolo: PropsTavolo | null; bozza: Bozza; cambia?: (b: Bozza) => void; restituibile?: boolean }) {
   const [aperto, setAperto] = useState<'libro' | { borsa: string } | null>(null);
   const m = r.zaino.monete.totale;
   const libro = scheda.magia.find((x) => x.libro);
@@ -302,13 +303,14 @@ function Zaino({ r, scheda, tavolo, bozza, cambia }: { r: Riepilogo; scheda: Sch
                   <p className="mt-1 text-sm text-testo-2">{v.contenuto.map((c) => `${c.quantita > 1 ? `${c.quantita} × ` : ''}${c.nome}`).join(', ')}</p>
                 </details>
               ) : <span className="text-base text-testo">{v.quantita > 1 ? `${v.quantita} × ` : ''}{v.nome}</span>}
+              {restituibile && cambia && <div className="mt-1 flex justify-end"><Restituisci bozza={bozza} cambia={cambia} id={v.oggetto} nome={v.nome} /></div>}
             </li>
           );
         })}
         {r.zaino.inventario.length === 0 && <li className="px-3 py-3 text-sm text-testo-2">Lo zaino è vuoto.</li>}
       </ul>
       {aperto === 'libro' && libro && <Libro magia={libro} chiudi={() => setAperto(null)} />}
-      {aperto && aperto !== 'libro' && <Borsa nome={aperto.borsa} scheda={scheda} tavolo={tavolo} chiudi={() => setAperto(null)} />}
+      {aperto && aperto !== 'libro' && <Borsa nome={aperto.borsa} scheda={scheda} tavolo={tavolo} chiudi={() => setAperto(null)} ignoraNonConsumate={!!bozza.tavolo?.eccezioni?.includes('componenti-non-consumate')} />}
     </div>
   );
 }

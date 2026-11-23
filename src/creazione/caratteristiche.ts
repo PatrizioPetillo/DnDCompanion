@@ -17,6 +17,13 @@ export function punteggiIniziali(metodo: MetodoPunteggi, classe?: Id): Punteggi 
   return { metodo, base: daLista(consigliata ?? Array(6).fill(NON_ASSEGNATO)) };
 }
 
+// Point buy con i valori consigliati per la classe (23/11): la serie standard costa esattamente 27 punti (9+7+5+4+2+0),
+// quindi la distribuzione che l'SRD suggerisce per ogni classe (p. 21) vale anche nel point buy
+export function consigliatiPointBuy(classe: Id): Punteggi | null {
+  const serie = SERIE_PER_CLASSE[classe];
+  return serie ? { metodo: 'pointBuy27', base: daLista(serie) } : null;
+}
+
 export function spesaPointBuy(base: Record<Car, number>): { spesi: number; restanti: number } {
   const spesi = CARATTERISTICHE.reduce((s, c) => s + (COSTO_POINT_BUY[base[c]] ?? 0), 0);
   return { spesi, restanti: PUNTI_POINT_BUY - spesi };

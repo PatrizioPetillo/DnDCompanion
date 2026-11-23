@@ -10,7 +10,14 @@
 //   GET  /c/<id>/ascolta  → WebSocket: arriva { seq, il, evento } appena il master lo manda
 import { DurableObject } from 'cloudflare:workers';
 
-interface Env { SBLOCCHI: DurableObjectNamespace<Sblocco>; CANALI: DurableObjectNamespace<Canale> }
+// Tavolo collegato (23/11): i giocatori che hanno il link del tavolo mandano la loro scheda, il master la riceve da solo.
+//   POST /t/<id>              { pg, token, iv, cifrato } → salva l'ultima versione della scheda di quel personaggio
+//                             { pg, token, via: true }   → il personaggio lascia il tavolo
+//   POST /t/<id>/leggi        { segreto } → { schede: [{ pg, il, iv, cifrato, via? }] }; l'id deve essere l'impronta del segreto (solo il master)
+//   GET  /t/<id>/ascolta?segreto=…  → WebSocket del master: arriva ogni scheda nuova o cambiata
+// Le schede sono cifrate con la chiave del link del tavolo: il servizio non le può leggere. Il token di ogni personaggio
+// lo fissa il primo invio: nessun altro può sovrascriverlo. Massimo 40 personaggi; senza uso per 90 giorni si cancella tutto.
+interface Env { SBLOCCHI: DurableObjectNamespace<Sblocco>; CANALI: DurableObjectNamespace<Canale>; TAVOLI: DurableObjectNamespace<TavoloDO> }
 
 const ID = /^[A-Za-z0-9_-]{22}$/;
 const B64_32 = /^[A-Za-z0-9_-]{43}$/;
@@ -89,12 +96,57 @@ export class Canale extends DurableObject<Env> {
   async webSocketClose(ws: WebSocket, code: number) { try { ws.close(code === 1005 ? 1000 : code); } catch { /* già chiuso */ } }
 }
 
+interface SchedaTavolo { tok: string; il: string; iv?: string; cifrato?: string; via?: boolean }
+const PG = /^[A-Za-z0-9_-]{1,40}$/, MAX_PG = 40, DURATA_TAVOLO = 90 * 24 * 3600 * 1000;
+
+export class TavoloDO extends DurableObject<Env> {
+  async fetch(req: Request): Promise<Response> {
+    const url = new URL(req.url);
+    const [, , id, azione] = url.pathname.split('/');
+    if (azione === 'ascolta') {
+      if (req.headers.get('upgrade') !== 'websocket') return json({ errore: 'serve un WebSocket' }, 426);
+      const seg = url.searchParams.get('segreto') ?? '';
+      if (!B64_32.test(seg) || (await impronta(seg)) !== id) return json({ errore: 'non sei il master di questo tavolo' }, 403);
+      const [client, server] = Object.values(new WebSocketPair());
+      this.ctx.acceptWebSocket(server);
+      return new Response(null, { status: 101, webSocket: client });
+    }
+    if (req.method !== 'POST') return json({ errore: 'metodo non ammesso' }, 405);
+    let x: Record<string, unknown>;
+    try { x = await req.json(); } catch { return json({ errore: 'corpo non valido' }, 400); }
+    if (azione === 'leggi') {
+      if (typeof x.segreto !== 'string' || !B64_32.test(x.segreto) || (await impronta(x.segreto)) !== id) return json({ errore: 'non sei il master di questo tavolo' }, 403);
+      const tutte = await this.ctx.storage.list<SchedaTavolo>({ prefix: 'pg:' });
+      return json({ schede: [...tutte].map(([k, v]) => ({ pg: k.slice(3), il: v.il, ...(v.via ? { via: true } : { iv: v.iv, cifrato: v.cifrato }) })) });
+    }
+    const { pg, token, iv, cifrato, via } = x as { pg?: unknown; token?: unknown; iv?: unknown; cifrato?: unknown; via?: unknown };
+    if (typeof pg !== 'string' || !PG.test(pg) || typeof token !== 'string' || !B64_32.test(token)) return json({ errore: 'dati non validi' }, 400);
+    if (!via && (typeof iv !== 'string' || iv.length > 40 || typeof cifrato !== 'string' || cifrato.length > 60000)) return json({ errore: 'dati non validi' }, 400);
+    const chiave = `pg:${pg}`, tok = await impronta(token);
+    const prima = await this.ctx.storage.get<SchedaTavolo>(chiave);
+    if (prima && prima.tok !== tok) return json({ errore: 'questo personaggio è di un altro telefono' }, 403);
+    if (!prima && (await this.ctx.storage.list({ prefix: 'pg:' })).size >= MAX_PG) return json({ errore: 'tavolo pieno' }, 409);
+    const voce: SchedaTavolo = via ? { tok, il: new Date().toISOString(), via: true } : { tok, il: new Date().toISOString(), iv: iv as string, cifrato: cifrato as string };
+    await this.ctx.storage.put(chiave, voce);
+    await this.ctx.storage.setAlarm(Date.now() + DURATA_TAVOLO);
+    const msg = JSON.stringify({ pg, il: voce.il, ...(via ? { via: true } : { iv, cifrato }) });
+    for (const ws of this.ctx.getWebSockets()) { try { ws.send(msg); } catch { /* chiuso */ } }
+    return json({ il: voce.il });
+  }
+  async alarm() { await this.ctx.storage.deleteAll(); }
+  async webSocketMessage() { /* il master non manda nulla */ }
+  async webSocketClose(ws: WebSocket, code: number) { try { ws.close(code === 1005 ? 1000 : code); } catch { /* già chiuso */ } }
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const parti = new URL(req.url).pathname.split('/');
-    if ((parti[1] !== 's' && parti[1] !== 'c') || !ID.test(parti[2] ?? '') || parti.length > 4 || (parti[3] !== undefined && parti[3] !== 'ascolta')) return json({ errore: 'non trovato' }, 404);
-    if (req.headers.get('content-length') && Number(req.headers.get('content-length')) > 2000) return json({ errore: 'troppo grande' }, 413);
+    const ammesse = parti[1] === 't' ? ['ascolta', 'leggi'] : ['ascolta'];
+    if (!['s', 'c', 't'].includes(parti[1]) || !ID.test(parti[2] ?? '') || parti.length > 4 || (parti[3] !== undefined && !ammesse.includes(parti[3]))) return json({ errore: 'non trovato' }, 404);
+    const limite = parti[1] === 't' ? 70000 : 2000;
+    if (req.headers.get('content-length') && Number(req.headers.get('content-length')) > limite) return json({ errore: 'troppo grande' }, 413);
+    if (parti[1] === 't') return env.TAVOLI.getByName(parti[2]).fetch(req);
     return parti[1] === 's' ? env.SBLOCCHI.getByName(parti[2]).fetch(req) : env.CANALI.getByName(parti[2]).fetch(req);
   },
 } satisfies ExportedHandler<Env>;

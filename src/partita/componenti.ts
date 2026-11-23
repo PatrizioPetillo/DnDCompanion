@@ -25,20 +25,22 @@ export function conosciuti(s: Scheda): Id[] {
   return [...new Set(s.magia.flatMap((m) => [...m.trucchetti.scelti, ...m.semprePreparati, ...(m.preparati?.scelti ?? []), ...(m.libro?.scelti ?? [])]))];
 }
 
-export function componenti(s: Scheda, st: StatoPartita, d: Dati = DATI): { senzaCosto: Componente[]; conCosto: Componente[] } {
-  const senzaCosto: Componente[] = [], conCosto: Componente[] = [];
+// ignoraNonConsumate: regola del tavolo (23/11): le componenti con costo che non si consumano vanno in «nonServono»
+export function componenti(s: Scheda, st: StatoPartita, d: Dati = DATI, ignoraNonConsumate = false): { senzaCosto: Componente[]; conCosto: Componente[]; nonServono: Componente[] } {
+  const senzaCosto: Componente[] = [], conCosto: Componente[] = [], nonServono: Componente[] = [];
   for (const id of conosciuti(s)) {
     const i = d.incantesimi[id];
     const M = i?.componenti.M;
     if (!i || !M) continue;
     const base = { incantesimo: id, nome: i.nome, testo: testo(id, d), consumata: !!M.consumato };
     if (!M.costoMo) { senzaCosto.push({ ...base, disponibili: null }); continue; }
+    if (ignoraNonConsumate && !M.consumato) { nonServono.push({ ...base, costoMo: M.costoMo, disponibili: null }); continue; }
     const daOggetto = MATERIALE_DA_OGGETTO[id]?.oggetto;
     const comprati = s.inventario.filter((v) => v.oggetto === `materiale:${id}` || (daOggetto && v.oggetto === daOggetto)).reduce((n, v) => n + v.quantita, 0);
     conCosto.push({ ...base, costoMo: M.costoMo, disponibili: Math.max(0, comprati + (st.componenti?.[id] ?? 0)) });
   }
   const ord = (a: Componente, b: Componente) => a.nome.localeCompare(b.nome, 'it');
-  return { senzaCosto: senzaCosto.sort(ord), conCosto: conCosto.sort(ord) };
+  return { senzaCosto: senzaCosto.sort(ord), conCosto: conCosto.sort(ord), nonServono: nonServono.sort(ord) };
 }
 
 // +1 / −1 a una componente con costo (comprata durante il gioco, persa, ritrovata…); mai sotto zero
@@ -54,5 +56,5 @@ export function dopoIlLancio(s: Scheda, st: StatoPartita, id: Id, d: Dati = DATI
 }
 
 // Manca la componente con costo? (per il bordo rosso)
-export const mancaComponente = (s: Scheda, st: StatoPartita, id: Id, d: Dati = DATI) =>
-  componenti(s, st, d).conCosto.some((c) => c.incantesimo === id && c.disponibili === 0);
+export const mancaComponente = (s: Scheda, st: StatoPartita, id: Id, d: Dati = DATI, ignoraNonConsumate = false) =>
+  componenti(s, st, d, ignoraNonConsumate).conCosto.some((c) => c.incantesimo === id && c.disponibili === 0);

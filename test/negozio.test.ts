@@ -1,6 +1,6 @@
 // Passo Equipaggiamento: pacchetti, negozio ridotto, acquisti (SRD p. 23, 89-98).
 import { describe, expect, it } from 'vitest';
-import { aggiungiPersonalizzato, compra, negozio, opzioniPacchetto, prezzo, scegliPacchetto, togli } from '../src/creazione/equipaggiamento';
+import { aggiungiPersonalizzato, compra, negozio, opzioniPacchetto, prezzo, restituzione, scegliPacchetto, togli } from '../src/creazione/equipaggiamento';
 import { calcolaScheda } from '../src/regole/motore';
 import * as P from './personaggi';
 
@@ -74,5 +74,18 @@ describe('Negozio', () => {
     const b = aggiungiPersonalizzato(P.TRAVIS, 'Corda di seta', 10);
     expect(b.equipaggiamento!.extra![0]).toMatchObject({ nome: 'Corda di seta', costoMo: 10, quantita: 1 });
     expect(b.equipaggiamento!.extra![0].oggetto).toMatch(/^personalizzato:/);
+  });
+});
+
+describe('restituire un acquisto prima di salvare (23/11)', () => {
+  it('ridà le monete di una confezione, e solo per gli acquisti', () => {
+    const prima = calcolaScheda(P.TRAVIS).monete.totale;
+    let b = compra(compra(P.TRAVIS, 'arrows'), 'dagger');
+    expect(restituzione(b, 'arrows')).toEqual({ mo: 1, comprati: 20 });   // una confezione da 20, al prezzo dei dati dell'app
+    expect(restituzione(b, 'dagger')?.mo).toBe(2);
+    expect(restituzione(b, 'spellbook')).toBeNull();                       // dal pacchetto: non si restituisce
+    b = togli(togli(b, 'arrows'), 'dagger');
+    expect(calcolaScheda(b).monete.totale).toBe(prima);
+    expect(restituzione(b, 'arrows')).toBeNull();
   });
 });

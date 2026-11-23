@@ -18,6 +18,8 @@ export interface PersonaggioSalvato {
   aggiornato: string;         // ISO
   // Collegamento col master (22/11): il segreto va nel link della scheda; con quello il master manda eventi a questo personaggio
   canale?: { segreto: string; id: string };
+  // Tavolo collegato (23/11): il token con cui questo telefono manda la scheda al tavolo (solo lui la può aggiornare)
+  invio?: { token: string };
   ultimoEvento?: number;                                        // l'ultimo evento già applicato
   inAttesa?: import('../partita/eventi').EventoRicevuto[];      // tiri salvezza che aspettano la risposta del giocatore
 }
@@ -25,7 +27,7 @@ export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attiv
 
 // I tavoli creati come master: si riaprono, si modificano, si ricondividono
 // gruppo: le schede che i giocatori hanno mandato al master per questo tavolo (21/11)
-export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string; canale?: string }   // canale: il segreto per mandargli eventi (22/11)
+export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string; canale?: string; pg?: string; il?: string }   // pg, il: dal tavolo collegato (23/11)   // canale: il segreto per mandargli eventi (22/11)
 export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string; gruppo?: MembroGruppo[]; oggetti?: OggettoDelMaster[]; incontri?: Incontro[] }
 // Gli incontri preparati dal master (21/11); senza gruppo, il master scrive quanti personaggi e di che livello
 export interface Incontro { id: string; nome: string; nemici: Nemico[]; combattimento?: Combattimento; manuale?: { quanti: number; livello: number } }
@@ -59,6 +61,15 @@ export function aggiorna(a: Archivio, id: string, modifica: Partial<Omit<Persona
 }
 
 // Duplica: utile per provare una variante (Travis Accolito / Travis Sapiente). La copia parte con PF e slot pieni.
+// Lo stesso personaggio per un secondo tavolo (23/11): stesse scelte, salvato com'era, stato di partita e invio suoi
+export function copiaPerTavolo(a: Archivio, id: string, t: Tavolo, ora = new Date()): { archivio: Archivio; id: string } {
+  const o = a.personaggi.find((p) => p.id === id);
+  if (!o) return { archivio: a, id };
+  const { tavolo: _t, ...bozza } = structuredClone(o.bozza);
+  void _t;
+  return nuovo(unisciElementi(a, t.elementi), { ...bozza, tavolo: t }, ora, o.ritratto);
+}
+
 export function duplica(a: Archivio, id: string, ora = new Date()): { archivio: Archivio; id: string } {
   const o = a.personaggi.find((p) => p.id === id);
   if (!o) return { archivio: a, id };
@@ -76,7 +87,7 @@ export const apri = (a: Archivio, id: string): Archivio => ({ ...a, attivo: id }
 export const attivo = (a: Archivio): PersonaggioSalvato | null => a.personaggi.find((p) => p.id === a.attivo) ?? null;
 
 // Una riga della lista: Nome · Livello / Specie · Classe / Origine (il background)
-export interface VoceElenco { id: string; nome: string; livello: number; specie: string; classe: string; classeId?: string; origine: string; iniziali: string; pronto: boolean; ritratto?: string }
+export interface VoceElenco { id: string; nome: string; livello: number; specie: string; classe: string; classeId?: string; origine: string; iniziali: string; pronto: boolean; ritratto?: string; tavolo?: string }
 export function elenco(a: Archivio, d: Dati = DATI): VoceElenco[] {
   return [...a.personaggi].sort((x, y) => y.aggiornato.localeCompare(x.aggiornato)).map((p) => {
     const b = p.bozza;
@@ -92,6 +103,7 @@ export function elenco(a: Archivio, d: Dati = DATI): VoceElenco[] {
       iniziali: iniziali(nome),
       pronto: !!b.conclusoIl,   // «In creazione» finché il giocatore non lo salva (19/11)
       ...(p.ritratto ? { ritratto: p.ritratto } : {}),
+      ...(b.tavolo ? { tavolo: b.tavolo.nome.trim() || 'Tavolo senza nome' } : {}),   // copie per tavoli diversi (23/11)
     };
   });
 }
@@ -198,21 +210,26 @@ export function portaAlTavolo(a: Archivio, id: string, t: Tavolo | undefined, or
 
 // «Il mio gruppo» (21/11): la scheda di un giocatore entra nel gruppo di un tavolo. Se c'è già un personaggio con lo stesso
 // nome, è il giocatore che ha mandato la versione aggiornata: la sostituisce.
-export function aggiungiAlGruppo(a: Archivio, tavoloId: string, bozza: Bozza, elementi: Partial<Elementi> | undefined, ora = new Date(), canale?: string):
-  { archivio: Archivio; aggiornato: boolean } {
+export function aggiungiAlGruppo(a: Archivio, tavoloId: string, bozza: Bozza, elementi: Partial<Elementi> | undefined, ora = new Date(), canale?: string,
+  dalTavolo?: { pg: string; il: string }): { archivio: Archivio; aggiornato: boolean } {
   const chiave = bozza.nome.trim().toLowerCase();
   let aggiornato = false;
   const tavoliNuovi = (a.tavoli ?? []).map((t) => {
     if (t.id !== tavoloId) return t;
     const gruppo = t.gruppo ?? [];
-    const esistente = gruppo.find((m) => m.bozza.nome.trim().toLowerCase() === chiave && chiave);
+    // dal tavolo collegato il personaggio si riconosce dal suo id; dal link, dal nome
+    const esistente = dalTavolo ? gruppo.find((m) => m.pg === dalTavolo.pg) ?? gruppo.find((m) => !m.pg && chiave && m.bozza.nome.trim().toLowerCase() === chiave)
+      : gruppo.find((m) => m.bozza.nome.trim().toLowerCase() === chiave && chiave);
     aggiornato = !!esistente;
     const membro: MembroGruppo = { id: esistente?.id ?? `gr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-      bozza: structuredClone(bozza), ...(elementi ? { elementi } : {}), ricevuto: ora.toISOString(), ...(canale ?? esistente?.canale ? { canale: canale ?? esistente?.canale } : {}) };
+      bozza: structuredClone(bozza), ...(elementi ? { elementi } : {}), ricevuto: ora.toISOString(), ...(canale ?? esistente?.canale ? { canale: canale ?? esistente?.canale } : {}),
+      ...(dalTavolo ? dalTavolo : esistente?.pg ? { pg: esistente.pg, il: esistente.il } : {}) };
     return { ...t, gruppo: esistente ? gruppo.map((m) => (m.id === esistente.id ? membro : m)) : [...gruppo, membro] };
   });
   return { archivio: { ...a, tavoli: tavoliNuovi }, aggiornato };
 }
+export const togliPgDalGruppo = (a: Archivio, tavoloId: string, pg: string): Archivio =>
+  ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id === tavoloId ? { ...t, gruppo: (t.gruppo ?? []).filter((m) => m.pg !== pg) } : t)) });
 export const togliDalGruppo = (a: Archivio, tavoloId: string, membroId: string): Archivio =>
   ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id === tavoloId ? { ...t, gruppo: (t.gruppo ?? []).filter((m) => m.id !== membroId) } : t)) });
 

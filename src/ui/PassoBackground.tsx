@@ -40,15 +40,13 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
     const strumento = typeof bg.strumento === 'string' ? nomeOggetto(bg.strumento)
       : (bg.strumento.opzioni ?? []).includes('dice') ? 'Un gioco a scelta' : (bg.strumento.opzioni ?? []).includes('lute') ? 'Uno strumento musicale a scelta' : 'Uno strumento da artigiano a scelta';
     return (
-      <li key={bg.id}>
-        <button
-          onClick={() => scegli(bg.id)}
-          aria-pressed={scelto}
-          className={`w-full rounded-xl bg-superficie p-4 text-left ${scelto ? 'border-2 border-accento' : 'border border-bordo'}`}
-        >
-          <span className="-mx-4 -mt-4 mb-2 block"><Fascia gruppo="background" id={bg.id} alto={120} sfuma={60} /></span>
+      <li key={bg.id} ref={scelto ? (el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) : undefined}
+        className={`overflow-hidden rounded-xl bg-superficie ${scelto ? 'border-2 border-accento' : 'border border-bordo'}`}>
+        {/* 23/11: come Classe e Specie, toccando il background si apre e le sue scelte stanno dentro il riquadro */}
+        <Fascia gruppo="background" id={bg.id} alto={120} sfuma={60} />
+        <button onClick={() => scegli(bg.id)} aria-pressed={scelto} aria-expanded={scelto} className="w-full p-4 text-left">
           <span className="text-lg font-medium text-testo">{bg.nome}</span>
-          {bg.personalizzato && <span className="block text-xs italic text-testo-2">{bg.rimando ?? 'Inserito da te'}</span>}
+          {bg.personalizzato && <span className="block text-xs italic text-testo-2">{bg.rimando ?? (bozza.tavolo ? 'Dal master' : 'Inserito da te')}</span>}
           {bg.descrizione && <span className="mt-1 block text-sm text-testo-2">{bg.descrizione}</span>}
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
             <dt className="text-testo-2">Talento</dt>
@@ -61,8 +59,8 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
             <dd className="text-testo">{bg.caratteristiche.map((c) => NOME_CAR[c]).join(', ')}</dd>
           </dl>
         </button>
-        {bg.personalizzato && (
-          <div className="mt-1 flex justify-end gap-2">
+        {bg.personalizzato && !bozza.tavolo && (
+          <div className="flex justify-end gap-2 px-2">
             <button onClick={() => setModulo(moduloDa(bg))} className="min-h-11 px-3 text-sm text-accento">Modifica</button>
             <button onClick={() => {
               if (!window.confirm(`Eliminare «${bg.nome}» dai tuoi elementi?`)) return;
@@ -71,9 +69,10 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
           </div>
         )}
         {scelto && (
-          <>
+          <div className="anim-srotola border-t border-bordo px-4 pb-4 pt-3 [&>*:first-child]:mt-0">
+            <h3 className="text-sm font-medium text-testo">Le tue scelte</h3>
             {typeof bg.strumento !== 'string' && (
-              <div className="mt-2 rounded-xl border border-bordo bg-superficie p-4">
+              <div className="mt-2">
                 <Tendina
                   etichetta={strumento.replace('Un ', '').replace('Uno ', '').replace(' a scelta', '').replace(/^\w/, (c) => c.toUpperCase())}
                   valore={bozza.scelte[bg.strumento.id]?.[0] ?? ''}
@@ -90,7 +89,7 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
             <BonusBackground car={bg.caratteristiche} bonus={bozza.bonusBackground} imposta={(bonusBackground) => cambia({ ...bozza, bonusBackground })} />
             {bg.talento.talento === 'magic-initiate' && <RiquadroIniziato bozza={bozza} cambia={cambia} istanza="magic-initiate" />}
             {bg.talento.talento === 'skilled' && <SceltaAbile bozza={bozza} cambia={cambia} />}
-          </>
+          </div>
         )}
       </li>
     );

@@ -50,3 +50,23 @@ describe('Concentrazione a 0 PF (22/11)', () => {
     expect(danno(st, 10, 10).concentrazione).toBeNull();
   });
 });
+
+describe('Regola del tavolo: componenti che non si consumano (23/11)', () => {
+  it('Travis: la perla di Identificare non serve, l\'incenso di Trova famiglio sì', async () => {
+    const { calcolaScheda } = await import('../src/regole');
+    const { tavoloVuoto } = await import('../src/regole/tavolo');
+    const P = await import('./personaggi');
+    const aperti = (pg: typeof P.TRAVIS) => calcolaScheda(pg).avvisi.filter((a) => a.id.startsWith('materiale:') && !a.accettato).map((a) => a.id).sort();
+    expect(aperti(P.TRAVIS)).toEqual(['materiale:find-familiar', 'materiale:identify']);
+    const t = { ...tavoloVuoto(), eccezioni: ['componenti-non-consumate' as const] };
+    expect(aperti({ ...P.TRAVIS, tavolo: t })).toEqual(['materiale:find-familiar']);
+  });
+});
+
+describe('Valori consigliati nel point buy (23/11)', () => {
+  it('per ogni classe costano esattamente 27 punti', async () => {
+    const { consigliatiPointBuy, spesaPointBuy } = await import('../src/creazione/caratteristiche');
+    const { DATI } = await import('../src/regole/dati');
+    for (const c of Object.keys(DATI.classi)) expect(spesaPointBuy(consigliatiPointBuy(c)!.base).spesi).toBe(27);
+  });
+});

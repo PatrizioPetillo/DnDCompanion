@@ -191,7 +191,8 @@ export interface Talento extends Elemento {
 
 // ───────────── Tavolo e personaggio ─────────────
 // Eccezioni che il master concede in anticipo (scelta di Patrizio, 18/11): i loro avvisi risultano già accettati
-export type EccezioneTavolo = 'lingue-rare' | 'allineamenti-malvagi' | 'talenti-fuori-srd';
+// 'componenti-non-consumate' (23/11, regola della casa scelta da Patrizio): le componenti con costo che non si consumano non servono
+export type EccezioneTavolo = 'lingue-rare' | 'allineamenti-malvagi' | 'talenti-fuori-srd' | 'componenti-non-consumate';
 export type MetodoPunteggi = 'pointBuy27' | 'serieStandard' | 'tiri';
 // Elementi personalizzati (dal manuale di chi li inserisce, sezione 4): viaggiano con il tavolo e con la scheda
 export interface ElementiPersonalizzati { background: Record<Id, Background>; specie?: Record<Id, Specie> }
@@ -206,6 +207,9 @@ export interface Tavolo {
   elementi?: ElementiPersonalizzati;                 // quelli del master: per il tavolo sono ammessi
   eccezioni?: EccezioneTavolo[];
   note?: string;
+  // Tavolo collegato (23/11): id e chiave viaggiano nel link (i giocatori mandano la scheda cifrata);
+  // il segreto per leggerle lo ha solo il master e non esce mai dal suo telefono
+  canale?: { id: string; chiave: string; segreto?: string };
 }
 
 export interface Personaggio {

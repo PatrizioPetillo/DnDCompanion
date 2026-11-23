@@ -2,7 +2,7 @@
 // un negozio ridotto per spendere le monete (armi, armature, focus, dotazioni, strumenti, munizioni, materiali)
 // e gli oggetti personalizzati con prezzo scritto a mano.
 import { useEffect, useState } from 'react';
-import { aggiungiPersonalizzato, compra, negozio, opzioniPacchetto, prezzo, scegliPacchetto, togli, type OpzionePacchetto } from '../creazione/equipaggiamento';
+import { aggiungiPersonalizzato, compra, negozio, opzioniPacchetto, prezzo, restituzione, scegliPacchetto, togli, type OpzionePacchetto } from '../creazione/equipaggiamento';
 import { comePersonaggio, statoPassi, type Bozza } from '../creazione/percorso';
 import { calcolaScheda, DATI } from '../regole';
 import { metri } from '../regole/misure';
@@ -145,13 +145,14 @@ export function PassoEquipaggiamento({ bozza, cambia }: { bozza: Bozza; cambia: 
       {extra.length > 0 && (
         <>
           <Separatore titolo="I tuoi acquisti" />
+          <p className="mb-2 text-sm text-testo-2">Hai cambiato idea? Finché non salvi la scheda, restituisci l'oggetto e riprendi le monete.</p>
           <ul className="space-y-2">
             {extra.map((x) => {
               const nome = s.inventario.find((v) => v.oggetto === x.oggetto)?.nome ?? x.nome ?? x.oggetto;
               return (
                 <li key={x.oggetto} className="flex items-center gap-2 rounded-xl border border-bordo bg-superficie px-3 py-2">
                   <span className="flex-1 text-base text-testo">{x.quantita > 1 ? `${x.quantita} × ` : ''}{nome}</span>
-                  <button onClick={() => cambia(togli(bozza, x.oggetto))} className="min-h-11 rounded-lg px-3 text-sm text-accento" aria-label={`Togli ${nome}`}>Togli</button>
+                  <Restituisci bozza={bozza} cambia={cambia} id={x.oggetto} nome={nome} />
                 </li>
               );
             })}
@@ -253,5 +254,17 @@ function Personalizzato({ aggiungi }: { aggiungi: (nome: string, mo: number) => 
         Aggiungi oggetto
       </button>
     </>
+  );
+}
+
+// Il pulsante del ripensamento (23/11): nel passo Equipaggiamento e nello zaino, finché la scheda non è salvata
+export function Restituisci({ bozza, cambia, id, nome }: { bozza: Bozza; cambia: (b: Bozza) => void; id: string; nome: string }) {
+  const r = restituzione(bozza, id);
+  if (!r) return null;
+  return (
+    <button onClick={() => cambia(togli(bozza, id))} aria-label={`Restituisci ${nome} e riprendi ${prezzo(r.mo)}`}
+      className="min-h-11 shrink-0 rounded-lg border border-accento/60 px-3 text-sm text-accento">
+      Restituisci{r.mo > 0 ? ` · +${prezzo(r.mo)}` : ''}
+    </button>
   );
 }

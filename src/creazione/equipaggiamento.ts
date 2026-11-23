@@ -120,6 +120,16 @@ export function togli(b: Bozza, id: Id): Bozza {
   return { ...b, equipaggiamento: { ...e, extra } };
 }
 
+// Ripensamento prima di salvare (23/11): quanto torna restituendo una confezione di un acquisto.
+// Solo gli acquisti: gli oggetti dei pacchetti A/B non si restituiscono uno per uno.
+export function restituzione(b: Bozza, id: Id, d: Dati = DATI): { mo: number; comprati: number } | null {
+  const x = (equip(b).extra ?? []).find((e) => e.oggetto === id);
+  if (!x) return null;
+  const unita = Math.min(CONFEZIONE[id] ?? 1, x.quantita);
+  const p = d.oggetti[id]?.costoMo ?? materiale(id, d)?.costoMo ?? x.costoMo ?? 0;
+  return { mo: Math.round(p * unita * 100) / 100, comprati: x.quantita };
+}
+
 // Oggetto fuori dal negozio: nome e prezzo scritti a mano
 export function aggiungiPersonalizzato(b: Bozza, nome: string, costoMo: number): Bozza {
   const e = equip(b);

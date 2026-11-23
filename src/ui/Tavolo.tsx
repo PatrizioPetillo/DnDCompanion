@@ -231,7 +231,8 @@ const TEMPI: { id: string; nome: string }[] = [
   { id: 'reazione', nome: 'Reazione' }, { id: 'rituale', nome: 'Rituale' },
 ];
 
-export function MagiaTavolo({ scheda, partita, cambia }: PropsTavolo) {
+export function MagiaTavolo({ scheda, partita, cambia, bozza }: PropsTavolo) {
+  const ignoraNonConsumate = !!bozza?.tavolo?.eccezioni?.includes('componenti-non-consumate');
   const [filtro, setFiltro] = useState('tutti');
   const [lancio, setLancio] = useState<{ magia: MagiaCalcolata; id: Id } | null>(null);
   const [leggi, setLeggi] = useState<Id | null>(null);
@@ -304,7 +305,7 @@ export function MagiaTavolo({ scheda, partita, cambia }: PropsTavolo) {
                 const tag = [i.livello === 0 ? 'trucchetto' : `${i.livello}°`, i.concentrazione ? 'C' : '', soloRituale ? 'solo rituale (dal libro)' : i.rituale ? 'R' : '',
                   i.tiro ? (i.tiro.tipo === 'attacco' ? `attacco +${m.attacco?.totale}` : `TS ${i.tiro.car} CD ${m.cd?.totale}`) : '',
                   testoDadi(id, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0) ?? ''].filter(Boolean).join(' · ');
-                const manca = mancaComponente(scheda, partita, id);   // componente con costo finita: si lancia lo stesso, segnato in rosso
+                const manca = mancaComponente(scheda, partita, id, undefined, ignoraNonConsumate);   // componente con costo finita: si lancia lo stesso, segnato in rosso
                 return (
                   <li key={id} className={`flex items-center gap-2 border-t border-bordo py-1 first:border-t-0 ${manca ? '-mx-1 rounded-lg border-2 !border-attenzione px-1' : ''}`}>
                     <button onClick={() => setLeggi(id)} className="min-h-11 flex-1 text-left">

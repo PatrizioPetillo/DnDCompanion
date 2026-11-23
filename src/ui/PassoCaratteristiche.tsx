@@ -1,7 +1,7 @@
 // Passo 5: Caratteristiche (sezione 5.2). Point buy, serie standard o tiri (SRD p. 21), quelli ammessi dal tavolo; il bonus scelto nel Background
 // è già applicato; sotto ogni caratteristica le abilità che ne dipendono.
 import { useEffect, useState } from 'react';
-import { assegna, metodiAmmessi, metodoIniziale, contatoreAbilitaClasse, contatoreMaestria, daCompletare, scegliMaestria, NON_ASSEGNATO, opzioniPunteggio, punteggiIniziali, scegliAbilitaClasse, spesaPointBuy, statoAbilita, type StatoAbilita } from '../creazione/caratteristiche';
+import { assegna, metodiAmmessi, metodoIniziale, contatoreAbilitaClasse, contatoreMaestria, daCompletare, scegliMaestria, NON_ASSEGNATO, opzioniPunteggio, punteggiIniziali, consigliatiPointBuy, scegliAbilitaClasse, spesaPointBuy, statoAbilita, type StatoAbilita } from '../creazione/caratteristiche';
 import { comePersonaggio, type Bozza } from '../creazione/percorso';
 import { DATI, modificatore } from '../regole';
 import { NOME_CAR } from '../regole/dati/base';
@@ -63,6 +63,15 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
           <strong className="text-testo">Point buy</strong> vuol dire «compra i punteggi»: hai 27 punti da spendere. Ogni caratteristica parte da 8, che non costa niente;
           alzarla costa punti, sempre di più verso l'alto (13 costa 5, 14 costa 7, 15 costa 9). Il costo è scritto accanto a ogni valore (SRD p. 21).
         </p>
+      )}
+      {p?.metodo === 'pointBuy27' && classe && bozza.classe && consigliatiPointBuy(bozza.classe) && (
+        <button onClick={() => {
+          const spesi = spesaPointBuy(p.base).spesi;
+          if (spesi > 0 && !window.confirm('Sostituire i punteggi che hai scelto con quelli consigliati?')) return;
+          cambia({ ...bozza, punteggi: consigliatiPointBuy(bozza.classe!)! });
+        }} className="mb-3 min-h-11 w-full rounded-lg border border-accento px-3 text-sm text-accento">
+          Metti i valori consigliati per la tua classe ({classe.nome})
+        </button>
       )}
       {p?.metodo === 'tiri' && (
         <p className="mb-3 text-sm text-testo-2">

@@ -96,9 +96,9 @@ export function Libro({ magia: m, chiudi }: { magia: MagiaCalcolata; chiudi: () 
 }
 
 // La borsa per componenti (SRD p. 105-106): le componenti senza costo ci sono sempre; quelle con un costo si contano
-export function Borsa({ nome, scheda, tavolo, chiudi }: { nome: string; scheda: Scheda; tavolo: PropsTavolo | null; chiudi: () => void }) {
+export function Borsa({ nome, scheda, tavolo, chiudi, ignoraNonConsumate = false }: { nome: string; scheda: Scheda; tavolo: PropsTavolo | null; chiudi: () => void; ignoraNonConsumate?: boolean }) {
   const borsa = /borsa/i.test(nome);
-  const { senzaCosto, conCosto } = componenti(scheda, tavolo?.partita ?? statoVuoto());
+  const { senzaCosto, conCosto, nonServono } = componenti(scheda, tavolo?.partita ?? statoVuoto(), undefined, ignoraNonConsumate);
   return (
     <FoglioDalBasso chiudi={chiudi} titolo={<>
       <h2 className="font-titolo text-lg text-accento">{nome}</h2>
@@ -128,6 +128,15 @@ export function Borsa({ nome, scheda, tavolo, chiudi }: { nome: string; scheda: 
                 </li>
               );
             })}
+          </ul>
+        </>
+      )}
+      {nonServono.length > 0 && (
+        <>
+          <h3 className="mb-1 text-base font-medium text-testo">Con un costo, ma non servono al tuo tavolo</h3>
+          <p className="mb-2 text-xs text-testo-2">Regola del master: le componenti che non si consumano non vanno comprate.</p>
+          <ul className="mb-4 space-y-1 text-sm">
+            {nonServono.map((c) => <li key={c.incantesimo}><span className="text-testo">{c.nome}:</span> <span className="text-testo-2">{c.testo}</span></li>)}
           </ul>
         </>
       )}

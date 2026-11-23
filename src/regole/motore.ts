@@ -580,7 +580,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
 
   // Regole del tavolo (sezione 5.1): i suoi avvisi, e le eccezioni concesse in anticipo dal master
   if (pg.tavolo) avvisi.push(...avvisiTavolo(pg, pg.tavolo, d));
-  for (const a of avvisi) if (pg.avvisiAccettati.includes(a.id) || (pg.tavolo && coperto(pg.tavolo, a))) a.accettato = true;
+  for (const a of avvisi) if (pg.avvisiAccettati.includes(a.id) || (pg.tavolo && coperto(pg.tavolo, a, d))) a.accettato = true;
 
   return {
     punteggi, modificatori: mod, competenza: PB, pf, iniziativa,

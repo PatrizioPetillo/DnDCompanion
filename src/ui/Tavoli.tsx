@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { elenco, tavoli, type Archivio } from '../archivio/archivio';
 import type { Elementi } from '../creazione/personalizzati';
 import { creaLinkTavolo } from '../esporta/link';
+import { nuovoCanaleTavolo, tavoliAttivi } from '../sblocchi/tavolo-canale';
 import { DATI } from '../regole';
 import { descriviTavolo, NOME_ECCEZIONE, NOME_METODO } from '../regole/tavolo';
 import type { EccezioneTavolo, Id, MetodoPunteggi, Tavolo } from '../regole/tipi';
@@ -68,6 +69,7 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
   togliIncontro?: (id: string) => void;
 }) {
   const [stato, setStato] = useState<string | null>(null);
+  const [regole, setRegole] = useState(!tavolo.nome.trim());   // un tavolo nuovo si apre sulle regole
   const escludi = tavolo.fonti.escludi ?? [];
   const alterna = (id: Id) => cambia({ ...tavolo, fonti: { srd: true, escludi: escludi.includes(id) ? escludi.filter((x) => x !== id) : [...escludi, id] } });
   const metodo = (m: MetodoPunteggi) => {
@@ -92,7 +94,11 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
     cambia({ ...tavolo, elementi: { background: bgTavolo, ...tavolo.elementi, specie: sp } });
   };
   const condividi = async () => {
-    const url = await creaLinkTavolo(tavolo, location.href);
+    // Tavolo collegato (23/11): la prima volta si crea il canale, così le schede dei giocatori arrivano da sole
+    let t = tavolo;
+    if (!t.canale && tavoliAttivi()) { t = { ...t, canale: await nuovoCanaleTavolo() }; cambia(t); }
+    const url = await creaLinkTavolo(t, location.href);
+    setRegole(false);
     try {
       if (navigator.share) await navigator.share({ title: tavolo.nome || 'Tavolo', text: `Crea il personaggio per «${tavolo.nome || 'il tavolo'}»`, url });
       else { await navigator.clipboard.writeText(url); setStato('Link copiato: incollalo nel messaggio ai giocatori.'); }
@@ -119,7 +125,22 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
 
   return (
     <section>
-      <h1 className="mb-4 font-titolo text-2xl text-accento">{tavolo.nome || 'Nuovo tavolo'}</h1>
+      <h1 className="mb-1 font-titolo text-2xl text-accento">{tavolo.nome || 'Nuovo tavolo'}</h1>
+      {tavolo.nome.trim() && <p className="mb-3 text-sm text-testo-2">{descriviTavolo(tavolo, DATI).join(' · ')}</p>}
+
+      {/* 23/11: prima il gruppo e il gioco, le regole in un riquadro che si apre (richiesta di Patrizio) */}
+      <button onClick={condividi} disabled={!tavolo.nome.trim()} className="mt-2 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo-2">
+        {tavolo.nome.trim() ? 'Invita i giocatori (manda il link)' : 'Dai un nome al tavolo per invitare'}
+      </button>
+      {stato && <p role="status" className="mt-2 text-sm text-testo">{stato}</p>}
+
+      <div className="mt-4 rounded-xl border border-bordo bg-superficie">
+        <button onClick={() => setRegole(!regole)} aria-expanded={regole} className="flex min-h-12 w-full items-center justify-between px-4 text-left">
+          <span className="text-base font-medium text-testo">Regole del tavolo</span>
+          <span className="text-sm text-accento">{regole ? 'Chiudi' : 'Modifica'}</span>
+        </button>
+        {regole && (
+          <div className="anim-srotola border-t border-bordo px-4 pb-4 pt-3">
       <label className="block text-sm font-medium text-testo" htmlFor="nome-tavolo">Nome del tavolo</label>
       <input id="nome-tavolo" value={tavolo.nome} onChange={(e) => cambia({ ...tavolo, nome: e.target.value })} maxLength={80}
         placeholder="Es. La Torre di Hillmarch" className={`mt-1 h-12 w-full rounded-lg border bg-superficie px-3 text-base text-testo ${tavolo.nome.trim() ? 'border-bordo' : 'border-attenzione bg-attenzione/10'}`} />
@@ -187,7 +208,12 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
       <textarea id="note-tavolo" value={tavolo.note ?? ''} onChange={(e) => cambia({ ...tavolo, note: e.target.value })} rows={4} maxLength={2000}
         placeholder="Ambientazione, data della sessione, cose da sapere" className="w-full rounded-lg border border-bordo bg-superficie p-3 text-base text-testo" />
 
-      <Gruppo gruppo={membri} apri={apriMembro} togli={togliMembro} />
+            <p className="mt-3 text-xs text-testo-2">Se cambi le regole, rimanda il link: chi ha già creato il personaggio tiene le regole di prima.</p>
+          </div>
+        )}
+      </div>
+
+      <Gruppo gruppo={membri} apri={apriMembro} togli={togliMembro} collegato={!!tavolo.canale && tavoliAttivi()} />
       <MandaEventi membri={membri} nomeTavolo={tavolo.nome} />
 
       {salvaIncontro && togliIncontro && <Incontri incontri={incontri} membri={membri} salva={salvaIncontro} togli={togliIncontro} />}
@@ -195,12 +221,7 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
       {salvaOggetto && togliOggetto && <OggettiTavolo oggetti={oggetti} nomeTavolo={tavolo.nome} salva={salvaOggetto} togli={togliOggetto} />}
       <DaiBottino nomeTavolo={tavolo.nome} inGruppo={membri.length} />
 
-      <div className="mt-6 space-y-2 border-t border-bordo pt-4">
-        <button onClick={condividi} disabled={!tavolo.nome.trim()} className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo-2">
-          {tavolo.nome.trim() ? 'Condividi il link ai giocatori' : 'Dai un nome al tavolo per condividerlo'}
-        </button>
-        {stato && <p role="status" className="text-sm text-testo">{stato}</p>}
-        <p className="text-xs text-testo-2">Se cambi le regole, rimanda il link: chi ha già creato il personaggio tiene le regole di prima.</p>
+      <div className="mt-6 border-t border-bordo pt-4">
         <button onClick={() => window.confirm(`Eliminare il tavolo «${tavolo.nome || 'senza nome'}»? I personaggi già creati non cambiano.`) && elimina()}
           className="h-12 w-full rounded-xl border border-attenzione text-base text-attenzione">Elimina il tavolo</button>
       </div>
@@ -209,14 +230,28 @@ export function ModuloTavolo({ tavolo, cambia, elimina, mieiElementi, membri = [
 }
 
 // ───────── Il gruppo del master (21/11) ─────────
-function Gruppo({ gruppo, apri, togli }: { gruppo: MembroGruppo[]; apri?: (m: MembroGruppo) => void; togli?: (id: string) => void }) {
+function Gruppo({ gruppo, apri, togli, collegato = false }: { gruppo: MembroGruppo[]; apri?: (m: MembroGruppo) => void; togli?: (id: string) => void; collegato?: boolean }) {
   const righe = gruppo.map((m) => ({ m, r: rigaGruppo(m.id, m.bozza) })).filter((x): x is { m: MembroGruppo; r: RigaGruppo } => !!x.r);
+  // chi ha accettato l'invito e sta ancora creando il personaggio (23/11)
+  const inCorso = gruppo.filter((m) => !rigaGruppo(m.id, m.bozza));
   const sintesi = riassuntoGruppo(righe.map((x) => x.r));
   return (
     <section className="mt-6 border-t border-bordo pt-4" aria-labelledby="titolo-gruppo">
       <h2 id="titolo-gruppo" className="font-titolo text-lg text-accento">Il gruppo {righe.length > 0 && <span className="font-sans text-sm text-testo-2">({righe.length})</span>}</h2>
+      {inCorso.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {inCorso.map((m) => (
+            <li key={m.id} className="flex min-h-11 items-center justify-between rounded-xl border border-dashed border-bordo px-3 text-sm">
+              <span className="text-testo">{m.bozza.nome.trim() || 'Un giocatore'}{m.bozza.classe ? ` · ${DATI.classi[m.bozza.classe]?.nome ?? ''}` : ''}</span>
+              <span className="text-xs text-testo-2">sta creando il personaggio</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {righe.length === 0 ? (
-        <p className="mt-1 text-sm text-testo-2">Quando un giocatore ti manda la sua scheda con il link, aprila e tocca «Aggiungi al gruppo»: qui vedrai tutti i personaggi insieme.</p>
+        <p className="mt-1 text-sm text-testo-2">{collegato
+          ? 'Quando un giocatore accetta il tuo invito, il suo personaggio compare qui da solo, anche mentre lo crea. Ti arriva un avviso.'
+          : 'Quando un giocatore ti manda la sua scheda con il link, aprila e tocca «Aggiungi al gruppo»: qui vedrai tutti i personaggi insieme.'}</p>
       ) : (
         <>
           <ul className="mt-2 space-y-2">
@@ -249,7 +284,7 @@ function Gruppo({ gruppo, apri, togli }: { gruppo: MembroGruppo[]; apri?: (m: Me
             {sintesi.migliorPercezione && <p><span className="text-testo-2">Percezione passiva più alta:</span> {sintesi.migliorPercezione.nome} ({sintesi.migliorPercezione.percezione})</p>}
             <p className="mt-1"><span className="text-testo-2">Lingue del gruppo:</span> {sintesi.lingue.map((l) => `${l.lingua}${righe.length > 1 && l.chi.length === 1 ? ` (solo ${l.chi[0]})` : ''}`).join(', ')}</p>
           </div>
-          <p className="mt-2 text-xs text-testo-2">Tocca un personaggio per aprire la sua scheda. Se il giocatore ti rimanda il link, la scheda si aggiorna.</p>
+          <p className="mt-2 text-xs text-testo-2">Tocca un personaggio per aprire la sua scheda. {collegato ? 'Quando il giocatore la cambia, si aggiorna da sola.' : 'Se il giocatore ti rimanda il link, la scheda si aggiorna.'}</p>
         </>
       )}
     </section>

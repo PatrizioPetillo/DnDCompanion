@@ -11,6 +11,10 @@ class_name = "Sblocco"
 name = "CANALI"
 class_name = "Canale"
 
+[[durable_objects.bindings]]
+name = "TAVOLI"
+class_name = "TavoloDO"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Sblocco"]
@@ -19,3 +23,9 @@ new_sqlite_classes = ["Sblocco"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Canale"]
+
+
+# 23/11: tavolo collegato (le schede dei giocatori arrivano al master)
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["TavoloDO"]

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, aggiungiOggettoVelato, aggiungiMovimento, elenco, salvaIncontro, togliIncontro, salvaOggettoTavolo, togliOggettoTavolo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio, type PersonaggioSalvato } from './archivio/archivio';
+import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, aggiungiOggettoVelato, copiaPerTavolo, aggiungiMovimento, elenco, salvaIncontro, togliIncontro, salvaOggettoTavolo, togliOggettoTavolo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio, type PersonaggioSalvato } from './archivio/archivio';
 import { elementiUsati, registra, unione, type Elementi } from './creazione/personalizzati';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, concludi, concluso, daCompletarePrimaDiSalvare, PASSI, prossimoPasso, riapri, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
 import { importaJSON } from './creazione/riepilogo';
@@ -9,6 +9,8 @@ import { BottinoRicevuto } from './ui/Monete';
 import { prezzo } from './creazione/equipaggiamento';
 import { OggettoRicevuto } from './ui/OggettiTavolo';
 import { useSblocchi } from './ui/useSblocchi';
+import { useInvioTavolo, useTavoliCollegati } from './ui/useTavoloCollegato';
+import { lasciaTavolo } from './sblocchi/tavolo-canale';
 import { AvvisiMaster, useEventi } from './ui/Eventi';
 import { nuoveChiavi } from './sblocchi/cifra';
 import { servizioAttivo } from './sblocchi/servizio';
@@ -116,6 +118,9 @@ export default function App() {
   }, []);
   // I background inseriti dal proprio manuale entrano nei dati del motore (anche quelli di una scheda ricevuta)
   const mieiElementi = elementi(archivio);
+  // Tavolo collegato (23/11): le schede legate a un tavolo partono da sole; i tavoli del master le ricevono
+  useInvioTavolo(archivio, (f) => setArchivio(f), mieiElementi);
+  useTavoliCollegati(archivio, (f) => setArchivio(f), (t) => setMessaggio(t));
   // e quelli del tavolo (del personaggio aperto o del link appena arrivato), anche se non sono tra i miei
   // e quelli delle schede nei gruppi dei miei tavoli (21/11)
   const elementiGruppi = tavoli(archivio).flatMap((t) => (t.gruppo ?? []).map((m) => m.elementi));
@@ -251,7 +256,21 @@ export default function App() {
               setArchivio(nuovo(unisciElementi(archivio, t.elementi), { ...bozzaVuota(), tavolo: t }).archivio);
               setVista('classe');
             }}
-            usa={(id) => { const t = tavoloRicevuto; setTavoloRicevuto(null); apri(id, portaAlTavolo(archivio, id, t)); }}
+            usa={(id) => {
+              const t = tavoloRicevuto;
+              const p = archivio.personaggi.find((x) => x.id === id);
+              const altro = p?.bozza.tavolo;
+              // Già in un altro tavolo (23/11): una copia per questo, così stato, monete e oggetti restano separati
+              const stesso = altro && (altro.canale && t.canale ? altro.canale.id === t.canale.id : altro.nome.trim() === t.nome.trim());
+              if (p && altro && !stesso) {
+                if (!window.confirm(`${p.bozza.nome.trim() || 'Questo personaggio'} gioca già a «${altro.nome || 'un altro tavolo'}». Creo una copia per «${t.nome || 'questo tavolo'}»? Stato della partita, monete e oggetti restano separati.`)) return;
+                setTavoloRicevuto(null);
+                const c = copiaPerTavolo(archivio, id, t);
+                apri(c.id, c.archivio);
+                return;
+              }
+              setTavoloRicevuto(null); apri(id, portaAlTavolo(archivio, id, t));
+            }}
             rifiuta={() => { setTavoloRicevuto(null); setVista('home'); }}
           />
         )}
@@ -333,7 +352,8 @@ export default function App() {
         {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && !bottinoRicevuto && vistaReale === 'indice' && (
           <Indice nome={bozza.nome} stati={stati} apri={setVista} tavolo={bozza.tavolo}
             togliTavolo={() => corrente && window.confirm(`Togliere ${bozza.nome.trim() || 'il personaggio'} dal tavolo «${bozza.tavolo?.nome}»? Le sue scelte restano, spariscono le regole del master.`)
-              && setArchivio(portaAlTavolo(archivio, corrente.id, undefined))} />
+              && (corrente.invio && bozza.tavolo?.canale && void lasciaTavolo(bozza.tavolo.canale, corrente.id, corrente.invio.token),
+                setArchivio(portaAlTavolo(archivio, corrente.id, undefined)))} />
         )}
         {!ricevuta && !tavoloRicevuto && !oggettoRicevuto && !bottinoRicevuto && vistaReale === 'classe' && (
           <PassoClasse

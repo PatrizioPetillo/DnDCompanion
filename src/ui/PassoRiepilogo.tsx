@@ -161,6 +161,9 @@ function Combattimento({ r, tavolo, scheda }: { r: Riepilogo; tavolo: PropsTavol
       </div>
       {aperto?.somma && <p className="-mt-2 text-sm text-testo-2">{aperto.etichetta}: {somma(aperto.somma, aperto.valore)}</p>}
       <BottoneTiro etichetta="Tira l'iniziativa" onClick={() => setTiro(daIniziativa(scheda.iniziativa.totale))} />
+      {tavolo?.partita.iniziativa && (
+        <p className="-mt-2 text-sm text-testo-2">Ultima iniziativa: <span className="text-testo">{tavolo.partita.iniziativa.totale}</span> (alle {new Date(tavolo.partita.iniziativa.il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}){tavolo.bozza?.tavolo?.canale ? ' · arriva da sola al master' : ''}</p>
+      )}
 
       <div>
         <h2 className="mb-2 text-base font-medium text-testo">Tiri salvezza</h2>
@@ -236,7 +239,9 @@ function Combattimento({ r, tavolo, scheda }: { r: Riepilogo; tavolo: PropsTavol
         </div>
       )}
       {c.altro.length > 0 && <ul className="space-y-1 text-sm text-testo">{c.altro.map((x) => <li key={x}>{x}</li>)}</ul>}
-      {tiro && <Tiro r={tiro} {...(tavolo ? condizioniPerTiro(tavolo) : {})} chiudi={() => setTiro(null)} />}
+      {tiro && <Tiro r={tiro} {...(tavolo ? condizioniPerTiro(tavolo) : {})} chiudi={() => setTiro(null)}
+        // l'iniziativa resta nella scheda: con il tavolo collegato arriva al master (SRD p. 13: ognuno tira la sua)
+        {...(tavolo && tiro.d20?.genere === 'iniziativa' ? { quandoTira: (t: { totale: number }) => tavolo.cambia({ ...tavolo.partita, iniziativa: { totale: t.totale, il: new Date().toISOString() } }) } : {})} />}
     </div>
   );
 }

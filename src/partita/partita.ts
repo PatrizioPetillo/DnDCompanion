@@ -17,6 +17,7 @@ export interface StatoPartita {
   morte: { successi: number; fallimenti: number; stabile: boolean; morto: boolean };   // tiri salvezza contro la morte (p. 17-18)
   componenti?: Record<Id, number>;       // componenti con costo aggiunte (+) o usate (−) durante il gioco
   condizioni?: import('./condizioni').CondizioneSegnata[];   // le condizioni del personaggio (22/11)
+  iniziativa?: import('./al-tavolo').IniziativaTirata;        // l'ultima iniziativa tirata, per il tavolo collegato (23/11)
 }
 
 export const statoVuoto = (): StatoPartita => ({

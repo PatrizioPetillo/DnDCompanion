@@ -43,5 +43,10 @@ export async function scaricaFoundry(bozza: Bozza): Promise<string> {
     scarica(testo, 'application/json', nome);
     const base = 'In Foundry: crea un personaggio vuoto, tasto destro su di lui nella barra degli attori, «Import Data», scegli questo file.';
     return avvisi.length ? `${base} Attenzione: ${avvisi.length} elementi non sono dell'SRD e sono arrivati come semplici oggetti, controllali.` : base;
-  } catch { return 'Non sono riuscito a creare il file per Foundry. Riprova.'; }
+  } catch (e) {
+    // 23/11: il motivo vero, per capire cosa non va (prima si leggeva solo «Riprova»)
+    console.error('Foundry', e);
+    const motivo = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 160) : String(e).slice(0, 160);
+    return `Non sono riuscito a creare il file per Foundry. Motivo: ${motivo}`;
+  }
 }

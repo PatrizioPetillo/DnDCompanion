@@ -32,7 +32,8 @@ function Risultato({ valore, min, max, piccolo = false }: { valore: number; min:
   );
 }
 
-export function Tiro({ r, condizioni = [], pfZero = false, chiudi }: { r: RichiestaTiro; condizioni?: CondizioneSegnata[]; pfZero?: boolean; chiudi: () => void }) {
+// quandoTira: chiamato a ogni tiro del d20 (anche il primo), per chi deve ricordarlo (l'iniziativa per il tavolo collegato)
+export function Tiro({ r, condizioni = [], pfZero = false, chiudi, quandoTira }: { r: RichiestaTiro; condizioni?: CondizioneSegnata[]; pfZero?: boolean; chiudi: () => void; quandoTira?: (t: TiroD20) => void }) {
   const daCond = r.d20 ? perTiro(condizioni, pfZero, r.d20.genere) : null;
   const proposta = daCond && r.d20?.svantaggio ? { ...daCond, svantaggi: [...daCond.svantaggi, r.d20.svantaggio] } : daCond;
   const modoProposto = proposta ? combinaModo(proposta.vantaggi.length, proposta.svantaggi.length) : 'normale';
@@ -44,11 +45,12 @@ export function Tiro({ r, condizioni = [], pfZero = false, chiudi }: { r: Richie
   const [critico, setCritico] = useState(() => !!d20?.critico);
   const [n, setN] = useState(0);                        // cambia a ogni tiro: fa ripartire l'animazione
   const annuncio = useRef<HTMLParagraphElement>(null);
+  useEffect(() => { if (d20) quandoTira?.(d20); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const tira = (m: Modo) => {
     if (!r.d20 || proposta?.fallitoAuto) return;
     const t = tiraD20(r.d20.bonus, m, { attacco: r.d20.attacco, meno: proposta?.meno ?? 0 });
-    setD20(t); setCritico(t.critico); setDanni({}); setN((x) => x + 1);
+    setD20(t); setCritico(t.critico); setDanni({}); setN((x) => x + 1); quandoTira?.(t);
   };
 
   const tiraDanni = (k: number) => {

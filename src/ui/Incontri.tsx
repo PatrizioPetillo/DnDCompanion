@@ -5,24 +5,54 @@ import type { Incontro, MembroGruppo } from '../archivio/archivio';
 import { calcolaScheda } from '../regole';
 import {
   budgetGruppo, cambiaPf, cambiaTiro, difficolta, GRADI, NOME_DIFFICOLTA, nomeGrado, peNemici, prossimoTurno, SPIEGA_DIFFICOLTA,
-  cambiaCondizioneNemico, sposta, tiraIniziativa, totale, turnoPrecedente, type Combattimento, type Nemico,
+  cambiaCondizioneNemico, scriviTotale, sposta, tiraIniziativa, totale, turnoPrecedente, type Combattimento, type Combattente, type Nemico,
 } from '../creazione/incontri';
 import { caricaMostri, cercaMostri, daMostro, type Mostro } from '../creazione/mostri';
-import { CONDIZIONI, type IdCondizione } from '../partita/condizioni';
+import { CONDIZIONE, CONDIZIONI, inEffetto, type IdCondizione } from '../partita/condizioni';
+import { valePer, type StatoAlTavolo } from '../partita/al-tavolo';
+import { DATI } from '../regole';
+import { NOME_CAR } from '../regole/dati/base';
+import type { Car } from '../regole/tipi';
 import { semplici, Tendina } from './Tendina';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 
 const nuovoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const pe = (n: number) => n.toLocaleString('it-IT');
 
-// I personaggi del gruppo, con livello e bonus all'iniziativa calcolati dalla loro scheda
-function personaggi(membri: MembroGruppo[]) {
+// I personaggi del gruppo, con i numeri della loro scheda e, dal tavolo collegato, PF, condizioni e iniziativa
+// che manda il telefono del giocatore (23/11). Senza tavolo collegato i PF sono quelli pieni della scheda.
+export interface InfoPg {
+  id: string; nome: string; livello: number; bonus: number; chi: string;
+  ca: number; pfMax: number; pfAttuali: number | null; pfTemp: number; percezione: number; cd: number | null;
+  ts: { car: Car; totale: number; competente: boolean }[];
+  condizioni: { nome: string; inclusa: boolean }[]; concentrazione: string | null;
+  morte: StatoAlTavolo['morte'] | null; stato?: StatoAlTavolo; collegato: boolean; aggiornato: string;
+}
+const CARS: Car[] = ['FOR', 'DES', 'COS', 'INT', 'SAG', 'CAR'];
+function personaggi(membri: MembroGruppo[]): InfoPg[] {
   return membri.flatMap((m) => {
     const b = m.bozza;
     if (!b.classe || !b.specie || !b.background) return [];
     try {
       const s = calcolaScheda(b as never);
-      return [{ id: m.id, nome: b.nome.trim() || 'Senza nome', livello: b.livello ?? 1, bonus: s.iniziativa.totale }];
+      const st = m.stato;
+      const pfAttuali = st ? Math.max(0, Math.min(s.pf.totale, s.pf.totale - st.pfPersi)) : null;
+      const segnate = st?.condizioni ?? [];
+      const effetto = inEffetto(segnate, pfAttuali === 0 && !st?.morte.morto);
+      const cd = s.magia.map((x) => x.cd?.totale ?? 0).filter(Boolean);
+      return [{
+        id: m.id, nome: b.nome.trim() || 'Senza nome', livello: b.livello ?? 1, bonus: s.iniziativa.totale,
+        chi: `${DATI.specie[b.specie]?.nome ?? b.specie} · ${DATI.classi[b.classe]?.nome ?? b.classe} ${b.livello ?? 1}`,
+        ca: s.ca.formule.find((f) => f.id === s.ca.attuale)!.valore.totale, pfMax: s.pf.totale, pfAttuali, pfTemp: st?.pfTemporanei ?? 0,
+        percezione: s.percezionePassiva, cd: cd.length ? Math.max(...cd) : null,
+        ts: CARS.map((car) => ({ car, totale: s.tiriSalvezza[car].totale, competente: s.tiriSalvezza[car].competente })),
+        condizioni: effetto.map((id) => {
+          const l = segnate.find((x) => x.id === id)?.livello;
+          return { nome: `${CONDIZIONE[id].nome}${l ? ` ${l}` : ''}`, inclusa: !segnate.some((x) => x.id === id) };
+        }),
+        concentrazione: st?.concentrazione ? DATI.incantesimi[st.concentrazione]?.nome ?? st.concentrazione : null,
+        morte: st && pfAttuali === 0 ? st.morte : null, ...(st ? { stato: st } : {}), collegato: !!m.pg, aggiornato: m.ricevuto,
+      }];
     } catch { return []; }
   });
 }
@@ -67,20 +97,31 @@ function budget(i: Incontro, pg: { livello: number }[]) {
 }
 
 function SchedaIncontro({ inc, pg, salva, chiudi, togli }: {
-  inc: Incontro; pg: { id: string; nome: string; livello: number; bonus: number }[];
+  inc: Incontro; pg: InfoPg[];
   salva: (i: Incontro) => void; chiudi: () => void; togli: () => void;
 }) {
   const metti = (o: Partial<Incontro>) => salva({ ...inc, ...o });
   const c = inc.combattimento;
+  // L'iniziativa tirata sul telefono del giocatore (tavolo collegato) entra da sola, se è di questo combattimento
+  const arrivate = c ? c.ordine.flatMap((x) => {
+    if (x.tipo !== 'pg' || (!x.attesa && !x.dalGiocatore)) return [];
+    const i = pg.find((p) => `pg:${p.id}` === x.id)?.stato?.iniziativa;
+    return i && valePer(i, c.iniziato) && (x.attesa || x.scritto !== i.totale) ? [{ id: x.id, totale: i.totale }] : [];
+  }) : [];
+  const firmaArrivate = arrivate.map((a) => `${a.id}:${a.totale}`).join(',');
+  useEffect(() => {
+    if (!c || !arrivate.length) return;
+    metti({ combattimento: arrivate.reduce((cc, a) => scriviTotale(cc, a.id, a.totale, true), c) });
+  }, [firmaArrivate]);   // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="text-lg font-medium text-testo">{c ? `Round ${c.round}` : 'Prepara l\'incontro'}</h2>}>
-      {c ? <Combattendo c={c} cambia={(n) => metti({ combattimento: n })} fine={() => window.confirm('Finire il combattimento?') && metti({ combattimento: undefined })} />
+      {c ? <Combattendo c={c} pg={pg} cambia={(n) => metti({ combattimento: n })} fine={() => window.confirm('Finire il combattimento?') && metti({ combattimento: undefined })} />
         : <Prepara inc={inc} pg={pg} metti={metti} togli={togli} />}
     </FoglioDalBasso>
   );
 }
 
-function Prepara({ inc, pg, metti, togli }: { inc: Incontro; pg: { id: string; nome: string; livello: number; bonus: number }[]; metti: (o: Partial<Incontro>) => void; togli: () => void }) {
+function Prepara({ inc, pg, metti, togli }: { inc: Incontro; pg: InfoPg[]; metti: (o: Partial<Incontro>) => void; togli: () => void }) {
   const [elenco, setElenco] = useState(false);
   const b = budget(inc, pg);
   const tot = peNemici(inc.nemici);
@@ -165,21 +206,101 @@ function Prepara({ inc, pg, metti, togli }: { inc: Incontro; pg: { id: string; n
       </div>
 
       <button disabled={!inc.nemici.length && !pg.length} onClick={() => metti({ combattimento: tiraIniziativa(pg, inc.nemici) })}
-        className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo">Tira l'iniziativa e inizia</button>
+        className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo">Inizia: tira l'iniziativa dei nemici</button>
       {!pg.length && <p className="text-xs text-testo-2">Senza schede nel gruppo, nell'ordine dei turni ci saranno solo i nemici.</p>}
-      <p className="text-xs text-testo-2">I nemici uguali tirano una volta sola, come dice l'SRD (p. 13). Se un giocatore preferisce tirare da sé, poi scrivi il suo d20.</p>
+      <p className="text-xs text-testo-2">Tu tiri per i nemici (i nemici uguali una volta sola); ogni giocatore tira la sua (SRD p. 13). Con il tavolo collegato il totale arriva dal suo telefono, altrimenti scrivi quello che ti dice.</p>
       <button onClick={() => window.confirm(`Eliminare «${inc.nome || 'l\'incontro'}»?`) && togli()} className="min-h-11 w-full text-sm text-attenzione">Elimina l'incontro</button>
     </div>
   );
 }
 
-function Combattendo({ c, cambia, fine }: { c: Combattimento; cambia: (c: Combattimento) => void; fine: () => void }) {
-  const segno = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
+const segno = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
+
+function Frecce({ c, i, nome, cambia }: { c: Combattimento; i: number; nome: string; cambia: (c: Combattimento) => void }) {
+  return (
+    <span className="flex flex-col">
+      <button onClick={() => cambia(sposta(c, i, -1))} disabled={i === 0} aria-label={`Sposta ${nome} su`} className="h-11 w-11 text-testo-2 disabled:opacity-30">▲</button>
+      <button onClick={() => cambia(sposta(c, i, 1))} disabled={i === c.ordine.length - 1} aria-label={`Sposta ${nome} giù`} className="h-11 w-11 text-testo-2 disabled:opacity-30">▼</button>
+    </span>
+  );
+}
+
+// Un personaggio nell'ordine dei turni (23/11): il totale lo tira il giocatore; chiuso mostra PF, CA e condizioni,
+// aperto (come le schede di Classe, Specie e Background) tutti i numeri che servono al master.
+function RigaPg({ x, i, c, info, ora, cambia }: { x: Combattente; i: number; c: Combattimento; info?: InfoPg; ora: boolean; cambia: (c: Combattimento) => void }) {
+  const [aperto, setAperto] = useState(false);
+  const [testo, setTesto] = useState<string | null>(null);      // mentre il master scrive
+  const valore = testo ?? (x.attesa ? '' : String(totale(x)));
+  const scrivi = (t: string) => {
+    setTesto(t);
+    const n = parseInt(t.replace('−', '-'), 10);
+    if (t.trim() === '') cambia(scriviTotale(c, x.id, null));
+    else if (!Number.isNaN(n)) cambia(scriviTotale(c, x.id, n));
+  };
+  const pf = info ? (info.pfAttuali ?? info.pfMax) : null;
+  const aTerra = info?.pfAttuali === 0;
+  const idDettagli = `dettagli-${x.id}`;
+  return (
+    <li aria-current={ora ? 'step' : undefined} className={`rounded-xl border p-3 ${ora ? 'border-accento bg-accento/10' : 'border-bordo bg-superficie'}`}>
+      <div className="flex items-center gap-2">
+        <span className="w-9 text-center text-lg font-medium text-testo">{x.attesa ? '—' : totale(x)}</span>
+        <button onClick={() => setAperto(!aperto)} aria-expanded={aperto} aria-controls={idDettagli} className="min-h-11 min-w-0 flex-1 text-left">
+          <span className="block truncate text-base text-testo">{x.nome}{ora ? ' · tocca a lui' : ''}</span>
+          {info && (
+            <span className={`block text-xs ${aTerra ? 'text-attenzione' : 'text-testo-2'}`}>
+              PF {pf}/{info.pfMax}{info.pfTemp ? ` +${info.pfTemp}` : ''} · CA {info.ca}{info.condizioni.filter((k) => !k.inclusa).length ? ` · ${info.condizioni.filter((k) => !k.inclusa).map((k) => k.nome.toLowerCase()).join(', ')}` : ''}
+            </span>
+          )}
+          <span className="block text-xs text-accento">{aperto ? 'Chiudi i dettagli' : 'Dettagli'}</span>
+        </button>
+        <Frecce c={c} i={i} nome={x.nome} cambia={cambia} />
+      </div>
+      <label className="mt-1 flex flex-wrap items-center gap-2 text-xs text-testo-2">
+        Iniziativa (la tira il giocatore)
+        <input inputMode="numeric" value={valore} placeholder="—" aria-label={`Iniziativa di ${x.nome}`}
+          onChange={(e) => scrivi(e.target.value)} onBlur={() => setTesto(null)}
+          className="h-11 w-14 rounded border border-bordo bg-sfondo text-center text-base text-testo" />
+        <span>{x.attesa ? (info?.collegato ? 'aspetta il tiro: arriva dal suo telefono, o scrivilo tu' : 'scrivi il totale che ti dice') : x.dalGiocatore ? 'dal suo telefono' : `bonus ${segno(x.bonus)}`}</span>
+      </label>
+      {aperto && info && (
+        <div id={idDettagli} className="anim-srotola mt-2 space-y-2 border-t border-bordo pt-2 text-sm">
+          <p className="text-xs text-testo-2">{info.chi}</p>
+          <div className="grid grid-cols-4 gap-1 text-center">
+            {[['CA', info.ca], ['PF', `${pf}/${info.pfMax}`], ['Perc.', info.percezione], ['CD', info.cd ?? '—']].map(([e, v]) => (
+              <span key={e} className="rounded-lg bg-sfondo py-1"><span className="block text-base text-testo">{v}</span><span className="block text-xs text-testo-2">{e}</span></span>
+            ))}
+          </div>
+          {info.pfTemp > 0 && <p className="text-testo">PF temporanei: {info.pfTemp}</p>}
+          <div>
+            <p className="text-xs text-testo-2">Tiri salvezza</p>
+            <p className="grid grid-cols-3 gap-x-2 text-testo">
+              {info.ts.map((t) => <span key={t.car}>{NOME_CAR[t.car].slice(0, 3)} {segno(t.totale)}{t.competente ? ' ●' : ''}</span>)}
+            </p>
+          </div>
+          <p className="text-testo"><span className="text-testo-2">Condizioni: </span>
+            {info.condizioni.length ? info.condizioni.map((k) => k.inclusa ? `${k.nome.toLowerCase()} (inclusa)` : k.nome.toLowerCase()).join(', ') : 'nessuna'}</p>
+          {info.concentrazione && <p className="text-testo"><span className="text-testo-2">In concentrazione: </span><em>{info.concentrazione}</em></p>}
+          {info.morte && (
+            <p className="text-attenzione">{info.morte.morto ? 'Morto' : info.morte.stabile ? 'A 0 PF, stabile' : `A 0 PF: tiri contro la morte ${info.morte.successi} successi, ${info.morte.fallimenti} fallimenti`}</p>
+          )}
+          <p className="text-xs text-testo-2">
+            {info.stato ? `PF e condizioni dal telefono del giocatore, aggiornati alle ${new Date(info.aggiornato).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}.`
+              : 'Senza tavolo collegato: PF pieni e condizioni dalla scheda ricevuta, non aggiornati durante la partita.'}
+          </p>
+        </div>
+      )}
+      {aperto && !info && <p id={idDettagli} className="mt-2 text-xs text-testo-2">La scheda di questo personaggio non è più nel gruppo.</p>}
+    </li>
+  );
+}
+
+function Combattendo({ c, pg, cambia, fine }: { c: Combattimento; pg: InfoPg[]; cambia: (c: Combattimento) => void; fine: () => void }) {
   return (
     <div className="space-y-3">
       <ol className="space-y-2">
         {c.ordine.map((x, i) => {
           const ora = i === c.turno;
+          if (x.tipo === 'pg') return <RigaPg key={x.id} x={x} i={i} c={c} ora={ora} cambia={cambia} info={pg.find((p) => `pg:${p.id}` === x.id)} />;
           return (
             <li key={x.id} aria-current={ora ? 'step' : undefined}
               className={`rounded-xl border p-3 ${ora ? 'border-accento bg-accento/10' : 'border-bordo bg-superficie'}`}>
@@ -192,10 +313,7 @@ function Combattendo({ c, cambia, fine }: { c: Combattimento; cambia: (c: Combat
                     <input inputMode="numeric" value={x.tiro} aria-label={`d20 di ${x.nome}`} onChange={(e) => cambia(cambiaTiro(c, x.id, Number(e.target.value) || 1))}
                       className="h-11 w-12 rounded border border-bordo bg-sfondo text-center text-base text-testo" /> {segno(x.bonus)}</label>
                 </span>
-                <span className="flex flex-col">
-                  <button onClick={() => cambia(sposta(c, i, -1))} disabled={i === 0} aria-label={`Sposta ${x.nome} su`} className="h-11 w-11 text-testo-2 disabled:opacity-30">▲</button>
-                  <button onClick={() => cambia(sposta(c, i, 1))} disabled={i === c.ordine.length - 1} aria-label={`Sposta ${x.nome} giù`} className="h-11 w-11 text-testo-2 disabled:opacity-30">▼</button>
-                </span>
+                <Frecce c={c} i={i} nome={x.nome} cambia={cambia} />
               </div>
               {x.tipo === 'nemico' && <CondizioniNemico x={x} cambia={(k, cond, si) => cambia(cambiaCondizioneNemico(c, x.id, k, cond, si))} />}
               {x.pf && (

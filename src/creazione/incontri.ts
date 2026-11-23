@@ -59,17 +59,20 @@ export const SPIEGA_DIFFICOLTA: Record<Difficolta, string> = {
 // ───────── Iniziativa (SRD p. 13) ─────────
 // Un gruppo di creature identiche tira una volta sola: stessa iniziativa per tutti. In caso di parità decide il master.
 // condizioni: una lista per ogni nemico del gruppo (come i PF); le immunità vengono dalla scheda del mostro
+// I personaggi tirano da sé (SRD p. 13: «The GM rolls for monsters»): il loro totale arriva dal telefono del giocatore
+// (tavolo collegato) o lo scrive il master. Finché manca, «attesa». scritto: il totale del personaggio.
 export interface Combattente {
   id: string; nome: string; tipo: 'pg' | 'nemico'; bonus: number; tiro: number; quanti?: number; pf?: number[]; pfMax?: number;
   ca?: number; immunita?: IdCondizione[]; condizioni?: IdCondizione[][];
+  attesa?: boolean; scritto?: number; dalGiocatore?: boolean;
 }
-export interface Combattimento { ordine: Combattente[]; turno: number; round: number }
+export interface Combattimento { ordine: Combattente[]; turno: number; round: number; iniziato?: string }
 
 export const d20 = () => casuale(20);   // modulo dei dadi (23/11)
 
-export function tiraIniziativa(pg: { id: string; nome: string; bonus: number }[], nemici: Nemico[], dado: () => number = d20): Combattimento {
+export function tiraIniziativa(pg: { id: string; nome: string; bonus: number }[], nemici: Nemico[], dado: () => number = d20, ora = new Date()): Combattimento {
   const ordine: Combattente[] = [
-    ...pg.map((p) => ({ id: `pg:${p.id}`, nome: p.nome, tipo: 'pg' as const, bonus: p.bonus, tiro: dado() })),
+    ...pg.map((p) => ({ id: `pg:${p.id}`, nome: p.nome, tipo: 'pg' as const, bonus: p.bonus, tiro: 0, attesa: true })),
     ...nemici.filter((n) => n.quanti > 0).map((n) => ({
       id: `n:${n.id}`, nome: n.nome || 'Nemico', tipo: 'nemico' as const, bonus: n.iniziativa, tiro: dado(), quanti: n.quanti,
       ...(n.pf ? { pf: Array.from({ length: n.quanti }, () => n.pf!), pfMax: n.pf } : {}),
@@ -77,12 +80,26 @@ export function tiraIniziativa(pg: { id: string; nome: string; bonus: number }[]
       condizioni: Array.from({ length: n.quanti }, () => [] as IdCondizione[]),
     })),
   ];
-  return { ordine: ordina(ordine), turno: 0, round: 1 };
+  return { ordine: ordina(ordine), turno: 0, round: 1, iniziato: ora.toISOString() };
 }
 
-export const totale = (c: Combattente) => c.tiro + c.bonus;
-// Dal più alto al più basso; a parità prima il bonus più alto (solo come proposta: il master può spostare)
-export const ordina = (o: Combattente[]) => [...o].sort((a, b) => totale(b) - totale(a) || b.bonus - a.bonus);
+export const totale = (c: Combattente) => c.scritto ?? c.tiro + c.bonus;
+// Dal più alto al più basso; a parità prima il bonus più alto (solo come proposta: il master può spostare).
+// Chi aspetta ancora il tiro sta in fondo.
+export const ordina = (o: Combattente[]) => [...o].sort((a, b) => Number(!!a.attesa) - Number(!!b.attesa) || totale(b) - totale(a) || b.bonus - a.bonus);
+
+// Il totale di un personaggio: detto dal giocatore e scritto dal master, o arrivato dal suo telefono.
+// Prima che qualcuno agisca (round 1, primo turno) il turno va al nuovo primo; dopo resta su chi lo aveva.
+export function scriviTotale(c: Combattimento, id: string, valore: number | null, dalGiocatore = false): Combattimento {
+  const attivo = c.ordine[c.turno]?.id;
+  const inizio = c.round === 1 && c.turno === 0;
+  const ordine = ordina(c.ordine.map((x) => {
+    if (x.id !== id || x.tipo !== 'pg') return x;
+    const { scritto: _s, attesa: _a, dalGiocatore: _d, ...resto } = x;
+    return valore === null ? { ...resto, attesa: true } : { ...resto, scritto: Math.max(-20, Math.min(60, Math.round(valore))), ...(dalGiocatore ? { dalGiocatore: true } : {}) };
+  }));
+  return { ...c, ordine, turno: inizio ? 0 : Math.max(0, ordine.findIndex((x) => x.id === attivo)) };
+}
 
 export function prossimoTurno(c: Combattimento): Combattimento {
   if (!c.ordine.length) return c;

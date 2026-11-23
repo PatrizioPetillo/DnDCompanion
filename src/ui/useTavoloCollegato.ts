@@ -2,7 +2,8 @@
 // Giocatore: ogni personaggio legato a un tavolo con il canale manda da solo la sua scheda (anche mentre la crea), cifrata.
 // Master: i suoi tavoli ricevono le schede e le mettono nel gruppo, con un avviso quando arriva qualcuno di nuovo.
 import { useEffect, useRef } from 'react';
-import { aggiungiAlGruppo, tavoli, togliPgDalGruppo, type Archivio } from '../archivio/archivio';
+import { aggiungiAlGruppo, statoDelMembro, tavoli, togliPgDalGruppo, type Archivio } from '../archivio/archivio';
+import { daPartita, statoValido } from '../partita/al-tavolo';
 import { elementiUsati, type Elementi } from '../creazione/personalizzati';
 import { creaLink, leggiLink } from '../esporta/link';
 import { DATI } from '../regole/dati';
@@ -36,12 +37,14 @@ export function useInvioTavolo(archivio: Archivio, setArchivio: (f: (a: Archivio
         }
         const url = await creaLink(p.bozza, 'https://x/', elementiUsati(p.bozza, mieiElementi), p.canale.segreto);
         const testo = url.slice(url.indexOf('#'));
+        const stato = daPartita(p.partita);          // PF, condizioni e iniziativa per il master (23/11)
+        const firmaInvio = `${testo}|${JSON.stringify(stato)}`;
         const chiave = `${p.id}@${p.bozza.tavolo!.canale!.id}`;
-        if (inviati()[chiave] === testo) continue;
-        if (await inviaScheda(p.bozza.tavolo!.canale!, p.id, p.invio.token, testo)) segna(chiave, testo);
+        if (inviati()[chiave] === firmaInvio) continue;
+        if (await inviaScheda(p.bozza.tavolo!.canale!, p.id, p.invio.token, testo, stato)) segna(chiave, firmaInvio);
       }
     };
-    const t = setTimeout(() => void invia(), 2000);   // aspetta che il giocatore smetta di toccare
+    const t = setTimeout(() => void invia(), 1000);   // aspetta che il giocatore smetta di toccare
     const online = () => void invia();
     window.addEventListener('online', online);
     return () => { annullato = true; clearTimeout(t); window.removeEventListener('online', online); };
@@ -69,10 +72,11 @@ export function useTavoliCollegati(archivio: Archivio, setArchivio: (f: (a: Arch
         return;
       }
       if (membro?.il === s.il) return;
-      const testo = await testoScheda(s, t.tavolo.canale.chiave);
-      const r = testo ? await leggiLink(testo) : null;
+      const arrivato = await testoScheda(s, t.tavolo.canale.chiave);
+      const r = arrivato ? await leggiLink(arrivato.testo) : null;
       if (!r || 'errore' in r) return;
-      setArchivio((a) => aggiungiAlGruppo(a, tavoloId, r.bozza, r.elementi, new Date(), r.canale, { pg: s.pg, il: s.il }).archivio);
+      const stato = statoValido(arrivato!.stato) ?? undefined;
+      setArchivio((a) => statoDelMembro(aggiungiAlGruppo(a, tavoloId, r.bozza, r.elementi, new Date(), r.canale, { pg: s.pg, il: s.il }).archivio, tavoloId, s.pg, stato));
       if (!membro) {
         const classe = r.bozza.classe ? DATI.classi[r.bozza.classe]?.nome : undefined;
         avvisa(`${r.bozza.nome.trim() || 'Un nuovo personaggio'}${classe ? ` (${classe})` : ''} si è unito a «${t.tavolo.nome || 'il tuo tavolo'}».`);

@@ -27,7 +27,7 @@ export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attiv
 
 // I tavoli creati come master: si riaprono, si modificano, si ricondividono
 // gruppo: le schede che i giocatori hanno mandato al master per questo tavolo (21/11)
-export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string; canale?: string; pg?: string; il?: string }   // pg, il: dal tavolo collegato (23/11)   // canale: il segreto per mandargli eventi (22/11)
+export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string; canale?: string; pg?: string; il?: string; stato?: import('../partita/al-tavolo').StatoAlTavolo }   // stato: PF, condizioni e iniziativa dal telefono del giocatore (23/11)   // pg, il: dal tavolo collegato (23/11)   // canale: il segreto per mandargli eventi (22/11)
 export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string; gruppo?: MembroGruppo[]; oggetti?: OggettoDelMaster[]; incontri?: Incontro[] }
 // Gli incontri preparati dal master (21/11); senza gruppo, il master scrive quanti personaggi e di che livello
 export interface Incontro { id: string; nome: string; nemici: Nemico[]; combattimento?: Combattimento; manuale?: { quanti: number; livello: number } }
@@ -228,6 +228,13 @@ export function aggiungiAlGruppo(a: Archivio, tavoloId: string, bozza: Bozza, el
   });
   return { archivio: { ...a, tavoli: tavoliNuovi }, aggiornato };
 }
+// Lo stato di partita arrivato con la scheda dal tavolo collegato (23/11)
+export const statoDelMembro = (a: Archivio, tavoloId: string, pg: string, stato: import('../partita/al-tavolo').StatoAlTavolo | undefined): Archivio =>
+  ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id !== tavoloId ? t : { ...t, gruppo: (t.gruppo ?? []).map((m) => {
+    if (m.pg !== pg) return m;
+    const { stato: _vecchio, ...resto } = m;
+    return stato ? { ...resto, stato } : resto;
+  }) })) });
 export const togliPgDalGruppo = (a: Archivio, tavoloId: string, pg: string): Archivio =>
   ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id === tavoloId ? { ...t, gruppo: (t.gruppo ?? []).filter((m) => m.pg !== pg) } : t)) });
 export const togliDalGruppo = (a: Archivio, tavoloId: string, membroId: string): Archivio =>

@@ -20,8 +20,8 @@ const post = async (percorso: string, corpo: unknown) => {
 };
 
 // Il giocatore: la sua scheda (il pezzo dopo «#» del link della scheda) per il tavolo
-export async function inviaScheda(canale: { id: string; chiave: string }, pg: string, token: string, testo: string): Promise<boolean> {
-  const c = await cifra({ testo }, canale.chiave);
+export async function inviaScheda(canale: { id: string; chiave: string }, pg: string, token: string, testo: string, stato?: unknown): Promise<boolean> {
+  const c = await cifra(stato ? { testo, stato } : { testo }, canale.chiave);
   return !!(await post(`/t/${canale.id}`, { pg, token, ...c }));
 }
 export const lasciaTavolo = async (canale: { id: string }, pg: string, token: string) => !!(await post(`/t/${canale.id}`, { pg, token, via: true }));
@@ -33,10 +33,10 @@ export async function leggiSchede(id: string, segreto: string): Promise<SchedaAr
   const x = await post(`/t/${id}/leggi`, { segreto }) as { schede?: SchedaArrivata[] } | null;
   return x?.schede ?? null;
 }
-export async function testoScheda(s: SchedaArrivata, chiave: string): Promise<string | null> {
+export async function testoScheda(s: SchedaArrivata, chiave: string): Promise<{ testo: string; stato?: unknown } | null> {
   if (!s.iv || !s.cifrato) return null;
-  const x = await decifra<{ testo?: string }>({ iv: s.iv, cifrato: s.cifrato }, chiave);
-  return typeof x?.testo === 'string' ? x.testo : null;
+  const x = await decifra<{ testo?: string; stato?: unknown }>({ iv: s.iv, cifrato: s.cifrato }, chiave);
+  return typeof x?.testo === 'string' ? { testo: x.testo, ...(x.stato !== undefined ? { stato: x.stato } : {}) } : null;
 }
 
 // Il master in ascolto mentre l'app è aperta; si riconnette da solo

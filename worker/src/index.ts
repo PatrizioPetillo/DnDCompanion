@@ -1,4 +1,4 @@
-// Servizio degli sblocchi di Companion B20 (21/11).
+// Servizio degli sblocchi di Companion DomusDraconis (21/11; prima Companion B20).
 // Un Durable Object per oggetto: tiene la chiave quando il master sblocca e la manda a chi è in ascolto.
 // Conserva solo id casuali e chiavi: nessun nome, nessuna scheda, nessun dato personale.
 //   GET  /s/<id>          → { chiave } se sbloccato, altrimenti 404
@@ -50,11 +50,13 @@ export class Sblocco extends DurableObject<Env> {
       if (typeof x.segreto !== 'string' || !B64_32.test(x.segreto) || typeof x.chiave !== 'string' || !B64_32.test(x.chiave)) return json({ errore: 'dati non validi' }, 400);
       if ((await impronta(x.segreto)) !== id) return json({ errore: 'non sei il master di questo oggetto' }, 403);
       await this.ctx.storage.put('chiave', x.chiave);
+      await this.ctx.storage.setAlarm(Date.now() + 365 * 24 * 3600 * 1000);   // dopo un anno si cancella (23/11, apertura a tutti)
       for (const ws of this.ctx.getWebSockets()) { try { ws.send(JSON.stringify({ chiave: x.chiave })); } catch { /* chiuso */ } }
       return json({ sbloccato: true });
     }
     return json({ errore: 'metodo non ammesso' }, 405);
   }
+  async alarm() { await this.ctx.storage.deleteAll(); }
   async webSocketMessage() { /* i giocatori non mandano nulla */ }
   async webSocketClose(ws: WebSocket, code: number) { try { ws.close(code === 1005 ? 1000 : code); } catch { /* già chiuso */ } }
 }

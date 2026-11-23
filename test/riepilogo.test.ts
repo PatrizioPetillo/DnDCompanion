@@ -104,7 +104,7 @@ describe('Esportazione JSON', () => {
   });
   it('file sbagliati: messaggio chiaro', () => {
     expect(importaJSON('ciao')).toEqual({ errore: 'Il file non è un JSON valido.' });
-    expect(importaJSON('{"a":1}')).toEqual({ errore: 'Questo file non è una scheda di Companion B20.' });
+    expect(importaJSON('{"a":1}')).toEqual({ errore: 'Questo file non è una scheda di Companion DomusDraconis.' });
     const altro = JSON.stringify({ formato: 'companion-b20', versione: 1, personaggio: { ...P.TRAVIS, specie: 'warforged' } });
     expect('errore' in importaJSON(altro) && importaJSON(altro)).toMatchObject({ errore: expect.stringMatching(/warforged/) });
   });

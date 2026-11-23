@@ -38,8 +38,8 @@ export function Home({ personaggi, apriPersonaggi, apriTavoli, apriInformazioni 
         <Logo src={logoDomus} nome="DomusDraconis" />
         {LOGO_B20 && <Logo src={logoB20} nome="B20 GDR" />}
       </div>
-      <h1 className="font-titolo text-4xl text-accento">Companion B20</h1>
-      <p className="mt-3 max-w-72 text-base text-testo">Crea il tuo personaggio di livello 1 e usalo al tavolo, con ogni numero spiegato.</p>
+      <h1 className="font-titolo text-4xl text-accento">Companion<span className="mt-1 block text-xl">DomusDraconis</span></h1>
+      <p className="mt-3 max-w-72 text-base text-testo">Crea il tuo personaggio, dal 1° al 5° livello, e usalo al tavolo, con ogni numero spiegato.</p>
       <p className="mt-1 text-sm text-testo-2">Regole SRD 5.2 · compatibile con la quinta edizione</p>
       <button onClick={apriPersonaggi} className="mt-8 h-12 w-full max-w-80 rounded-xl bg-accento text-base font-medium text-su-accento">
         I miei personaggi{personaggi ? ` (${personaggi})` : ''}
@@ -55,7 +55,7 @@ export function Home({ personaggi, apriPersonaggi, apriTavoli, apriInformazioni 
           </span>
         </button>
       </div>
-      <button onClick={apriInformazioni} className="mt-8 min-h-11 px-4 text-sm text-testo-2 underline underline-offset-4">Informazioni, crediti e note legali</button>
+      <button onClick={apriInformazioni} className="mt-8 min-h-11 px-4 text-sm text-testo-2 underline underline-offset-4">Informazioni, privacy e note legali</button>
     </section>
     </>
   );

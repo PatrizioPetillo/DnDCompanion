@@ -7,7 +7,7 @@ import { calcolaScheda } from '../regole/motore';
 import { DATI, type Dati } from '../regole/dati';
 import { ABILITA, ALLINEAMENTI, NOME_CAR, NOME_LINGUA } from '../regole/dati/base';
 import { metri } from '../regole/misure';
-import { DADI_INCANTESIMI, testoDadi } from '../regole/dati/dadi-incantesimi';
+import { DADI_INCANTESIMI, dadiAlLivello, testoDadi } from '../regole/dati/dadi-incantesimi';
 import { CARATTERISTICHE, type Avviso, type Car, type Effetto, type Id, type Numero, type Risorsa, type Scheda } from '../regole/tipi';
 
 const segno = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
@@ -76,7 +76,7 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
         const tiro = i.tiro?.tipo === 'attacco' ? `${segno(m.attacco?.totale ?? 0)} per colpire`
           : i.tiro?.tipo === 'ts' ? `TS ${NOME_CAR[i.tiro.car]} CD ${m.cd?.totale}` : 'colpisce sempre';
         const extra = (s.bonusDanniTrucchetti?.[t] ?? []).reduce((x, b) => x + b.valore, 0);   // Deflagrazione agonizzante
-        return { id: `${m.id}:${t}`, nome: i.nome, fonte: m.nome, tiro, dadi: testoDadi(t, modCar, extra)!, ...(DADI_INCANTESIMI[t].nota ? { nota: DADI_INCANTESIMI[t].nota } : {}) };
+        return { id: `${m.id}:${t}`, nome: i.nome, fonte: m.nome, tiro, dadi: testoDadi(t, modCar, extra, s.livello)!, ...(dadiAlLivello(t, s.livello)?.nota ? { nota: dadiAlLivello(t, s.livello)!.nota } : {}) };
       })),
       risorse: s.risorse.map((r) => ({ id: r.id, nome: r.nome, usi: r.usi, recupero: recupero(r.recupero), ...(r.dettaglio ? { dettaglio: r.dettaglio } : {}) })),
       altro,
@@ -178,7 +178,7 @@ export function importaJSON(testo: string, d: Dati = DATI): { bozza: Bozza; ritr
   let dati: unknown;
   try { dati = JSON.parse(testo); } catch { return { errore: 'Il file non è un JSON valido.' }; }
   const x = dati as { formato?: string; versione?: number; personaggio?: Bozza; ritratto?: unknown; elementi?: Elementi; canale?: unknown };
-  if (x?.formato !== FORMATO || !x.personaggio) return { errore: 'Questo file non è una scheda di Companion B20.' };
+  if (x?.formato !== FORMATO || !x.personaggio) return { errore: 'Questo file non è una scheda di Companion DomusDraconis.' };
   if (x.versione !== 1 || x.personaggio.schema !== 1) return { errore: 'La scheda è di una versione dell\'app che questa non conosce.' };
   const p = x.personaggio;
   // Solo elementi personalizzati ben formati, e mai sopra uno dell'SRD (anche quelli del tavolo dentro la scheda)

@@ -10,7 +10,7 @@ import { metri } from './misure';
 import { avvisiTavolo, coperto } from './tavolo';
 
 import { LIVELLO_MASSIMO } from './livelli';
-import { TALENTO_LIBERO } from './dati/classi';
+import { LIVELLO_SUPPLICA, REQUISITO_SUPPLICA, TALENTO_LIBERO } from './dati/classi';
 export { LIVELLO_MASSIMO };
 import {
   CARATTERISTICHE, type Avviso, type Car, type ConcessioneMagia, type Effetto, type FormulaCA, type Id,
@@ -54,7 +54,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   if (!classe || !specie || !bg) throw new Error('Classe, specie o background sconosciuti');
 
   const livello = pg.livello;
-  const PB = 2;                                           // p. 23, livelli 1-4
+  const PB = livello >= 17 ? 6 : livello >= 13 ? 5 : livello >= 9 ? 4 : livello >= 5 ? 3 : 2;   // p. 23: +2 ai livelli 1-4, +3 ai 5-8…
   // Aumento di livello (23/11): i dati delle classi arrivano per ora fino al 2° livello
   if (!Number.isInteger(livello) || livello < 1 || livello > LIVELLO_MASSIMO)
     avvisa('livello-non-supportato', 'errore', `L'app calcola per ora i livelli da 1 a ${LIVELLO_MASSIMO}: il ${livello}° livello arriverà più avanti`, { pagina: 23 });
@@ -181,7 +181,8 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
       } else if (e.tipo === 'talento') {
         const ids = typeof e.talento === 'string' ? [e.talento] : risposta(e.talento.daScelta);
         for (const id of ids) aggiungiTalento(id, fonte, e.parametri, typeof e.talento === 'string' ? undefined : e.talento.daScelta);
-      } else voci.push({ effetto: e, fonte, parametri });
+      } else if (e.tipo === 'dalLivello') { if (livello >= e.livello) aggiungi(e.effetti, fonte, parametri); }
+      else voci.push({ effetto: e, fonte, parametri });
     }
   }
 
@@ -270,6 +271,10 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   const suppliche = [...scelte.keys()].filter((k) => k.startsWith('warlock.suppliche')).flatMap((k) => risposta(k));
   for (const x of new Set(suppliche)) if (suppliche.filter((y) => y === x).length > 1)
     avvisa(`supplica-doppia:${x}`, 'errore', 'Hai scelto due volte la stessa supplica occulta: scegline un\'altra', { pagina: 72 });
+  for (const x of new Set(suppliche)) if ((LIVELLO_SUPPLICA[x] ?? 1) > livello)
+    avvisa(`supplica-livello:${x}`, 'errore', `Questa supplica richiede il ${LIVELLO_SUPPLICA[x]}° livello da warlock`, { pagina: 72 });
+  for (const x of suppliche) if (REQUISITO_SUPPLICA[x] && !suppliche.includes(REQUISITO_SUPPLICA[x]))
+    avvisa(`supplica-requisito:${x}`, 'errore', `Questa supplica richiede ${REQUISITO_SUPPLICA[x] === 'pact-of-the-blade' ? 'il Patto della lama' : 'il Patto della catena'}`, { pagina: 73 });
 
   const tiriSalvezza = Object.fromEntries(CARATTERISTICHE.map((c) => {
     const comp = classe.tiriSalvezza.includes(c);
@@ -345,7 +350,8 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
           avvisa(`non-rituale:${sid}:${sp}`, 'errore', `${d.incantesimi[sp].nome} non è un rituale: qui servono incantesimi con l'etichetta Rituale`, c.srd);
       }
     }
-    const semprePreparati = [...(c.semprePreparati ?? []), ...scelti1];
+    const dal = Object.entries(c.semprePreparatiDal ?? {}).filter(([l]) => livello >= Number(l)).flatMap(([, ids]) => ids);
+    const semprePreparati = [...(c.semprePreparati ?? []), ...dal, ...scelti1];
     semprePreparati.forEach((s) => lanciabili.add(s));
 
     // Preparati (il limite non conta i sempre preparati, p. 104)
@@ -356,6 +362,9 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
       preparati = { limite, scelti: sc };
       if (sc.length > limite) avvisa(`preparati-troppi:${c.id}`, 'errore', `${nome}: hai preparato ${sc.length} incantesimi, ne puoi preparare ${limite}`, c.srd);
       if (sc.length < limite) avvisa(`preparati-mancanti:${c.id}`, 'info', `${nome}: puoi preparare ancora ${limite - sc.length} incantesimi (${sc.length} su ${limite})`, c.srd);
+      // Un incantesimo preparato due volte conta una volta sola (23/11, trovato preparando il 5° livello)
+      for (const sp of new Set(sc.filter((x, i) => sc.indexOf(x) !== i)))
+        avvisa(`preparato-doppio:${c.id}:${sp}`, 'errore', `${d.incantesimi[sp]?.nome ?? sp} è già tra i preparati: scegline un altro`, { pagina: 104 });
       for (const sp of sc) {
         controllaIncantesimo(`${c.id}.preparati`, sp, lista, 'max');
         if (c.preparati.da === 'libro' && !libro.includes(sp))
@@ -368,6 +377,8 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     if (c.libro) {
       if (libro.length < nLibro) avvisa(`libro-incompleto:${c.id}`, 'info', `Al ${livello}° livello il libro contiene ${nLibro} incantesimi (${libro.length} su ${nLibro})`, { pagina: 78 });
       if (libro.length > nLibro) avvisa(`libro-troppi:${c.id}`, 'attenzione', `Al ${livello}° livello il libro ha ${nLibro} incantesimi: 6 al 1° livello e 2 in più a ogni livello`, { pagina: 78 });
+      for (const sp of new Set(libro.filter((x, i) => libro.indexOf(x) !== i)))
+        avvisa(`libro-doppio:${sp}`, 'errore', `${d.incantesimi[sp]?.nome ?? sp} è già nel libro: scegline un altro`, { pagina: 78 });
       for (const sp of libro) { controllaIncantesimo(`${c.id}.libro`, sp, lista, 'max'); lanciabili.add(sp); }
     }
 
@@ -535,7 +546,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   };
   const padronanze = new Set([...scelte.values()].filter((x) => x.tipo === 'maestriaArma').flatMap((x) => risposta(x.id)));
   // Arti marziali (p. 50): senza armatura né scudo, DES al posto di FOR e il dado (1d6) su colpo senz'armi e armi da monaco
-  const dadoMarziale = effetti('valoreClasse').find((v) => v.effetto.id === 'martial-arts-die')?.effetto.valore;
+  const dadoMarziale = effetti('valoreClasse').filter((v) => v.effetto.id === 'martial-arts-die').at(-1)?.effetto.valore;   // l'ultimo: 1d8 dal 5° livello
   const senzaArmatura = !indossata && !haScudo;   // Arti marziali: niente armatura indossata né scudo (21/11)
   const arti = dadoMarziale && senzaArmatura ? dadoMarziale : null;
   const daMonaco = (id: Id) => ARMI[id].tipo === 'mischia' && (ARMI[id].categoria === 'semplice' || ARMI[id].proprieta.includes('leggera'));
@@ -614,7 +625,8 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
 
   // ───────── Il resto ─────────
   const risorse = effetti('risorsa').map(({ effetto: { risorsa: r } }: { effetto: { risorsa: Risorsa } }) => ({
-    id: r.id, nome: r.nome, usi: valore(r.usi), recupero: r.recupero, ...(r.dettaglio ? { dettaglio: r.dettaglio } : {}),
+    id: r.id, nome: r.nome, usi: valore(r.usi), ...Object.entries(r.dal ?? {}).filter(([l]) => livello >= Number(l))
+      .reduce((x, [, v]) => ({ ...x, ...v }), { recupero: r.recupero, ...(r.dettaglio ? { dettaglio: r.dettaglio } : {}) } as Pick<Risorsa, 'recupero' | 'dettaglio'>),
   }));
   const cdSpeciali = effetti('cdSpeciale').map((v) => ({ id: v.effetto.id, nome: v.effetto.nome,
     cd: numero([{ etichetta: 'Base', valore: 8 }, { etichetta: NOME_CAR[v.effetto.caratteristica], valore: mod[v.effetto.caratteristica] }, { etichetta: 'Competenza', valore: PB }]) }));
@@ -624,7 +636,8 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   if (forzaBassa) avvisa(`armatura-forza:${indossata}`, 'attenzione', `${d.oggetti[indossata!].nome} richiede Forza ${armaturaIndossata!.forza}: con meno la tua velocità cala di ${metri(10)}`, { pagina: 92 });
   const libero = !indossata && !haScudo;
   const velocita = (vel.length ? Math.max(...vel.map((v) => v.effetto.valore)) : specie.velocita) - (forzaBassa ? 10 : 0)
-    + (libero ? effetti('velocitaSenzaArmatura').reduce((s, v) => s + v.effetto.valore, 0) : 0);   // Movimento senza armatura (p. 51)
+    + (libero ? effetti('velocitaSenzaArmatura').reduce((s, v) => s + v.effetto.valore, 0) : 0)   // Movimento senza armatura (p. 51)
+    + (armaturaIndossata?.categoria !== 'pesante' ? effetti('velocitaSenzaPesante').reduce((s, v) => s + v.effetto.valore, 0) : 0);   // Movimento veloce (p. 29)
   // Svantaggio alla Furtività con le armature che lo hanno (p. 92), solo se indossate
   if (armaturaIndossata?.svantaggioFurtivita) abilita.stealth.svantaggio = `Svantaggio: ${d.oggetti[indossata!].nome}`;
 

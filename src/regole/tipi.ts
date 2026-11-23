@@ -68,6 +68,9 @@ export type Effetto =
   // 2° livello (23/11): Factotum del bardo, Movimento senza armatura del monaco, Deflagrazione agonizzante
   | { tipo: 'mezzaCompetenzaAbilita'; etichetta: string }
   | { tipo: 'velocitaSenzaArmatura'; valore: number; etichetta: string }
+  // 5° livello (23/11): Movimento veloce del barbaro (senza armatura pesante); effetti che arrivano a un livello del personaggio
+  | { tipo: 'velocitaSenzaPesante'; valore: number; etichetta: string }
+  | { tipo: 'dalLivello'; livello: number; effetti: Effetto[] }
   | { tipo: 'bonusDanniTrucchetto'; incantesimo: Id; car: Car; etichetta: string }
   | { tipo: 'libroExtra'; quanti: number; etichetta: string }          // Invocatore sapiente (3° livello)
   | { tipo: 'nota'; testo: string };
@@ -87,6 +90,8 @@ export interface Risorsa {
   usi: Valore;
   recupero: { riposo: Riposo; quanti: 'tutti' | number }[];
   dettaglio?: string;
+  // cosa cambia da un livello in poi (5°: Ispirazione bardica d8 che torna anche con il riposo breve; Soffio 2d10)
+  dal?: Record<number, { dettaglio?: string; recupero?: { riposo: Riposo; quanti: 'tutti' | number }[] }>;
   srd: RifSRD;
 }
 
@@ -103,6 +108,7 @@ export interface ConcessioneMagia {
   trucchettiFissi?: Id[];
   incantesimiScelti?: { scelta: Id; soloRituali?: boolean };  // incantesimi di 1° scelti e sempre preparati (Iniziato; rituali del Patto del tomo)
   semprePreparati?: Id[];
+  semprePreparatiDal?: Record<number, Id[]>;   // incantesimi di sottoclasse che arrivano a un livello di classe (5°)
   preparati?: { numero: Valore; da: 'lista' | 'libro' };
   lanciGratuiti?: { incantesimi: Id[] | 'scelti'; usi: Valore; recupero: Riposo };
   puoUsareSlot: boolean;

@@ -328,7 +328,7 @@ export function MagiaTavolo({ scheda, partita, cambia, bozza }: PropsTavolo) {
                 const soloRituale = i.livello > 0 && !m.semprePreparati.includes(id) && !(m.preparati?.scelti ?? []).includes(id);
                 const tag = [i.livello === 0 ? 'trucchetto' : `${i.livello}°`, i.concentrazione ? 'C' : '', soloRituale ? 'solo rituale (dal libro)' : i.rituale ? 'R' : '',
                   i.tiro ? (i.tiro.tipo === 'attacco' ? `attacco +${m.attacco?.totale}` : `TS ${i.tiro.car} CD ${m.cd?.totale}`) : '',
-                  testoDadi(id, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0) ?? ''].filter(Boolean).join(' · ');
+                  testoDadi(id, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0, 0, scheda.livello) ?? ''].filter(Boolean).join(' · ');
                 const manca = mancaComponente(scheda, partita, id, undefined, ignoraNonConsumate);   // componente con costo finita: si lancia lo stesso, segnato in rosso
                 return (
                   <li key={id} className={`flex items-center gap-2 border-t border-bordo py-1 first:border-t-0 ${manca ? '-mx-1 rounded-lg border-2 !border-attenzione px-1' : ''}`}>
@@ -341,7 +341,7 @@ export function MagiaTavolo({ scheda, partita, cambia, bozza }: PropsTavolo) {
                       <button onClick={() => setLancio({ magia: m, id })} className="min-h-11 shrink-0 rounded-lg border border-accento px-3 text-sm text-accento">Lancia</button>
                     )}
                     {i.livello === 0 && DADI_INCANTESIMI[id] && (() => {
-                      const rq = daIncantesimo(id, m, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0, undefined, (scheda.bonusDanniTrucchetti?.[id] ?? []).reduce((s, t) => s + t.valore, 0));
+                      const rq = daIncantesimo(id, m, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0, undefined, (scheda.bonusDanniTrucchetti?.[id] ?? []).reduce((s, t) => s + t.valore, 0), scheda.livello);
                       return rq && <button onClick={() => setTiro(rq)} aria-label={`Tira: ${i.nome}`} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-oro/70"><IconaD20 /></button>;
                     })()}
                     {i.livello === 0 && i.concentrazione && (
@@ -362,7 +362,7 @@ export function MagiaTavolo({ scheda, partita, cambia, bozza }: PropsTavolo) {
             cambia(dopoIlLancio(scheda, s, lancio.id)); setLancio(null);
             setAvviso(interrotto ? `Hai interrotto ${nome(interrotto)}: ora sei concentrato su ${nome(lancio.id)}.` : null);
             // dadi (idea 6): se l'incantesimo fa danni o cura, si apre il tiro con lo slot usato
-            const rq = daIncantesimo(lancio.id, lancio.magia, lancio.magia.caratteristica ? scheda.modificatori[lancio.magia.caratteristica] : 0, livello, (scheda.bonusDanniTrucchetti?.[lancio.id] ?? []).reduce((s, t) => s + t.valore, 0));
+            const rq = daIncantesimo(lancio.id, lancio.magia, lancio.magia.caratteristica ? scheda.modificatori[lancio.magia.caratteristica] : 0, livello, (scheda.bonusDanniTrucchetti?.[lancio.id] ?? []).reduce((s, t) => s + t.valore, 0), scheda.livello);
             if (rq) setTiro(rq);
           }} />
       )}

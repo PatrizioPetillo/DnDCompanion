@@ -6,21 +6,27 @@ import { elenco, statoCopia, type Archivio, type VoceElenco } from '../archivio/
 import { iPhoneNonInstallata } from './salvataggio';
 import { Avatar } from './Avatar';
 import { FoglioDalBasso } from './SchedaIncantesimo';
+import { SceltaPronti } from './Pronti';
+import { PREDEFINITI, type Predefinito } from '../creazione/predefiniti';
 
-export function Personaggi({ archivio, apri, crea, duplica, elimina, importa, scaricaCopia }: {
+export function Personaggi({ archivio, apri, crea, creaPronto, duplica, elimina, importa, scaricaCopia }: {
   archivio: Archivio;
   scaricaCopia: () => void;
   apri: (id: string) => void;
   crea: () => void;
+  creaPronto: (p: Predefinito, livello: number) => void;
   duplica: (id: string) => void;
   elimina: (id: string) => void;
   importa: (testo: string) => void;
 }) {
   const voci = elenco(archivio);
   const [menu, setMenu] = useState<VoceElenco | null>(null);
+  const [nuovoAperto, setNuovoAperto] = useState(false);
   const copia = statoCopia(archivio);
   return (
     <section>
+      {nuovoAperto && <SceltaPronti elenco={PREDEFINITI} chiudi={() => setNuovoAperto(false)}
+        daZero={() => { setNuovoAperto(false); crea(); }} scegli={(p, l) => { setNuovoAperto(false); creaPronto(p, l); }} />}
       {iPhoneNonInstallata() && (
         <div className="mb-4 rounded-xl border border-attenzione bg-superficie p-3 text-sm text-testo">
           <strong>Su iPhone installa l'app</strong>: tocca Condividi e poi «Aggiungi alla schermata Home».
@@ -29,7 +35,7 @@ export function Personaggi({ archivio, apri, crea, duplica, elimina, importa, sc
       )}
       <div className="mb-4 flex items-center gap-3">
         <h1 className="font-titolo text-2xl text-accento">I miei personaggi</h1>
-        <button onClick={crea} aria-label="Crea un nuovo personaggio"
+        <button onClick={() => setNuovoAperto(true)} aria-label="Crea un nuovo personaggio"
           className="flex h-11 w-11 items-center justify-center rounded-full border border-accento text-accento">
           <IconaPiu />
         </button>
@@ -39,7 +45,7 @@ export function Personaggi({ archivio, apri, crea, duplica, elimina, importa, sc
         <div className="rounded-xl border border-bordo bg-superficie p-4 text-center">
           <p className="text-base text-testo">Crea il tuo primo personaggio</p>
           <p className="mt-1 text-sm text-testo-2">Classe, background, specie: l'app ti guida un passo alla volta e controlla le regole.</p>
-          <button onClick={crea} className="mt-3 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Crea personaggio</button>
+          <button onClick={() => setNuovoAperto(true)} className="mt-3 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Crea personaggio</button>
         </div>
       )}
 

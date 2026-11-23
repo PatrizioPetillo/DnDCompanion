@@ -17,6 +17,8 @@ import { LIVELLO_MASSIMO, NOME_REGOLA_PF, type RegolaPf } from '../regole/livell
 import type { EccezioneTavolo, Id, MetodoPunteggi, Tavolo } from '../regole/tipi';
 import { Avatar } from './Avatar';
 import { Separatore } from './PassoMagia';
+import { SceltaPronti } from './Pronti';
+import { predefinitiPer, type Predefinito } from '../creazione/predefiniti';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 
 // ───────── «I miei tavoli» ─────────
@@ -345,14 +347,16 @@ function Gruppo({ gruppo, apri, togli, collegato = false }: { gruppo: MembroGrup
 }
 
 // ───────── Il giocatore apre il link ─────────
-export function TavoloRicevuto({ tavolo, archivio, nuovo, usa, rifiuta }: {
+export function TavoloRicevuto({ tavolo, archivio, nuovo, pronto, usa, rifiuta }: {
   tavolo: Tavolo;
   archivio: Archivio;
   nuovo: () => void;
+  pronto: (p: Predefinito) => void;
   usa: (id: string) => void;
   rifiuta: () => void;
 }) {
   const [scegli, setScegli] = useState(false);
+  const [pronti, setPronti] = useState(false);
   const [accettato, setAccettato] = useState(false);
   const voci = elenco(archivio);
   if (!accettato) return <Invito tavolo={tavolo} accetta={() => setAccettato(true)} rifiuta={rifiuta} />;
@@ -366,6 +370,10 @@ export function TavoloRicevuto({ tavolo, archivio, nuovo, usa, rifiuta }: {
         {descriviTavolo(tavolo, DATI).map((r) => <li key={r}>· {r}</li>)}
       </ul>
       <button onClick={nuovo} className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Nuovo personaggio per questo tavolo</button>
+      {predefinitiPer(tavolo).length > 0 && (
+        <button onClick={() => setPronti(true)} className="mt-2 h-12 w-full rounded-xl border border-bordo text-base text-testo">Usa un personaggio pronto</button>
+      )}
+      {pronti && <SceltaPronti elenco={predefinitiPer(tavolo)} livelloFisso={tavolo.livello} chiudi={() => setPronti(false)} scegli={(p) => { setPronti(false); pronto(p); }} />}
       {voci.length > 0 && (
         <button onClick={() => setScegli(true)} className="mt-2 h-12 w-full rounded-xl border border-bordo text-base text-testo">Usa un mio personaggio</button>
       )}

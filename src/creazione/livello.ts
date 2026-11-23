@@ -29,6 +29,12 @@ const RIGHE: Record<string, string> = {
   'font-of-magic': '2 punti stregoneria: diventano slot, e gli slot diventano punti.',
   metamagic: '2 opzioni per modificare gli incantesimi.',
   'eldritch-invocations-2': '2 suppliche occulte in più.',
+  // 5° livello (23/11)
+  'extra-attack': 'Con l\'azione Attacco attacchi due volte invece di una.',
+  'fast-movement': 'La tua velocità aumenta di 3 m se non indossi un\'armatura pesante.',
+  'faithful-steed': 'Trova cavalcatura è sempre preparato e puoi lanciarlo una volta senza slot; torna con il riposo lungo.',
+  'eldritch-invocations-5': '2 suppliche occulte in più: ora anche quelle del 5° livello.',
+  'evocation-savant-5': 'Un incantesimo di invocazione da mago di 3° livello nel libro, gratis (nuovo livello di slot).',
   'magical-cunning': 'Una volta per riposo lungo, in 1 minuto recuperi metà degli slot del patto.',
   scholar: 'Maestria in un\'abilità tra Arcano, Storia, Indagare, Medicina, Natura, Religione.',
 };

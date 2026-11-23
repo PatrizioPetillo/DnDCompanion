@@ -11,8 +11,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Companion B20',
-        short_name: 'Companion B20',
+        name: 'Companion DomusDraconis',   // nome deciso da Patrizio il 23/11 (app aperta a tutti)
+        short_name: 'Companion',
         description: 'Crea il tuo personaggio di livello 1 secondo le regole del tavolo. Compatibile con la quinta edizione.',
         lang: 'it',
         display: 'standalone',

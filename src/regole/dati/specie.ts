@@ -12,17 +12,23 @@ const magiaSpecie = (id: string, nome: string, specie: string, sceltaCar: string
     id, nome, fonte: { tipo: 'specie', id: specie }, caratteristica: { daScelta: sceltaCar },
     puoUsareSlot: false, srd: { pagina }, ...extra } });
 
+const incantesimoDiLivello = (specie: string, nome: string, sceltaCar: string, pagina: number, livello: 3 | 5, id: string): Effetto => ({ tipo: 'dalLivello', livello, effetti: [
+  magiaSpecie(`${specie}-${livello}`, `${nome} (${livello}° livello)`, specie, sceltaCar, pagina,
+    { semprePreparati: [id], lanciGratuiti: { incantesimi: [id], usi: 1, recupero: 'lungo' }, puoUsareSlot: true, slot: 'normali' })] });
+
 const ANTENATI: [string, string, string][] = [
   ['black', 'Nero', 'acido'], ['blue', 'Blu', 'fulmine'], ['brass', 'Ottone', 'fuoco'], ['bronze', 'Bronzo', 'fulmine'],
   ['copper', 'Rame', 'acido'], ['gold', 'Oro', 'fuoco'], ['green', 'Verde', 'veleno'], ['red', 'Rosso', 'fuoco'],
   ['silver', 'Argento', 'freddo'], ['white', 'Bianco', 'freddo'],
 ];
 
-const tieflingLegacy = (id: string, nome: string, nomeEn: string, danno: string, trucchetto: string): Lignaggio => ({
+const tieflingLegacy = (id: string, nome: string, nomeEn: string, danno: string, trucchetto: string, l3: string, l5: string): Lignaggio => ({
   id, nome, nomeEn, srd: { pagina: 86 }, effetti: [
     { tipo: 'resistenza', danno },
     magiaSpecie('tiefling', `Specie: Tiefling (${nome.toLowerCase()})`, 'tiefling', 'tiefling.caratteristica', 86,
       { trucchettiFissi: [trucchetto, 'thaumaturgy'] }),   // Presenza ultraterrena: Taumaturgia con la stessa caratteristica
+    incantesimoDiLivello('tiefling', `Specie: Tiefling (${nome.toLowerCase()})`, 'tiefling.caratteristica', 86, 3, l3),
+    incantesimoDiLivello('tiefling', `Specie: Tiefling (${nome.toLowerCase()})`, 'tiefling.caratteristica', 86, 5, l5),
   ] });
 
 export const SPECIE: Record<string, Specie> = {
@@ -35,8 +41,11 @@ export const SPECIE: Record<string, Specie> = {
       { id: 'breath-weapon', nome: 'Soffio', nomeEn: 'Breath Weapon', livello: 1, srd: { pagina: 84 }, effetti: [
         { tipo: 'cdSpeciale', id: 'breath-weapon', nome: 'Specie: Soffio', caratteristica: 'COS', srd: { pagina: 84 } },
         { tipo: 'risorsa', risorsa: { id: 'breath-weapon', nome: 'Soffio', usi: { competenza: true }, dettaglio: '1d10, TS di Destrezza',
-          recupero: [{ riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 84 } } },
+          dal: { 5: { dettaglio: '2d10, TS di Destrezza' } }, recupero: [{ riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 84 } } },
       ] },
+      { id: 'draconic-flight', nome: 'Volo draconico', nomeEn: 'Draconic Flight', livello: 5, srd: { pagina: 84 }, effetti: [{ tipo: 'dalLivello', livello: 5, effetti: [
+        { tipo: 'risorsa', risorsa: { id: 'draconic-flight', nome: 'Volo draconico', usi: 1, dettaglio: 'Azione bonus: ali spettrali, volo pari alla velocità per 10 minuti',
+          recupero: [{ riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 84 } } }] }] },
       { id: 'dragonborn-darkvision', nome: 'Scurovisione', nomeEn: 'Darkvision', livello: 1, srd: { pagina: 84 }, effetti: [scuro(60)] },
     ],
   },
@@ -59,13 +68,19 @@ export const SPECIE: Record<string, Specie> = {
     lignaggi: { scelta: 'elf.lignaggio', srd: { pagina: 85 }, opzioni: [
       { id: 'drow', nome: 'Drow', nomeEn: 'Drow', srd: { pagina: 85 }, effetti: [
         { tipo: 'nota', testo: `Scurovisione ${metri(120)}` },
-        magiaSpecie('elf', 'Specie: Elfo (drow)', 'elf', 'elf.caratteristica', 85, { trucchettiFissi: ['dancing-lights'] }) ] },
+        magiaSpecie('elf', 'Specie: Elfo (drow)', 'elf', 'elf.caratteristica', 85, { trucchettiFissi: ['dancing-lights'] }),
+        incantesimoDiLivello('elf', 'Specie: Elfo (drow)', 'elf.caratteristica', 85, 3, 'faerie-fire'),
+        incantesimoDiLivello('elf', 'Specie: Elfo (drow)', 'elf.caratteristica', 85, 5, 'darkness') ] },
       { id: 'high-elf', nome: 'Elfo alto', nomeEn: 'High Elf', srd: { pagina: 85 }, effetti: [
         magiaSpecie('elf', 'Specie: Alto elfo', 'elf', 'elf.caratteristica', 85, { trucchettiFissi: ['prestidigitation'],
-          cambioTrucchetti: { quando: 'riposoLungo', quanti: 1, srd: { pagina: 85 } } }) ] },
+          cambioTrucchetti: { quando: 'riposoLungo', quanti: 1, srd: { pagina: 85 } } }),
+        incantesimoDiLivello('elf', 'Specie: Alto elfo', 'elf.caratteristica', 85, 3, 'detect-magic'),
+        incantesimoDiLivello('elf', 'Specie: Alto elfo', 'elf.caratteristica', 85, 5, 'misty-step') ] },
       { id: 'wood-elf', nome: 'Elfo dei boschi', nomeEn: 'Wood Elf', srd: { pagina: 85 }, effetti: [
         { tipo: 'velocita', valore: 35 },
-        magiaSpecie('elf', 'Specie: Elfo dei boschi', 'elf', 'elf.caratteristica', 85, { trucchettiFissi: ['druidcraft'] }) ] },
+        magiaSpecie('elf', 'Specie: Elfo dei boschi', 'elf', 'elf.caratteristica', 85, { trucchettiFissi: ['druidcraft'] }),
+        incantesimoDiLivello('elf', 'Specie: Elfo dei boschi', 'elf.caratteristica', 85, 3, 'longstrider'),
+        incantesimoDiLivello('elf', 'Specie: Elfo dei boschi', 'elf.caratteristica', 85, 5, 'pass-without-trace') ] },
     ] },
     tratti: [
       { id: 'elf-darkvision', nome: 'Scurovisione', nomeEn: 'Darkvision', livello: 1, srd: { pagina: 84 }, effetti: [scuro(60)] },
@@ -104,6 +119,9 @@ export const SPECIE: Record<string, Specie> = {
       { tipo: 'risorsa', risorsa: { id: 'giant-ancestry', nome: `Discendenza gigantica: ${nome}`, usi: { competenza: true },
         recupero: [{ riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 85 } } } as Effetto] })) },
     tratti: [
+      { id: 'large-form', nome: 'Forma Grande', nomeEn: 'Large Form', livello: 5, srd: { pagina: 86 }, effetti: [{ tipo: 'dalLivello', livello: 5, effetti: [
+        { tipo: 'risorsa', risorsa: { id: 'large-form', nome: 'Forma Grande', usi: 1, dettaglio: 'Azione bonus: diventi Grande per 10 minuti, vantaggio alle prove di Forza, velocità +3 m',
+          recupero: [{ riposo: 'lungo', quanti: 'tutti' }], srd: { pagina: 86 } } }] }] },
       { id: 'powerful-build', nome: 'Costituzione robusta', nomeEn: 'Powerful Build', livello: 1, srd: { pagina: 86 }, effetti: [{ tipo: 'nota', testo: 'Vantaggio per liberarsi da Afferrato; conti come una taglia più grande per il carico' }] },
     ],
   },
@@ -146,9 +164,9 @@ export const SPECIE: Record<string, Specie> = {
   tiefling: {
     id: 'tiefling', nome: 'Tiefling', nomeEn: 'Tiefling', srd: { pagina: 86 }, taglie: ['media', 'piccola'], velocita: 30,
     lignaggi: { scelta: 'tiefling.eredita', srd: { pagina: 86 }, opzioni: [
-      tieflingLegacy('abyssal', 'Abissale', 'Abyssal', 'veleno', 'poison-spray'),
-      tieflingLegacy('chthonic', 'Ctonio', 'Chthonic', 'necrotico', 'chill-touch'),
-      tieflingLegacy('infernal', 'Infernale', 'Infernal', 'fuoco', 'fire-bolt'),
+      tieflingLegacy('abyssal', 'Abissale', 'Abyssal', 'veleno', 'poison-spray', 'ray-of-sickness', 'hold-person'),
+      tieflingLegacy('chthonic', 'Ctonio', 'Chthonic', 'necrotico', 'chill-touch', 'false-life', 'ray-of-enfeeblement'),
+      tieflingLegacy('infernal', 'Infernale', 'Infernal', 'fuoco', 'fire-bolt', 'hellish-rebuke', 'darkness'),
     ] },
     tratti: [
       { id: 'tiefling-darkvision', nome: 'Scurovisione', nomeEn: 'Darkvision', livello: 1, srd: { pagina: 86 }, effetti: [scuro(60)] },

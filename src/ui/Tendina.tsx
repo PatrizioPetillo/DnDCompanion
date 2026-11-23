@@ -2,14 +2,15 @@
 // Le opzioni non valide restano visibili ma spente, con il motivo tra parentesi.
 import type { Opzione } from '../creazione/opzioni';
 
-export function Tendina({ etichetta, valore, opzioni, gruppi, cambia }: {
+export function Tendina({ etichetta, valore, opzioni, gruppi, cambia, facoltativa }: {
   etichetta: string;
   valore: string;
   opzioni: Opzione[];
   gruppi?: { titolo: string; opzioni: Opzione[] }[];
   cambia: (id: string) => void;
+  facoltativa?: boolean;   // vuota non è «da fare»: niente evidenziazione, e la voce vuota dice «Niente»
 }) {
-  const vuota = !valore;
+  const vuota = !valore && !facoltativa;
   const voce = (o: Opzione) => (
     <option key={o.id} value={o.id} disabled={o.disattivata}>{o.nome}{o.motivo ? ` (${o.motivo})` : ''}</option>
   );
@@ -21,7 +22,7 @@ export function Tendina({ etichetta, valore, opzioni, gruppi, cambia }: {
         onChange={(e) => cambia(e.target.value)}
         className={`h-12 w-full rounded-lg border px-3 text-base text-testo ${vuota ? 'border-attenzione bg-attenzione/10' : 'border-bordo bg-sfondo'}`}
       >
-        <option value="">Scegli…</option>
+        <option value="">{facoltativa ? 'Niente' : 'Scegli…'}</option>
         {opzioni.map(voce)}
         {gruppi?.map((g) => <optgroup key={g.titolo} label={g.titolo}>{g.opzioni.map(voce)}</optgroup>)}
       </select>

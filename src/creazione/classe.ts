@@ -4,6 +4,7 @@
 import { DATI } from '../regole';
 import type { Dati } from '../regole/dati';
 import { ABILITA, ARMI, NOME_LINGUA, STRUMENTI_ARTIGIANO, STRUMENTI_MUSICALI } from '../regole/dati/base';
+import { LIVELLO_SUPPLICA, REQUISITO_SUPPLICA } from '../regole/dati/classi';
 import type { Id, Scelta } from '../regole/tipi';
 import type { Opzione } from './opzioni';
 import type { Bozza } from './percorso';
@@ -15,7 +16,12 @@ const NOMI_OPZIONI: Record<Id, string> = {
   'pact-of-the-chain': 'Patto della catena', 'pact-of-the-blade': 'Patto della lama', 'pact-of-the-tome': 'Patto del tomo',
   // 2° livello (23/11)
   'agonizing-blast': 'Deflagrazione agonizzante', 'devils-sight': 'Vista del diavolo', 'eldritch-spear': 'Lancia occulta',
-  'fiendish-vigor': 'Vigore immondo', 'mask-of-many-faces': 'Maschera dai molti volti', 'misty-visions': 'Visioni nebbiose',
+  'fiendish-vigor': 'Vigore immondo', 'mask-of-many-faces': 'Maschera dei molti volti', 'misty-visions': 'Visioni velate',
+  'otherworldly-leap': 'Balzo ultraterreno', 'repelling-blast': 'Deflagrazione respingente', 'lessons-of-the-first-ones': 'Conoscenze degli Antichi',
+  // 5° livello (23/11, nomi dell'SRD 5.2.1 p. 88-90)
+  'ascendant-step': 'Passo ascendente', 'gaze-of-two-minds': 'Sguardo delle due menti', 'gift-of-the-depths': 'Dono degli abissi',
+  'master-of-myriad-forms': 'Maestro di mille forme', 'one-with-shadows': 'Tutt\'uno con le ombre', 'eldritch-smite': 'Punizione occulta',
+  'thirsting-blade': 'Lama assetata', 'investment-of-the-chain-master': 'Investitura del Signore delle Catene',
   'careful-spell': 'Incantesimo cauto', 'distant-spell': 'Incantesimo distante', 'empowered-spell': 'Incantesimo potenziato',
   'extended-spell': 'Incantesimo esteso', 'heightened-spell': 'Incantesimo intensificato', 'quickened-spell': 'Incantesimo rapido',
   'seeking-spell': 'Incantesimo cercante', 'subtle-spell': 'Incantesimo sottile', 'transmuted-spell': 'Incantesimo trasmutato',
@@ -28,6 +34,8 @@ const NOMI_OPZIONI: Record<Id, string> = {
   'elk': 'Alce', 'baboon': 'Babbuino', 'camel': 'Cammello', 'goat': 'Capra', 'riding-horse': 'Cavallo da galoppo', 'draft-horse': 'Cavallo da tiro', 'seahorse': 'Cavalluccio marino', 'boar': 'Cinghiale', 'deer': 'Daino', 'weasel': 'Faina', 'giant-weasel': 'Faina gigante', 'cat': 'Gatto', 'crab': 'Granchio', 'giant-crab': 'Granchio gigante', 'hyena': 'Iena', 'lizard': 'Lucertola', 'giant-lizard': 'Lucertola gigante', 'wolf': 'Lupo', 'mastiff': 'Mastino', 'giant-centipede': 'Millepiedi gigante', 'mule': 'Mulo', 'panther': 'Pantera', 'piovra': 'Piovra', 'piranha': 'Piranha', 'pony': 'Pony', 'spider': 'Ragno', 'giant-wolf-spider': 'Ragno lupo gigante', 'frog': 'Rana', 'giant-frog': 'Rana gigante', 'giant-fire-beetle': 'Scarabeo di fuoco gigante', 'jackal': 'Sciacallo', 'scorpion': 'Scorpione', 'constrictor-snake': 'Serpente stritolatore', 'venomous-snake': 'Serpente velenoso', 'giant-venomous-snake': 'Serpente velenoso gigante', 'badger': 'Tasso', 'giant-badger': 'Tasso gigante', 'rat': 'Topo', 'giant-rat': 'Topo gigante',
 };
 const NON_QUI = new Set(['abilita', 'maestria', 'trucchetto', 'incantesimo']);
+
+export const nomeOpzione = (o: Id) => NOMI_OPZIONI[o] ?? o;
 
 export function nome(s: Scelta, o: Id, d: Dati): string {
   if (s.tipo === 'maestriaArma') return ARMI[o] ? `${ARMI[o].nome} · ${ARMI[o].padronanza}` : o;
@@ -52,15 +60,21 @@ export function scelteDiClasse(b: Bozza, d: Dati = DATI, soloLivello?: number): 
     // le abilità di classe dal 3° livello (Conoscenza primordiale, Competenze bonus) qui, quando si crea a un livello alto;
     // in «Sali di livello» le gestisce nuovo-livello.ts
     if (NON_QUI.has(s.tipo) && !(s.tipo === 'abilita' && f.livello > 1 && !soloLivello)) continue;
-    const ids = s.opzioni ?? (s.tipo === 'abilita' ? Object.keys(ABILITA) : null) ?? (s.filtro && 'categoriaTalento' in s.filtro
+    let ids = s.opzioni ?? (s.tipo === 'abilita' ? Object.keys(ABILITA) : null) ?? (s.filtro && 'categoriaTalento' in s.filtro
       ? Object.values(d.talenti).filter((t) => t.categoria === (s.filtro as { categoriaTalento: string }).categoriaTalento).map((t) => t.id) : []);
+    // Suppliche: nella tendina di ogni livello quelle disponibili a quel livello (p. 72)
+    if (s.id.startsWith('warlock.suppliche')) ids = ids.filter((o) => (LIVELLO_SUPPLICA[o] ?? 1) <= f.livello);
     out.push({
       // Il titolo è il nome del privilegio, tranne quando la scelta non è il privilegio stesso: gli strumenti del bardo
       // stanno dentro «Incantesimi» (SRD p. 31-32) e non vanno chiamati così (segnalato da Patrizio il 20/11)
       id: s.id, titolo: s.tipo === 'strumento' ? (ids.every((o) => o in STRUMENTI_MUSICALI) ? 'Strumento musicale' : 'Strumento') : f.nome,
       quantita: s.quantita, feature: f.id,
       opzioni: ids.map((o) => {
-        const motivo = s.tipo === 'lingua' && origine.includes(o) ? 'la conosci già' : undefined;
+        const altre = s.id.startsWith('warlock.suppliche') ? Object.entries(b.scelte).filter(([k]) => k.startsWith('warlock.suppliche') && k !== s.id).flatMap(([, v]) => v) : [];
+        const motivo = s.tipo === 'lingua' && origine.includes(o) ? 'la conosci già'
+          : altre.includes(o) ? 'ce l\'hai già'
+          : REQUISITO_SUPPLICA[o] && !Object.entries(b.scelte).some(([k, v]) => k.startsWith('warlock.suppliche') && v.includes(REQUISITO_SUPPLICA[o])) ? (REQUISITO_SUPPLICA[o] === 'pact-of-the-blade' ? 'serve il Patto della lama' : 'serve il Patto della catena')
+          : undefined;
         return { id: o, nome: nome(s, o, d), disattivata: !!motivo, ...(motivo ? { motivo } : {}) };
       }),
     });

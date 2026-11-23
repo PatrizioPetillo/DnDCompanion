@@ -12,7 +12,9 @@ const SCURO = (m: string) => `Entro ${m} vedi nella luce fioca come in piena luc
 
 // Una riga per tratto, per id (gli id della Scurovisione cambiano per specie: la distanza è diversa)
 const TRATTI: Record<Id, string> = {
-  'breath-weapon': 'Quando fai l\'azione Attacco puoi sostituire un attacco con un soffio: un cono di 4,5 m o una linea di 9 m (larga 1,5 m), a tua scelta. Chi è nell\'area fa un tiro salvezza su Destrezza (CD 8 + Costituzione + competenza): subisce 1d10 danni del tipo del tuo antenato, la metà se lo supera. Usi pari alla competenza, tornano con un riposo lungo.',
+  'draconic-flight': 'Dal 5° livello: con un\'Azione bonus ti spuntano ali spettrali e voli alla tua velocità per 10 minuti. Una volta per riposo lungo.',
+  'large-form': 'Dal 5° livello: con un\'Azione bonus diventi di taglia Grande per 10 minuti, con vantaggio alle prove di Forza e velocità +3 m. Una volta per riposo lungo.',
+  'breath-weapon': 'Quando fai l\'azione Attacco puoi sostituire un attacco con un soffio: un cono di 4,5 m o una linea di 9 m (larga 1,5 m), a tua scelta. Chi è nell\'area fa un tiro salvezza su Destrezza (CD 8 + Costituzione + competenza): subisce 1d10 danni del tipo del tuo antenato (2d10 dal 5° livello), la metà se lo supera. Usi pari alla competenza, tornano con un riposo lungo.',
   'dragonborn-darkvision': SCURO('18 m'),
   'dwarf-darkvision': SCURO('36 m'),
   'dwarven-resilience': 'Resistenza ai danni da veleno, e vantaggio ai tiri salvezza per evitare o far finire la condizione Avvelenato.',

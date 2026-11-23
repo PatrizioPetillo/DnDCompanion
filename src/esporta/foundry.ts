@@ -165,7 +165,7 @@ export function attoreFoundry(pg: Bozza, dati: DatiFoundry, opzioni: { ora?: Dat
   const armatura = s.ca.indossata, scudo = s.ca.scudo;
   for (const v of s.inventario) {
     const rif = ix.oggetto[v.oggetto];
-    if (!rif) { oggetti.push({ _id: nuovoId(), name: v.nome, type: 'loot', system: { quantity: v.quantita, description: { value: '<p>Dalla scheda di Companion B20</p>' } } } as Doc); continue; }
+    if (!rif) { oggetti.push({ _id: nuovoId(), name: v.nome, type: 'loot', system: { quantity: v.quantita, description: { value: '<p>Dalla scheda di Companion DomusDraconis</p>' } } } as Doc); continue; }
     metti(rif.doc, (d) => {
       if (rif.nome) d.name = rif.nome;
       d.system.quantity = v.quantita;
@@ -234,7 +234,7 @@ export function attoreFoundry(pg: Bozza, dati: DatiFoundry, opzioni: { ora?: Dat
     prototypeToken: { name: pg.nome?.trim() || 'Senza nome', actorLink: true, disposition: 1, sight: { enabled: true } },
     items: oggetti,
     effects: [],
-    flags: { 'companion-b20': { esportatoIl: (opzioni.ora ?? new Date()).toISOString(), app: 'Companion B20' } },
+    flags: { 'companion-b20': { esportatoIl: (opzioni.ora ?? new Date()).toISOString(), app: 'Companion DomusDraconis' } },
     _stats: { systemId: 'dnd5e', systemVersion: dati.sistema, coreVersion: dati.foundry.minimum },
   };
   return { attore, avvisi };

@@ -24,6 +24,7 @@ import { mandaLink, scaricaCopia, scaricaFoundry, scaricaPdf } from './ui/esport
 import { Compendio } from './ui/Compendio';
 import { Home } from './ui/Home';
 import { Informazioni } from './ui/Informazioni';
+import { SEGNALAZIONI_URL } from './licenza';
 import { PassoBackground } from './ui/PassoBackground';
 import { PassoCaratteristiche } from './ui/PassoCaratteristiche';
 import { PassoClasse } from './ui/PassoClasse';
@@ -32,6 +33,8 @@ import { PassoMagia } from './ui/PassoMagia';
 import { PassoPersonaggio } from './ui/PassoPersonaggio';
 import { PassoRiepilogo } from './ui/PassoRiepilogo';
 import { PassoSpecie } from './ui/PassoSpecie';
+import { creaPredefinito, type Predefinito } from './creazione/predefiniti';
+import { ritrattoPronto } from './ui/Pronti';
 import { Personaggi } from './ui/Personaggi';
 import { chiediMemoriaPersistente, useArchivio, useTema } from './ui/salvataggio';
 
@@ -84,6 +87,13 @@ export default function App() {
   const modifica = (m: Partial<Omit<PersonaggioSalvato, 'id' | 'creato'>>) =>
     setArchivio((a: Archivio) => (a.attivo ? aggiorna(a, a.attivo, m) : a));
   const setBozza = (b: Bozza) => modifica({ bozza: b });
+
+  // Personaggio pronto (idea 12, 23/11): già salvato, al livello scelto o a quello del tavolo; il ritratto se c'è il file
+  const creaPronto = async (p: Predefinito, livello: number, t?: Tavolo) => {
+    const ritratto = await ritrattoPronto(p.id);
+    setArchivio((a: Archivio) => nuovo(t ? unisciElementi(a, t.elementi) : a, creaPredefinito(p, livello, new Date(), DATI, t), new Date(), ritratto).archivio);
+    setVista('riepilogo'); window.scrollTo(0, 0);
+  };
 
   // Un personaggio che si apre: se è pronto si va alla scheda, altrimenti al primo passo da fare
   const apri = (id: string, a: Archivio = archivio) => {
@@ -190,7 +200,7 @@ export default function App() {
             <IconaCasa />
           </button>
           <span className="flex-1 truncate text-center font-titolo text-lg text-accento">
-            {corrente && (inPasso || vistaReale === 'indice') && !ricevuta ? (bozza.nome.trim() || 'Nuovo personaggio') : 'Companion B20'}
+            {corrente && (inPasso || vistaReale === 'indice') && !ricevuta ? (bozza.nome.trim() || 'Nuovo personaggio') : 'Companion'}
           </span>
           <button ref={menuBottone} onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu} aria-haspopup="menu"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-bordo text-testo-2">
@@ -246,7 +256,8 @@ export default function App() {
                 </span>
               </VoceMenu>
               <VoceMenu onClick={() => { setMenu(false); setCompendio(true); }}>Elenco degli incantesimi</VoceMenu>
-              <VoceMenu onClick={() => { setRicevuta(null); setVista('informazioni'); }}>Informazioni e crediti</VoceMenu>
+              <VoceMenu onClick={() => { setRicevuta(null); setVista('informazioni'); }}>Informazioni e privacy</VoceMenu>
+              {SEGNALAZIONI_URL && <VoceMenu onClick={() => { setMenu(false); window.open(SEGNALAZIONI_URL, '_blank', 'noopener'); }}>Segnala un problema</VoceMenu>}
             </div>
           </>
         )}
@@ -294,6 +305,7 @@ export default function App() {
               setArchivio(nuovo(unisciElementi(archivio, t.elementi), { ...bozzaVuota(), livello: t.livello, tavolo: t }).archivio);   // nasce al livello del tavolo (23/11)
               setVista('classe');
             }}
+            pronto={(p) => { const t = tavoloRicevuto; setTavoloRicevuto(null); void creaPronto(p, t.livello, t); }}
             usa={(id) => {
               const t = tavoloRicevuto;
               const p = archivio.personaggi.find((x) => x.id === id);
@@ -361,6 +373,7 @@ export default function App() {
             archivio={archivio}
             apri={(id) => apri(id)}
             crea={() => { setArchivio(nuovo(archivio).archivio); setVista('classe'); }}
+            creaPronto={(p, livello) => creaPronto(p, livello)}
             duplica={(id) => setArchivio(duplica(archivio, id).archivio)}
             elimina={(id) => setArchivio(elimina(archivio, id))}
             scaricaCopia={() => {

@@ -1,4 +1,4 @@
-# Illustrazioni di Companion B20
+# Illustrazioni di Companion DomusDraconis
 
 Una per ogni classe, specie e background, dipinte nello stile DomusDraconis. L'app le usa:
 - come **fascia** in cima alle schede di scelta (Classe, Background, Specie) e al Riepilogo;
@@ -29,3 +29,9 @@ Stessa frase di stile per tutte e 25, cambia solo il soggetto: così sembrano un
 
 Esempi di soggetto: «a young human wizard holding a glowing staff and an open spellbook» (classi/wizard),
 «a dwarf with braided beard in a torchlit mine» (specie/dwarf), «an acolyte lighting candles in a temple» (background/acolyte).
+
+## Personaggi pronti (23/11)
+predefiniti/brannoc.webp · serafina · edda · ilvaren · marzio · ushra · vharok · tamsin · nyssa · livia · fenwick · elarion
+**Formato diverso dagli altri (scelta di Patrizio, 23/11): figura intera, in verticale, 800 × 1200 (2:3)**, WebP ≤ 100 kB.
+La testa in alto, al centro, nel primo quinto dell'immagine: l'avatar rotondo prende quella parte; aprendo il ritratto si vede tutta la figura.
+Prompt nel file «App PG B20 - Prompt personaggi pronti» del progetto.

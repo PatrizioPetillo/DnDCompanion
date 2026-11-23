@@ -2,7 +2,7 @@
 // e/o i danni o le cure. La finestra dei dadi (ui/Tiro.tsx) mostra e tira; qui solo i dati, per i test.
 import { DATI } from '../regole';
 import { NOME_CAR } from '../regole/dati/base';
-import { DADI_INCANTESIMI } from '../regole/dati/dadi-incantesimi';
+import { dadiAlLivello, raggi } from '../regole/dati/dadi-incantesimi';
 import type { Attacco, Car, Id, MagiaCalcolata } from '../regole/tipi';
 import type { GenereTiro } from './condizioni';
 import { conSlot, leggi, scrivi, type Espressione } from './dadi';
@@ -35,13 +35,17 @@ export function daAttacco(a: Attacco): RichiestaTiro {
 
 // Un incantesimo con i suoi dadi: trucchetto o di 1° con lo slot scelto (livelloSlot ≥ livello dell'incantesimo)
 // bonusDanni: aggiunte ai danni di un trucchetto (Deflagrazione agonizzante, 23/11)
-export function daIncantesimo(id: Id, m: MagiaCalcolata, modCar: number, livelloSlot?: number, bonusDanni = 0): RichiestaTiro | null {
+// livelloPg: livello del personaggio, per il Trucchetto potenziato (5°, 11°, 17°)
+export function daIncantesimo(id: Id, m: MagiaCalcolata, modCar: number, livelloSlot?: number, bonusDanni = 0, livelloPg = 1): RichiestaTiro | null {
   const i = DATI.incantesimi[id];
-  const d = DADI_INCANTESIMI[id];
+  const d = dadiAlLivello(id, livelloPg);
   if (!i || !d) return null;
   const sopra = Math.max(0, (livelloSlot ?? i.livello) - i.livello);
   const danni: Danni[] = [];
   let nota = d.nota;
+  // Deflagrazione occulta: un tiro per colpire per raggio (2 raggi dal 5° livello)
+  if (id === 'scorching-ray') nota = `${3 + sopra} raggi: questo è un raggio, tira di nuovo per ognuno degli altri (anche su bersagli diversi).`;
+  if (raggi(id, livelloPg) > 1) nota = `${raggi(id, livelloPg)} raggi: questo è un raggio, tira di nuovo per ognuno degli altri (anche su bersagli diversi).`;
   if (id === 'magic-missile') {
     // Ogni dardo fa 1d4 + 1; uno in più per ogni livello di slot sopra il 1° (SRD 5.2)
     danni.push({ etichetta: 'Ogni dardo', espressione: leggi('1d4 + 1')!, tipo: d.tipo, ripeti: 3 + sopra });

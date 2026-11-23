@@ -163,8 +163,8 @@ export async function creaPdf(b: Bozza, oggi = new Date(), immagini: ImmaginiPdf
   doc.registerFontkit(fontkit);
   doc.setTitle(perPdf(r.testata.nome));
   doc.setSubject(perPdf(r.testata.descrizione));
-  doc.setCreator('Companion B20');
-  doc.setProducer('Companion B20 (pdf-lib)');
+  doc.setCreator('Companion DomusDraconis');
+  doc.setProducer('Companion DomusDraconis (pdf-lib)');
   const f: Font = {
     r: await doc.embedFont(StandardFonts.Helvetica), b: await doc.embedFont(StandardFonts.HelveticaBold),
     t: fontTitoli ? await doc.embedFont(fontTitoli, { subset: true }) : await doc.embedFont(StandardFonts.TimesRomanBold),

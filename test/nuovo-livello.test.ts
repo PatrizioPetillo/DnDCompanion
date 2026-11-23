@@ -3,7 +3,8 @@
 import { describe, expect, it } from 'vitest';
 import { bozzaNuova, completo, nuovoLivello, type Scelte } from '../src/creazione/nuovo-livello';
 import { comePersonaggio, type Bozza } from '../src/creazione/percorso';
-import { calcolaScheda } from '../src/regole';
+import { calcolaScheda, DATI } from '../src/regole';
+const DATI_LIVELLO = (id: string) => DATI.incantesimi[id]?.livello;
 import { tavoloVuoto } from '../src/regole/tavolo';
 import * as P from './personaggi';
 
@@ -143,5 +144,75 @@ describe('Sali di livello: dal 3° al 4° (talento)', () => {
     const t = nuovoLivello(salvato(L.L3_BARBARO), {})!.capacita.flatMap((c) => c.tendine).find((x) => x.chiave === 'scelta:barbarian.padronanza-4')!;
     expect(t.opzioni.find((o) => o.id === 'greataxe')?.motivo).toBe('la padroneggi già');
     expect(t.opzioni.find((o) => o.id === 'javelin')?.disattivata).toBe(false);
+  });
+});
+
+describe('Sali di livello: dal 4° al 5°', () => {
+  it('tutti i personaggi di prova al 4° salgono al 5° senza scelte mancanti né errori', async () => {
+    const L = await import('./livelli-prova');
+    for (const [nome, pg] of Object.entries(L).filter(([k]) => k.startsWith('L4_'))) {
+      const b = salvato(pg as object);
+      const s = riempi(b);
+      expect(completo(b, s, null, false), nome).toBe(true);
+      const nuova = bozzaNuova(b, s, null);
+      expect(nuova.livello, nome).toBe(5);
+      expect(mancanti(nuova), nome).toEqual([]);
+      expect(calcolaScheda(comePersonaggio(nuova)!).avvisi.filter((a) => a.livello === 'errore' && !a.accettato).map((a) => a.id), nome).toEqual([]);
+    }
+  });
+  it('«Cresce da solo»: competenza, Attacco furtivo, Ispirazione d8, sempre preparati nuovi; suppliche: già prese e senza patto spente', async () => {
+    const L = await import('./livelli-prova');
+    expect(nuovoLivello(salvato(L.L4_LADRO), {})!.cresce).toEqual(expect.arrayContaining(['Bonus di competenza: +2 → +3', 'Attacco furtivo: 2d6 → 3d6']));
+    expect(nuovoLivello(salvato(L.L4_BARDO), {})!.cresce).toContain('Ispirazione bardica: d6 → d8');
+    expect(nuovoLivello(salvato(L.L4_PALADINO), {})!.cresce.find((c) => c.startsWith('Sempre preparati'))).toMatch(/Aiuto/);
+    const t = nuovoLivello(salvato(L.L4_WARLOCK), {})!.capacita.flatMap((c) => c.tendine).find((x) => x.chiave === 'scelta:warlock.suppliche-5')!;
+    expect(t.opzioni.find((o) => o.id === 'agonizing-blast')?.motivo).toBe('ce l\'hai già');
+    expect(t.opzioni.find((o) => o.id === 'thirsting-blade')?.motivo).toBe('serve il Patto della lama');
+    expect(t.opzioni.find((o) => o.id === 'one-with-shadows')?.disattivata).toBe(false);
+  });
+});
+
+describe('Sali di livello: cambi facoltativi (23/11)', () => {
+  it('warlock: cambia Blocca persone con Invisibilità, come nel file del 5° livello; niente avviso', async () => {
+    const L = await import('./livelli-prova');
+    const b = salvato(L.L4_WARLOCK);
+    const r = nuovoLivello(b, {})!;
+    expect(r.cambi.map((t) => t.chiave)).toEqual(expect.arrayContaining(['cambio:warlock:trucchetto', 'cambio:warlock:incantesimo', 'cambio:suppliche']));
+    const s = { ...riempi(b, { 'scelta:warlock.suppliche-5': ['one-with-shadows', 'repelling-blast'], 'preparati:warlock': ['counterspell'] }),
+      'cambio:warlock:incantesimo': ['prep:warlock|hold-person', 'invisibility'] };
+    expect(completo(b, s, null, false)).toBe(true);
+    const nuova = bozzaNuova(b, s, null);
+    expect(nuova.incantesimi.preparati.warlock).toEqual(L.L5_WARLOCK.incantesimi.preparati.warlock);
+    expect(calcolaScheda(comePersonaggio(nuova)!).avvisi.some((a) => a.id.startsWith('gia-sempre-preparato:hold-person'))).toBe(false);
+  });
+  it('un cambio a metà blocca la conferma; le opzioni nuove spengono ciò che conosci', async () => {
+    const L = await import('./livelli-prova');
+    const b = salvato(L.L4_BARDO);
+    const s = { ...riempi(b), 'cambio:bard:trucchetto': ['scelta:bard.trucchetti|vicious-mockery', ''] };
+    expect(completo(b, s, null, false)).toBe(false);
+    const t = nuovoLivello(b, s)!.cambi.find((x) => x.chiave === 'cambio:bard:trucchetto')!;
+    expect(t.opzioniNuove!.find((o) => o.id === 'mage-hand')?.motivo).toBe('lo conosci già');
+    expect(t.opzioniNuove!.find((o) => o.id === 'vicious-mockery')?.motivo).toBe('è quello che togli');
+    const fatto = { ...s, 'cambio:bard:trucchetto': ['scelta:bard.trucchetti|vicious-mockery', 'light'] };
+    expect(completo(b, fatto, null, false)).toBe(true);
+    expect(bozzaNuova(b, fatto, null).scelte['bard.trucchetti']).toContain('light');
+  });
+  it('supplica: una del 1° livello con una del 5°, accettata dal motore; Iniziato alla magia con uno dello stesso livello', async () => {
+    const L = await import('./livelli-prova');
+    const b = salvato(L.L4_WARLOCK);
+    const s = { ...riempi(b), 'cambio:suppliche': ['scelta:warlock.suppliche|armor-of-shadows', 'gaze-of-two-minds'] };
+    const nuova = bozzaNuova(b, s, null);
+    expect(nuova.scelte['warlock.suppliche']).toEqual(['gaze-of-two-minds']);
+    expect(mancanti(nuova)).toEqual([]);
+    expect(calcolaScheda(comePersonaggio(nuova)!).avvisi.filter((a) => a.livello === 'errore' && !a.accettato)).toEqual([]);
+    const t = (x: Scelte) => nuovoLivello(salvato(L.L4_TRAVIS), x)!.cambi.find((c) => c.chiave === 'cambio:magic-initiate:incantesimo')!;
+    expect(t({}).opzioniNuove).toEqual([]);
+    const dopo = t({ 'cambio:magic-initiate:incantesimo': ['scelta:magic-initiate.incantesimo1|healing-word', ''] });
+    expect(dopo.opzioniNuove!.every((o) => o.id === 'healing-word' || DATI_LIVELLO(o.id) === 1)).toBe(true);
+  });
+  it('guerriero: lo stile di combattimento si cambia con un altro talento di stile', async () => {
+    const L = await import('./livelli-prova');
+    const t = nuovoLivello(salvato(L.L4_GUERRIERO), {})!.cambi.find((c) => c.chiave === 'cambio:stile')!;
+    expect(t.opzioniNuove!.map((o) => o.id)).toEqual(expect.arrayContaining(['archery', 'great-weapon-fighting']));
   });
 });

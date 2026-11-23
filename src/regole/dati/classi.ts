@@ -404,9 +404,17 @@ const SUPPLICHE_2: Record<string, Effetto[]> = {
   'devils-sight': [{ tipo: 'nota', testo: 'Vista del diavolo: vedi normalmente nella luce fioca e nell\'oscurità, anche magica, entro 36 m (SRD p. 72)' }],
   'eldritch-spear': [{ tipo: 'nota', testo: 'Lancia occulta: la gittata di Deflagrazione occulta aumenta di 9 m per livello da warlock (SRD p. 72)' }],
   'fiendish-vigor': [{ tipo: 'nota', testo: 'Vigore immondo: lanci Vita falsata su te stesso senza slot; i PF temporanei sono il massimo del dado (SRD p. 72)' }],
-  'mask-of-many-faces': [{ tipo: 'nota', testo: 'Maschera dai molti volti: lanci Camuffare se stessi senza slot (SRD p. 73)' }],
-  'misty-visions': [{ tipo: 'nota', testo: 'Visioni nebbiose: lanci Immagine silenziosa senza slot (SRD p. 73)' }],
+  'mask-of-many-faces': [{ tipo: 'nota', testo: 'Maschera dei molti volti: lanci Camuffare se stessi senza slot (SRD p. 73)' }],
+  'misty-visions': [{ tipo: 'nota', testo: 'Visioni velate: lanci Immagine silenziosa senza slot (SRD p. 73)' }],
+  // Le altre del 2° livello (aggiunte il 23/11 con il 5°: «tutte quelle dell'SRD fino al 5° livello»)
+  'otherworldly-leap': [{ tipo: 'nota', testo: 'Balzo ultraterreno: lanci Salto su te stesso senza slot (SRD p. 74)' }],
+  'repelling-blast': [{ tipo: 'nota', testo: 'Deflagrazione respingente: quando colpisci una creatura Grande o più piccola con un trucchetto da warlock che fa danni, puoi spingerla di 3 m (SRD p. 74)' }],
+  'lessons-of-the-first-ones': [
+    { tipo: 'scelta', scelta: { id: 'lessons-of-the-first-ones.talento', tipo: 'talento', quantita: 1, filtro: { categoriaTalento: 'origine' }, srd: { pagina: 73 } } },
+    { tipo: 'talento', talento: { daScelta: 'lessons-of-the-first-ones.talento' } }],
 };
+// Suppliche con un patto come requisito (p. 73-74)
+export const REQUISITO_SUPPLICA: Record<string, string> = { 'eldritch-smite': 'pact-of-the-blade', 'thirsting-blade': 'pact-of-the-blade', 'investment-of-the-chain-master': 'pact-of-the-chain' };
 
 const LIVELLO_2: Record<string, Feature[]> = {
   barbarian: [
@@ -614,16 +622,96 @@ const LIVELLO_4: Record<string, () => Feature[]> = {
 };
 
 // Tabelle delle classi fino al 3° livello: incantesimi preparati, slot, patto (p. 31, 36, 41, 53, 57, 64, 71, 77)
-const PREPARATI: Record<string, number[]> = { bard: [4, 5, 6, 7], cleric: [4, 5, 6, 7], druid: [4, 5, 6, 7], paladin: [2, 3, 4, 5], ranger: [2, 3, 4, 5], sorcerer: [2, 4, 6, 7], warlock: [2, 3, 4, 5], wizard: [4, 5, 6, 7] };
+const PREPARATI: Record<string, number[]> = { bard: [4, 5, 6, 7, 9], cleric: [4, 5, 6, 7, 9], druid: [4, 5, 6, 7, 9], paladin: [2, 3, 4, 5, 6], ranger: [2, 3, 4, 5, 6], sorcerer: [2, 4, 6, 7, 9], warlock: [2, 3, 4, 5, 6], wizard: [4, 5, 6, 7, 9] };
 // Trucchetti conosciuti per livello (tabelle delle classi)
-const TRUCCHETTI: Record<string, number[]> = { bard: [2, 2, 2, 3], cleric: [3, 3, 3, 4], druid: [2, 2, 2, 3], sorcerer: [4, 4, 4, 5], warlock: [2, 2, 2, 3], wizard: [3, 3, 3, 4] };
+const TRUCCHETTI: Record<string, number[]> = { bard: [2, 2, 2, 3, 3], cleric: [3, 3, 3, 4, 4], druid: [2, 2, 2, 3, 3], sorcerer: [4, 4, 4, 5, 5], warlock: [2, 2, 2, 3, 3], wizard: [3, 3, 3, 4, 4] };
+// ───────── 5° livello (23/11/2026): valori attesi approvati da Patrizio (file «Valori attesi 5° livello») ─────────
+const attaccoExtra = (pagina: number): Feature => ({ id: 'extra-attack', nome: 'Attacco extra', nomeEn: 'Extra Attack', livello: 5, srd: { pagina }, effetti: [
+  { tipo: 'valoreClasse', id: 'attacchi', nome: 'Attacchi con l\'azione Attacco', valore: '2', srd: { pagina } }] });
+const SUPPLICHE_5 = (): Record<string, Effetto[]> => {
+  const l1 = CLASSI.warlock.features.flatMap((f) => f.effetti).find((e) => e.tipo === 'opzioni' && e.scelta.id === 'warlock.suppliche');
+  const patti = l1 && l1.tipo === 'opzioni' ? Object.fromEntries(Object.entries(l1.effetti).filter(([k]) => k.startsWith('pact-of'))) : {};
+  const { 'armor-of-shadows': ombre, 'eldritch-mind': mente, ...altre2 } = SUPPLICHE_2;
+  return { 'armor-of-shadows': ombre, 'eldritch-mind': mente, ...patti, ...altre2,
+    'ascendant-step': [nota('Passo ascendente: lanci Levitazione su te stesso senza slot (SRD p. 72)')],
+    'gaze-of-two-minds': [nota('Sguardo delle due menti: con un\'Azione bonus tocchi una creatura consenziente e percepisci con i suoi sensi fino alla fine del tuo turno successivo; puoi lanciare incantesimi dal suo spazio (SRD p. 73)')],
+    'gift-of-the-depths': [nota('Dono degli abissi: respiri sott\'acqua e nuoti alla tua velocità; lanci Respirare sott\'acqua senza slot una volta per riposo lungo (SRD p. 73)')],
+    'master-of-myriad-forms': [nota('Maestro di mille forme: lanci Alterare se stessi senza slot (SRD p. 74)')],
+    'one-with-shadows': [nota('Tutt\'uno con le ombre: nella luce fioca o al buio lanci Invisibilità su te stesso senza slot (SRD p. 74)')],
+    'eldritch-smite': [nota('Punizione occulta: una volta per turno, colpendo con l\'arma del patto, spendi uno slot del patto per 1d8 danni da forza più 1d8 per livello dello slot; puoi buttare a terra un bersaglio Enorme o più piccolo (SRD p. 73)')],
+    'thirsting-blade': [nota('Lama assetata: Attacco extra con l\'arma del patto (2 attacchi con l\'azione Attacco) (SRD p. 74)')],
+    'investment-of-the-chain-master': [nota('Investitura del Signore delle Catene: il famiglio vola o nuota a 12 m, attacca con la tua Azione bonus, può fare danni necrotici o radiosi, usa la tua CD; con una Reazione gli dai resistenza ai danni (SRD p. 73)')],
+  };
+};
+const LIVELLO_5: Record<string, () => Feature[]> = {
+  barbarian: () => [attaccoExtra(29), { id: 'fast-movement', nome: 'Movimento veloce', nomeEn: 'Fast Movement', livello: 5, srd: { pagina: 29 }, effetti: [
+    { tipo: 'velocitaSenzaPesante', valore: 10, etichetta: 'Movimento veloce' }] }],
+  bard: () => [{ id: 'font-of-inspiration', nome: 'Fonte di ispirazione', nomeEn: 'Font of Inspiration', livello: 5, srd: { pagina: 33 }, effetti: [
+    nota('Recuperi tutta l\'Ispirazione bardica anche con un riposo breve; puoi spendere uno slot (senza azione) per recuperarne un uso (SRD p. 33)')] }],
+  cleric: () => [{ id: 'sear-undead', nome: 'Bruciare i non morti', nomeEn: 'Sear Undead', livello: 5, srd: { pagina: 37 }, effetti: [
+    nota('Quando usi Scacciare non morti tiri tanti d8 quanto il tuo modificatore di Saggezza (minimo 1): i non morti che falliscono il tiro salvezza subiscono quei danni radiosi (SRD p. 37)')] }],
+  druid: () => [{ id: 'wild-resurgence', nome: 'Rinascita selvatica', nomeEn: 'Wild Resurgence', livello: 5, srd: { pagina: 43 }, effetti: [
+    nota('Senza usi di Forma selvatica, una volta per turno ne recuperi uno spendendo uno slot; puoi spendere un uso per avere uno slot di 1° livello, una volta per riposo lungo (SRD p. 43)')] }],
+  fighter: () => [attaccoExtra(48), { id: 'tactical-shift', nome: 'Spostamento tattico', nomeEn: 'Tactical Shift', livello: 5, srd: { pagina: 48 }, effetti: [
+    nota('Quando usi Recuperare energie con un\'Azione bonus, ti muovi fino a metà velocità senza provocare attacchi di opportunità (SRD p. 48)')] }],
+  monk: () => [attaccoExtra(51), { id: 'stunning-strike', nome: 'Colpo stordente', nomeEn: 'Stunning Strike', livello: 5, srd: { pagina: 51 }, effetti: [
+    { tipo: 'valoreClasse', id: 'martial-arts-die', nome: 'Dado delle Arti marziali', valore: '1d8', srd: { pagina: 50 } },
+    nota('Una volta per turno, colpendo con un\'arma da monaco o un colpo senz\'armi, spendi 1 punto: TS su Costituzione contro la CD della concentrazione o stordito fino al tuo turno successivo; se riesce, velocità dimezzata e vantaggio al prossimo attacco contro di lui (SRD p. 51)')] }],
+  paladin: () => [attaccoExtra(54), { id: 'faithful-steed', nome: 'Fido destriero', nomeEn: 'Faithful Steed', livello: 5, srd: { pagina: 54 }, effetti: [
+    { tipo: 'magia', concessione: { id: 'faithful-steed', nome: 'Classe: Fido destriero', fonte: { tipo: 'classe', id: 'paladin' }, lista: 'paladin', caratteristica: 'CAR',
+      semprePreparati: ['find-steed'], lanciGratuiti: { incantesimi: ['find-steed'], usi: 1, recupero: 'lungo' }, puoUsareSlot: true, slot: 'normali', srd: { pagina: 54 } } }] }],
+  ranger: () => [attaccoExtra(59)],
+  rogue: () => [
+    { id: 'cunning-strike', nome: 'Colpo astuto', nomeEn: 'Cunning Strike', livello: 5, srd: { pagina: 62 }, effetti: [
+      { tipo: 'valoreClasse', id: 'sneak-attack', nome: 'Attacco furtivo', valore: '3d6', srd: { pagina: 62 } },
+      { tipo: 'cdSpeciale', id: 'cunning-strike', nome: 'Classe: Colpo astuto', caratteristica: 'DES', srd: { pagina: 62 } },
+      nota('Rinunci a dadi dell\'Attacco furtivo per un effetto: Veleno (1d6, TS su Costituzione o avvelenato 1 minuto; servono le sostanze da avvelenatore), Inciampo (1d6, TS su Destrezza o prono, bersaglio Grande o più piccolo), Ritirata (1d6, ti muovi di metà velocità senza attacchi di opportunità) (SRD p. 62)')] },
+    { id: 'uncanny-dodge', nome: 'Schivata prodigiosa', nomeEn: 'Uncanny Dodge', livello: 5, srd: { pagina: 63 }, effetti: [
+      nota('Reazione quando un attaccante che vedi ti colpisce: dimezzi i danni dell\'attacco (SRD p. 63)')] }],
+  sorcerer: () => [{ id: 'sorcerous-restoration', nome: 'Ripristino stregonesco', nomeEn: 'Sorcerous Restoration', livello: 5, srd: { pagina: 66 }, effetti: [
+    nota('Finito un riposo breve recuperi punti stregoneria fino a metà del livello da stregone (2 al 5°), una volta per riposo lungo (SRD p. 66)')] }],
+  warlock: () => [{ id: 'eldritch-invocations-5', nome: 'Suppliche occulte', nomeEn: 'Eldritch Invocations', livello: 5, srd: { pagina: 70 }, effetti: [
+    { tipo: 'opzioni', scelta: { id: 'warlock.suppliche-5', tipo: 'opzione', quantita: 2, opzioni: Object.keys(SUPPLICHE_5()), srd: { pagina: 72 } }, effetti: SUPPLICHE_5() }] }],
+  wizard: () => [
+    { id: 'memorize-spell', nome: 'Memorizzare incantesimi', nomeEn: 'Memorize Spell', livello: 5, srd: { pagina: 78 }, effetti: [
+      nota('Finito un riposo breve puoi cambiare un incantesimo preparato di 1° livello o più con un altro del libro (SRD p. 78)')] },
+    { id: 'evocation-savant-5', nome: 'Invocatore sapiente', nomeEn: 'Evocation Savant', livello: 5, srd: { pagina: 82 }, effetti: [
+      { tipo: 'libroExtra', quanti: 1, etichetta: 'Invocatore sapiente: un\'invocazione del nuovo livello di slot' }] }],
+};
+// Livello da warlock che serve per ogni supplica (p. 72-74). Tutte le tendine delle suppliche accettano tutte le suppliche:
+// il livello lo controlla il motore, così salendo di livello se ne può cambiare una con una di livello più alto (p. 71)
+export const LIVELLO_SUPPLICA: Record<string, number> = {
+  'armor-of-shadows': 1, 'eldritch-mind': 1, 'pact-of-the-chain': 1, 'pact-of-the-blade': 1, 'pact-of-the-tome': 1,
+  'agonizing-blast': 2, 'devils-sight': 2, 'eldritch-spear': 2, 'fiendish-vigor': 2, 'mask-of-many-faces': 2, 'misty-visions': 2,
+  'otherworldly-leap': 2, 'repelling-blast': 2, 'lessons-of-the-first-ones': 2,
+  'ascendant-step': 5, 'gaze-of-two-minds': 5, 'gift-of-the-depths': 5, 'master-of-myriad-forms': 5, 'one-with-shadows': 5,
+  'eldritch-smite': 5, 'thirsting-blade': 5, 'investment-of-the-chain-master': 5,
+};
+
+// Incantesimi di sottoclasse del 5° livello (p. 40, 46, 56, 69, 76)
+const SOTTOCLASSE_5: Record<string, string[]> = { 'life-domain': ['mass-healing-word', 'revivify'], 'oath-of-devotion': ['aid', 'zone-of-truth'],
+  'draconic-spells': ['fear', 'fly'], 'fiend-spells': ['fireball', 'stinking-cloud'] };
+const TERRE_5: Record<string, string> = { arid: 'fireball', polar: 'sleet-storm', temperate: 'lightning-bolt', tropical: 'stinking-cloud' };
+
 const SLOT: Record<string, Record<number, number[]>> = {
-  bard: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] }, cleric: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] }, druid: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] },
-  sorcerer: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] }, wizard: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3] },
-  paladin: { 1: [2], 2: [2], 3: [3], 4: [3] }, ranger: { 1: [2], 2: [2], 3: [3], 4: [3] },
+  bard: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3], 5: [4, 3, 2] }, cleric: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3], 5: [4, 3, 2] }, druid: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3], 5: [4, 3, 2] },
+  sorcerer: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3], 5: [4, 3, 2] }, wizard: { 1: [2], 2: [3], 3: [4, 2], 4: [4, 3], 5: [4, 3, 2] },
+  paladin: { 1: [2], 2: [2], 3: [3], 4: [3], 5: [4, 2] }, ranger: { 1: [2], 2: [2], 3: [3], 4: [3], 5: [4, 2] },
 };
 for (const [id, c] of Object.entries(CLASSI)) {
-  c.features.push(...(LIVELLO_2[id] ?? []), ...(LIVELLO_3[id] ?? []), ...(LIVELLO_4[id]?.() ?? []));
+  c.features.push(...(LIVELLO_2[id] ?? []), ...(LIVELLO_3[id] ?? []), ...(LIVELLO_4[id]?.() ?? []), ...(LIVELLO_5[id]?.() ?? []));
+  for (const f of c.features) for (const e of f.effetti) {
+    if (e.tipo === 'opzioni' && e.scelta.id.startsWith('warlock.suppliche')) { const tutte = SUPPLICHE_5(); e.effetti = tutte; e.scelta = { ...e.scelta, opzioni: Object.keys(tutte) }; }
+    if (e.tipo === 'magia' && SOTTOCLASSE_5[e.concessione.id]) e.concessione.semprePreparatiDal = { 5: SOTTOCLASSE_5[e.concessione.id] };
+    if (e.tipo === 'opzioni' && e.scelta.id === 'druid.terra') for (const [terra, eff] of Object.entries(e.effetti)) for (const x of eff)
+      if (x.tipo === 'magia') x.concessione.semprePreparatiDal = { 5: [TERRE_5[terra]] };
+    // Nemico prescelto: Marchio del cacciatore gratis 2 volte, 3 dal 5° livello (tabella p. 57)
+    if (e.tipo === 'magia' && e.concessione.lanciGratuiti && e.concessione.semprePreparati?.includes('hunters-mark')) e.concessione.lanciGratuiti.usi = { perLivelli: [2, 2, 2, 2, 3] };
+    if (e.tipo === 'risorsa' && e.risorsa.id === 'bardic-inspiration')
+      e.risorsa.dal = { 5: { dettaglio: 'd8', recupero: [{ riposo: 'breve', quanti: 'tutti' }, { riposo: 'lungo', quanti: 'tutti' }] } };   // Fonte di ispirazione (p. 33)
+    if (e.tipo === 'risorsa' && e.risorsa.id === 'wild-shape')
+      e.risorsa.dal = { 4: { dettaglio: 'azione bonus; 6 forme di GS fino a 1/2 senza volo; PF temporanei pari al livello da druido' } };
+  }
   if (SLOT[id]) c.slot = SLOT[id];
   for (const f of c.features) for (const e of f.effetti) if (e.tipo === 'magia' && e.concessione.fonte.tipo === 'classe' && e.concessione.id === id) {
     const conc: ConcessioneMagia = e.concessione;
@@ -632,12 +720,12 @@ for (const [id, c] of Object.entries(CLASSI)) {
     if (conc.trucchetti && TRUCCHETTI[id]) conc.trucchetti = { ...conc.trucchetti, quantita: { perLivelli: TRUCCHETTI[id] } };
   }
 }
-CLASSI.warlock.patto = { 1: { numero: 1, livello: 1 }, 2: { numero: 2, livello: 1 }, 3: { numero: 2, livello: 2 }, 4: { numero: 2, livello: 2 } };
+CLASSI.warlock.patto = { 1: { numero: 1, livello: 1 }, 2: { numero: 2, livello: 1 }, 3: { numero: 2, livello: 2 }, 4: { numero: 2, livello: 2 }, 5: { numero: 2, livello: 3 } };
 // Usi che crescono con il livello (tabelle p. 28, 49, 64): Ira, punti concentrazione, punti stregoneria
 for (const f of [...CLASSI.barbarian.features, ...CLASSI.monk.features, ...CLASSI.sorcerer.features, ...CLASSI.fighter.features]) for (const e of f.effetti) if (e.tipo === 'risorsa') {
   if (e.risorsa.id === 'rage') e.risorsa.usi = { perLivelli: [2, 2, 3] };
-  if (e.risorsa.id === 'focus') e.risorsa.usi = { perLivelli: [0, 2, 3, 4] };
-  if (e.risorsa.id === 'sorcery-points') e.risorsa.usi = { perLivelli: [0, 2, 3, 4] };
-  if (e.risorsa.id === 'second-wind') e.risorsa.usi = { perLivelli: [2, 2, 2, 3] };
-  if (e.risorsa.id === 'rage') e.risorsa.usi = { perLivelli: [2, 2, 3, 3] };
+  if (e.risorsa.id === 'focus') e.risorsa.usi = { perLivelli: [0, 2, 3, 4, 5] };
+  if (e.risorsa.id === 'sorcery-points') e.risorsa.usi = { perLivelli: [0, 2, 3, 4, 5] };
+  if (e.risorsa.id === 'second-wind') e.risorsa.usi = { perLivelli: [2, 2, 2, 3, 3] };
+  if (e.risorsa.id === 'rage') e.risorsa.usi = { perLivelli: [2, 2, 3, 3, 3] };
 }

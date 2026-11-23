@@ -7,14 +7,16 @@ import { metri } from '../regole/misure';
 export interface Spiegazione { testo: string; pagina?: number }
 
 const PER_ID: Record<string, Spiegazione> = {
+  'draconic-flight': { pagina: 84, testo: 'Dal 5° livello: con un\'Azione bonus ti spuntano ali spettrali, fatte della stessa energia del tuo soffio, e voli alla tua velocità per 10 minuti (o finché non le ritiri, o se sei incapacitato). Una volta per riposo lungo.' },
+  'large-form': { pagina: 86, testo: `Dal 5° livello: con un'Azione bonus, se c'è spazio, diventi di taglia Grande per 10 minuti: vantaggio alle prove di Forza e velocità +${metri(10)}. Una volta per riposo lungo.` },
   'bardic-inspiration': { pagina: 31, testo:
     `Azione bonus: scegli un'altra creatura entro ${metri(60)} che può vederti o sentirti; riceve un tuo dado di Ispirazione bardica (d6). ` +
     'Entro un\'ora, quando fallisce una Prova d20 (prova di caratteristica, tiro per colpire o tiro salvezza), può tirare il dado e aggiungerlo al d20: ' +
     'il fallimento può diventare un successo. Il dado si consuma quando lo tira, e una creatura ne può avere uno solo alla volta. ' +
-    'Usi: quanto il tuo modificatore di Carisma (almeno 1); tornano tutti con il riposo lungo. Il dado diventa d8 al 5° livello.' },
+    'Usi: quanto il tuo modificatore di Carisma (almeno 1); tornano tutti con il riposo lungo. Dal 5° livello il dado diventa d8 e gli usi tornano anche con il riposo breve; puoi spendere uno slot per recuperarne uno (SRD p. 33).' },
   'breath-weapon': { pagina: 84, testo:
     `Quando fai l'azione di Attacco, puoi sostituire un attacco con il soffio: un cono di ${metri(15)} o una linea di ${metri(30)} larga ${metri(5)} (scegli ogni volta). ` +
-    'Ogni creatura nell\'area fa un tiro salvezza su Destrezza (CD 8 + Costituzione + competenza): se fallisce subisce 1d10 danni del tipo del tuo antenato, ' +
+    'Ogni creatura nell\'area fa un tiro salvezza su Destrezza (CD 8 + Costituzione + competenza): se fallisce subisce 1d10 danni del tipo del tuo antenato (2d10 dal 5° livello), ' +
     'se riesce la metà. Usi: quanto il tuo bonus di competenza; tornano con il riposo lungo.' },
   stonecunning: { pagina: 84, testo:
     `Azione bonus: per 10 minuti hai percezione tellurica entro ${metri(60)}, se sei su una superficie di pietra o la tocchi (naturale o lavorata). ` +

@@ -30,8 +30,8 @@ export const L2_STREGONE = al2(P.STREGONE, { 'sorcerer.metamagia': ['quickened-s
 export const L2_WARLOCK = al2(P.WARLOCK, { 'warlock.suppliche-2': ['agonizing-blast', 'devils-sight'] }, { warlock: [...P.WARLOCK.incantesimi.preparati.warlock, 'hellish-rebuke'] });
 export const L2_TRAVIS = al2(P.TRAVIS, { 'wizard.studioso': ['arcana'] }, { wizard: [...P.TRAVIS.incantesimi.preparati.wizard, 'magic-missile'] },
   [...P.TRAVIS.incantesimi.libro!, 'magic-missile', 'sleep']);
-export const L2_TRAVIS_SAGGIO = al2(P.TRAVIS_SAGGIO, { 'wizard.studioso': ['arcana'] }, { wizard: [...(P.TRAVIS_SAGGIO.incantesimi.preparati.wizard ?? []), 'magic-missile'] },
-  [...(P.TRAVIS_SAGGIO.incantesimi.libro ?? []), 'magic-missile', 'sleep']);
+export const L2_TRAVIS_SAGGIO = al2(P.TRAVIS_SAGGIO, { 'wizard.studioso': ['arcana'] }, { wizard: [...(P.TRAVIS_SAGGIO.incantesimi.preparati.wizard ?? []), 'burning-hands'] },
+  [...(P.TRAVIS_SAGGIO.incantesimi.libro ?? []), 'burning-hands', 'thunderwave']);   // correzione del 23/11: prima Dardo incantato e Sonno, già nel libro
 
 
 // ───── 3° livello (file «Valori attesi 3° livello», approvato il 23/11) ─────
@@ -41,8 +41,8 @@ export const L3_CHIERICO = sali(L2_CHIERICO, 3, {}, prep(L2_CHIERICO, 'cleric', 
 export const L3_DRUIDO = sali(L2_DRUIDO, 3, { 'druid.terra': ['temperate'] }, prep(L2_DRUIDO, 'druid', 'moonbeam'));
 export const L3_GUERRIERO = sali(L2_GUERRIERO, 3);
 export const L3_MONACO = sali(L2_MONACO, 3);
-export const L3_PALADINO = sali(L2_PALADINO, 3, {}, prep(L2_PALADINO, 'paladin', 'bless'));
-export const L3_RANGER = sali(L2_RANGER, 3, { 'ranger.preda': ['colossus-slayer'] }, prep(L2_RANGER, 'ranger', 'cure-wounds'));
+export const L3_PALADINO = sali(L2_PALADINO, 3, {}, prep(L2_PALADINO, 'paladin', 'heroism'));   // correzione del 23/11: prima Benedizione, già preparata
+export const L3_RANGER = sali(L2_RANGER, 3, { 'ranger.preda': ['colossus-slayer'] }, prep(L2_RANGER, 'ranger', 'fog-cloud'));   // correzione del 23/11: prima Cura ferite, già preparata
 export const L3_LADRO = sali(L2_LADRO, 3);
 export const L3_STREGONE = sali(L2_STREGONE, 3, {}, prep(L2_STREGONE, 'sorcerer', 'scorching-ray', 'misty-step'));
 export const L3_WARLOCK = sali(L2_WARLOCK, 3, {}, prep(L2_WARLOCK, 'warlock', 'misty-step'));
@@ -59,7 +59,7 @@ export const L4_DRUIDO = sali(L3_DRUIDO, 4, { ...asi('SAG', 'COS'), 'druid.forme
 export const L4_GUERRIERO = sali(L3_GUERRIERO, 4, { 'talento-4': ['grappler'], 'grappler.caratteristica': ['FOR'], 'fighter.padronanza-4': ['longsword'] });
 export const L4_MONACO = sali(L3_MONACO, 4, asi('DES', 'SAG'));
 export const L4_PALADINO = sali(L3_PALADINO, 4, asi('FOR', 'CAR'), prep(L3_PALADINO, 'paladin', 'command'));
-export const L4_RANGER = sali(L3_RANGER, 4, { 'talento-4': ['alert'] }, prep(L3_RANGER, 'ranger', 'goodberry'));
+export const L4_RANGER = sali(L3_RANGER, 4, { 'talento-4': ['alert'] }, prep(L3_RANGER, 'ranger', 'longstrider'));   // correzione del 23/11: prima Bacche benefiche, già preparate
 export const L4_LADRO = sali(L3_LADRO, 4, asi('DES', 'INT'));
 export const L4_STREGONE = sali(L3_STREGONE, 4, { ...asi('CAR', 'CAR'), ...tr(L3_STREGONE, 'sorcerer.trucchetti', 'mage-hand') }, prep(L3_STREGONE, 'sorcerer', 'shatter'));
 export const L4_WARLOCK = sali(L3_WARLOCK, 4, { ...asi('CAR', 'COS'), ...tr(L3_WARLOCK, 'warlock.trucchetti', 'mage-hand') }, prep(L3_WARLOCK, 'warlock', 'hold-person'));
@@ -67,3 +67,21 @@ export const L4_TRAVIS = sali(L3_TRAVIS, 4, { ...asi('INT', 'COS'), ...tr(L3_TRA
   [...L3_TRAVIS.incantesimi.libro!, 'invisibility', 'hold-person']);
 export const L4_TRAVIS_SAGGIO = sali(L3_TRAVIS_SAGGIO, 4, { ...asi('INT', 'COS'), ...tr(L3_TRAVIS_SAGGIO, 'wizard.trucchetti', 'prestidigitation') }, prep(L3_TRAVIS_SAGGIO, 'wizard', 'shatter'),
   [...L3_TRAVIS_SAGGIO.incantesimi.libro!, 'invisibility', 'hold-person']);
+
+// ───── 5° livello (file «Valori attesi 5° livello», approvato il 23/11) ─────
+export const L5_BARBARO = sali(L4_BARBARO, 5);
+export const L5_BARDO = sali(L4_BARDO, 5, {}, prep(L4_BARDO, 'bard', 'hypnotic-pattern', 'dispel-magic'));
+export const L5_CHIERICO = sali(L4_CHIERICO, 5, {}, prep(L4_CHIERICO, 'cleric', 'spirit-guardians', 'dispel-magic'));
+export const L5_DRUIDO = sali(L4_DRUIDO, 5, {}, prep(L4_DRUIDO, 'druid', 'call-lightning', 'conjure-animals'));
+export const L5_GUERRIERO = sali(L4_GUERRIERO, 5);
+export const L5_MONACO = sali(L4_MONACO, 5);
+export const L5_PALADINO = sali(L4_PALADINO, 5, {}, prep(L4_PALADINO, 'paladin', 'magic-weapon'));
+export const L5_RANGER = sali(L4_RANGER, 5, {}, prep(L4_RANGER, 'ranger', 'pass-without-trace'));
+export const L5_LADRO = sali(L4_LADRO, 5);
+export const L5_STREGONE = sali(L4_STREGONE, 5, {}, prep(L4_STREGONE, 'sorcerer', 'fireball', 'haste'));
+// Blocca persone ora arriva dalla specie: il warlock lo cambia con Invisibilità salendo di livello (p. 71)
+export const L5_WARLOCK = sali(L4_WARLOCK, 5, { 'warlock.suppliche-5': ['one-with-shadows', 'repelling-blast'] },
+  { warlock: [...L4_WARLOCK.incantesimi.preparati.warlock.filter((x) => x !== 'hold-person'), 'invisibility', 'counterspell'] });
+export const L5_TRAVIS = sali(L4_TRAVIS, 5, {}, prep(L4_TRAVIS, 'wizard', 'fireball', 'counterspell'), [...L4_TRAVIS.incantesimi.libro!, 'fireball', 'counterspell', 'haste']);
+export const L5_TRAVIS_SAGGIO = sali(L4_TRAVIS_SAGGIO, 5, {}, prep(L4_TRAVIS_SAGGIO, 'wizard', 'fireball', 'counterspell'),
+  [...L4_TRAVIS_SAGGIO.incantesimi.libro!, 'fireball', 'counterspell', 'haste']);

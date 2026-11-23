@@ -33,7 +33,19 @@ function Aumento({ t, valori, cambia }: { t: Tendine; valori: string[]; cambia: 
   );
 }
 
+// Un cambio facoltativo: «Togli» e «Al suo posto»; togliendo la prima scelta il cambio si annulla
+function Cambio({ t, valori, cambia }: { t: Tendine; valori: string[]; cambia: (v: string[]) => void }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-testo">{t.titolo}{t.nota ? <span className="font-normal text-testo-2"> · {t.nota}</span> : null}</p>
+      <Tendina etichetta="Togli" valore={valori[0] ?? ''} opzioni={t.opzioni} cambia={(id) => cambia(id ? [id, ''] : [])} facoltativa />
+      {valori[0] && <Tendina etichetta="Al suo posto" valore={valori[1] ?? ''} opzioni={t.opzioniNuove ?? []} cambia={(id) => cambia([valori[0], id])} />}
+    </div>
+  );
+}
+
 export function Gruppo({ t, valori, cambia }: { t: Tendine; valori: string[]; cambia: (v: string[]) => void }) {
+  if (t.tipo === 'cambio') return <Cambio t={t} valori={valori} cambia={cambia} />;
   if (t.tipo === 'aumento') return <Aumento t={t} valori={valori} cambia={cambia} />;
   if (t.tipo === 'testo') return (
     <label className="block">
@@ -67,7 +79,7 @@ export function NuovoLivello({ bozza, conferma, annulla }: { bozza: Bozza; confe
   const cos = pg ? calcolaScheda(pg).modificatori.COS : 0;
   const metti = (k: string, v: string[]) => setScelte((s) => ({ ...s, [k]: v }));
   // Solo le scelte delle tendine visibili: se cambi talento, quelle del talento di prima non restano nella scheda
-  const chiavi = new Set([...r.capacita.flatMap((c) => c.tendine), ...r.magia].map((t) => t.chiave));
+  const chiavi = new Set([...r.capacita.flatMap((c) => c.tendine), ...r.magia, ...r.cambi].map((t) => t.chiave));
   const valide = Object.fromEntries(Object.entries(scelte).filter(([k]) => chiavi.has(k)));
   const pronto = completo(bozza, valide, tiro, usaTiro);
   return (
@@ -92,6 +104,13 @@ export function NuovoLivello({ bozza, conferma, annulla }: { bozza: Bozza; confe
           <p className="text-base font-medium text-testo">Magia</p>
           {r.magia.map((t) => <Gruppo key={t.chiave} t={t} valori={scelte[t.chiave] ?? []} cambia={(v) => metti(t.chiave, v)} />)}
         </div>
+      )}
+      {r.cambi.length > 0 && (
+        <details className="border-t border-bordo pt-3">
+          <summary className="min-h-11 cursor-pointer text-base font-medium text-testo">Puoi anche cambiare (facoltativo)</summary>
+          <p className="mb-3 text-sm text-testo-2">Salendo di livello le regole ti permettono di cambiare una scelta di prima. Se non tocchi niente, resta tutto com'è.</p>
+          <div className="space-y-4">{r.cambi.map((t) => <Gruppo key={t.chiave} t={t} valori={scelte[t.chiave] ?? []} cambia={(v) => metti(t.chiave, v)} />)}</div>
+        </details>
       )}
       <div className="grid grid-cols-[1fr_2fr] gap-2 pt-1">
         <button onClick={annulla} className="h-12 rounded-xl border border-bordo text-base text-testo">Annulla</button>

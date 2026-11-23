@@ -233,7 +233,7 @@ function Combattimento({ r, tavolo, scheda }: { r: Riepilogo; tavolo: PropsTavol
                 {(() => {
                   const [mid, iid] = t.id.split(':');
                   const m = scheda.magia.find((x) => x.id === mid);
-                  const rq = m && daIncantesimo(iid, m, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0, undefined, (scheda.bonusDanniTrucchetti?.[iid] ?? []).reduce((s, t) => s + t.valore, 0));
+                  const rq = m && daIncantesimo(iid, m, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0, undefined, (scheda.bonusDanniTrucchetti?.[iid] ?? []).reduce((s, t) => s + t.valore, 0), scheda.livello);
                   return rq ? <BottoneTiro etichetta={`Tira: ${t.nome}`} onClick={() => setTiro(rq)} /> : null;
                 })()}
               </li>
@@ -433,7 +433,7 @@ function FoglioRitratto({ ritratto, nome, cambia, chiudi }: { ritratto?: string;
   return (
     <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="font-titolo text-lg text-accento">{nome || 'Ritratto'}</h2>}>
       {ritratto
-        ? <img src={ritratto} alt={`Ritratto di ${nome}`} className="mx-auto aspect-square w-full max-w-96 rounded-xl border border-bordo object-cover" />
+        ? <img src={ritratto} alt={`Ritratto di ${nome}`} className="mx-auto max-h-[70dvh] w-full max-w-96 rounded-xl border border-bordo object-contain" />
         : <p className="text-sm text-testo-2">Nessun ritratto: per ora si vede l'immagine della classe.</p>}
       {cambia && (
         <div className="mt-4 flex gap-2">

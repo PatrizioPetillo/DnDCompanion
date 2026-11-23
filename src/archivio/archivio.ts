@@ -157,7 +157,7 @@ export const eCopiaCompleta = (testo: string): boolean => {
 export function importaTutto(a: Archivio, testo: string, d: Dati = DATI): { archivio: Archivio; aggiunti: number; gia: number; scartati: number } | { errore: string } {
   let x: { formato?: string; versione?: number; personaggi?: PersonaggioSalvato[]; elementi?: Elementi };
   try { x = JSON.parse(testo); } catch { return { errore: 'Il file non è un JSON valido.' }; }
-  if (x?.formato !== FORMATO_COPIA || !Array.isArray(x.personaggi)) return { errore: 'Questo file non è una copia di Companion B20.' };
+  if (x?.formato !== FORMATO_COPIA || !Array.isArray(x.personaggi)) return { errore: 'Questo file non è una copia di Companion DomusDraconis.' };
   if (x.versione !== 1) return { errore: 'La copia è di una versione dell\'app che questa non conosce.' };
   let out = a;
   let aggiunti = 0, gia = 0, scartati = 0;

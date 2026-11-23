@@ -3,7 +3,7 @@
 // L'elenco si legge quando si costruisce l'app: un'immagine che non c'è semplicemente non compare, senza buchi.
 const FILE = import.meta.glob('../assets/immagini/*/*.webp', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
-export type Gruppo = 'classi' | 'specie' | 'background';
+export type Gruppo = 'classi' | 'specie' | 'background' | 'predefiniti';   // predefiniti: i personaggi pronti (23/11)
 export const immagine = (gruppo: Gruppo, id: string | undefined): string | undefined =>
   id ? FILE[`../assets/immagini/${gruppo}/${id}.webp`] : undefined;
 

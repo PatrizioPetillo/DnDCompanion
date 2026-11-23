@@ -163,12 +163,21 @@ export default function App() {
   const [appenaSalvato, setAppenaSalvato] = useState(false);
   const [compendio, setCompendio] = useState(false);   // elenco degli incantesimi dal menu (20/11)
   const salva = () => { setBozza(concludi(bozza)); setVista('riepilogo'); setAppenaSalvato(true); window.scrollTo(0, 0); };
+  // 23/11 (richiesta di Patrizio): Avanti e Indietro saltano i passi che non servono, cioè la Magia per chi non ha
+  // nessuna fonte di magia (classe, background, specie, talenti); con Iniziato alla magia o un elfo il passo resta
+  const serve = (i: number) => stati[PASSI[i].id]?.stato !== 'non-serve';
   const avanti = () => {
-    if (vistaReale === 'indice') setVista(prossimoPasso(bozza));
-    else setVista(PASSI[numero]?.id ?? 'indice');
+    if (vistaReale === 'indice') { setVista(prossimoPasso(bozza)); return; }
+    let i = numero;
+    while (i < PASSI.length - 1 && !serve(i)) i++;
+    setVista(PASSI[i]?.id ?? 'indice');
   };
   // Indietro dal passo 1 si torna alla lista dei personaggi
-  const indietro = () => setVista(numero > 1 ? PASSI[numero - 2].id : 'personaggi');
+  const indietro = () => {
+    let i = numero - 2;
+    while (i > 0 && !serve(i)) i--;
+    setVista(i >= 0 ? PASSI[i].id : 'personaggi');
+  };
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-120 flex-col font-sans">

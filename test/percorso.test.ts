@@ -265,3 +265,16 @@ describe('bonus del background completi (giro delle 12 classi, 23/11)', () => {
     expect(stato({ ...base, bonusBackground: { INT: 2 } }).background.stato).not.toBe('fatto');
   });
 });
+
+// 23/11: il passo Magia «non serve» (e Avanti lo salta) solo senza nessuna fonte di magia
+describe('Passo Magia saltato', () => {
+  it('guerriero orco soldato: non serve; monaco umano con Iniziato da Pluriabilità o mago: serve', async () => {
+    const P = await import('./personaggi');
+    expect(statoPassi(P.GUERRIERO).magia.stato).toBe('non-serve');
+    expect(statoPassi(P.BARBARO).magia.stato).toBe('non-serve');
+    expect(statoPassi(P.TRAVIS).magia.stato).not.toBe('non-serve');
+    // un ladro con il background Accolito riceve Iniziato alla magia: il passo resta
+    const ladroAccolito = { ...P.LADRO, background: 'acolyte' };
+    expect(statoPassi(ladroAccolito).magia.stato).not.toBe('non-serve');
+  });
+});

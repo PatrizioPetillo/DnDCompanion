@@ -15,7 +15,7 @@ describe('Scheda di Travis', () => {
     expect(r.combattimento.numeri.find((x) => x.id === 'ca')!.somma!.termini[0].etichetta).toBe('Base');   // Armatura magica 13 + DES
     expect(r.combattimento.tiriSalvezza.filter((t) => t.competente).map((t) => [t.car, t.valore])).toEqual([['INT', '+5'], ['SAG', '+4']]);
     expect(r.combattimento.attacchi.map((a) => a.id)).toEqual(['dagger', 'quarterstaff', 'unarmed-strike']);
-    expect(r.combattimento.risorse).toEqual([{ nome: 'Recupero arcano', usi: 1, recupero: 'tornano con il riposo lungo', ...(r.combattimento.risorse[0].dettaglio ? { dettaglio: r.combattimento.risorse[0].dettaglio } : {}) }]);
+    expect(r.combattimento.risorse).toEqual([{ id: 'arcane-recovery', nome: 'Recupero arcano', usi: 1, recupero: 'tornano con il riposo lungo', ...(r.combattimento.risorse[0].dettaglio ? { dettaglio: r.combattimento.risorse[0].dettaglio } : {}) }]);
   });
   it('trucchetti d\'attacco con i dadi: Dardo di fuoco sì, Mano magica no; Fiamma sacra di Iniziato con la CD', () => {
     expect(r.combattimento.trucchetti.map((t) => [t.nome, t.tiro, t.dadi])).toEqual([['Dardo di fuoco', '+5 per colpire', '1d10 fuoco']]);

@@ -26,7 +26,7 @@ export interface Riepilogo {
     tiriSalvezza: { car: Car; nome: string; valore: string; competente: boolean }[];
     attacchi: Scheda['attacchi'];
     trucchetti: { id: Id; nome: string; fonte: string; tiro: string; dadi: string; nota?: string }[];   // trucchetti che fanno danni
-    risorse: { nome: string; usi: number; recupero: string; dettaglio?: string }[];
+    risorse: { id: string; nome: string; usi: number; recupero: string; dettaglio?: string }[];
     altro: string[];                                               // resistenze, valori di classe, CD speciali
   };
   abilita: { car: Car; nome: string; punteggio: number; mod: string; voci: { id: Id; nome: string; valore: string; competente: boolean; maestria: boolean; svantaggio?: string }[] }[];
@@ -77,7 +77,7 @@ export function riepilogo(b: Bozza, d: Dati = DATI): Riepilogo | null {
           : i.tiro?.tipo === 'ts' ? `TS ${NOME_CAR[i.tiro.car]} CD ${m.cd?.totale}` : 'colpisce sempre';
         return { id: `${m.id}:${t}`, nome: i.nome, fonte: m.nome, tiro, dadi: testoDadi(t, modCar)!, ...(DADI_INCANTESIMI[t].nota ? { nota: DADI_INCANTESIMI[t].nota } : {}) };
       })),
-      risorse: s.risorse.map((r) => ({ nome: r.nome, usi: r.usi, recupero: recupero(r.recupero), ...(r.dettaglio ? { dettaglio: r.dettaglio } : {}) })),
+      risorse: s.risorse.map((r) => ({ id: r.id, nome: r.nome, usi: r.usi, recupero: recupero(r.recupero), ...(r.dettaglio ? { dettaglio: r.dettaglio } : {}) })),
       altro,
     },
     abilita: CARATTERISTICHE.map((c) => ({

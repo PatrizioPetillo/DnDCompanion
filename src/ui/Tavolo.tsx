@@ -15,6 +15,7 @@ import { daIncantesimo, type RichiestaTiro } from '../partita/tiri';
 import { IconaD20, Tiro } from './Tiro';
 import { aggiungi, cambiaLivello, CONDIZIONE, CONDIZIONI, fannoPerdereConcentrazione, inEffetto, livelloIndebolimento, riassunto, togli, type IdCondizione } from '../partita/condizioni';
 import { GUIDA_CONDIZIONI } from '../guide/guide';
+import { spiegaRisorsa } from '../creazione/spiega-risorse';
 
 export interface PropsTavolo {
   scheda: Scheda; partita: StatoPartita; cambia: (s: StatoPartita) => void; dado: number;
@@ -203,6 +204,26 @@ function Morte({ partita, cambia, massimo }: { partita: StatoPartita; cambia: (s
   );
 }
 
+// Il nome di una risorsa: toccandolo si legge cosa fa (23/11, partito dall'Ispirazione bardica)
+export function NomeRisorsa({ r, children }: { r: { id: string; nome: string; dettaglio?: string }; children?: React.ReactNode }) {
+  const [aperto, setAperto] = useState(false);
+  const s = spiegaRisorsa(r);
+  if (!s) return <>{children ?? r.nome}</>;
+  return (
+    <>
+      <button onClick={() => setAperto(true)} className="min-h-11 text-left underline decoration-dotted decoration-1 underline-offset-4" aria-haspopup="dialog">
+        {children ?? r.nome}<span className="sr-only">: cosa fa</span>
+      </button>
+      {aperto && (
+        <FoglioDalBasso chiudi={() => setAperto(false)} titolo={<h2 className="text-lg font-medium text-testo">{r.nome}</h2>}>
+          <p className="text-base text-testo">{s.testo}</p>
+          {s.pagina && <p className="mt-3 text-xs text-testo-2">SRD 5.2 p. {s.pagina}</p>}
+        </FoglioDalBasso>
+      )}
+    </>
+  );
+}
+
 export function RisorseTavolo({ scheda, partita, cambia }: PropsTavolo) {
   const v = vista(scheda, partita, 0);
   if (!v.risorse.length) return null;
@@ -212,7 +233,7 @@ export function RisorseTavolo({ scheda, partita, cambia }: PropsTavolo) {
       <ul>
         {v.risorse.map((r) => (
           <li key={r.id} className="flex items-center justify-between gap-2">
-            <span className="text-sm text-testo">{r.nome}<span className="block text-xs text-testo-2">tornano con il riposo {r.recupero}</span></span>
+            <span className="text-sm text-testo"><NomeRisorsa r={r} /><span className="block text-xs text-testo-2">tornano con il riposo {r.recupero}</span></span>
             {r.usi <= 8
               ? <Pallini etichetta={r.nome} totale={r.usi} rimasti={r.rimasti} cambia={(u) => cambia(segnaRisorsa(partita, r.id, u, r.usi))} />
               : <span className="flex items-center gap-1">

@@ -50,7 +50,9 @@ export async function scaricaFoundry(bozza: Bozza): Promise<string> {
     const { fileFoundry } = await import('../esporta/foundry');
     const { nome, testo, avvisi } = await fileFoundry(bozza);
     scarica(testo, 'application/json', nome);
-    const base = 'In Foundry: crea un personaggio vuoto, tasto destro su di lui nella barra degli attori, «Import Data», scegli questo file.';
+    // 23/11, scelta di Patrizio (strada 3): la prova su un Foundry vero non c'è stata, e lo si dice
+    const base = 'In Foundry (sistema D&D5e 6.x): crea un personaggio vuoto, tasto destro su di lui nella barra degli attori, «Import Data», scegli questo file. ' +
+      'Esportazione non ancora provata su un Foundry vero: dopo l\'importazione controlla caratteristiche, PF, CA, competenze e incantesimi con la scheda dell\'app.';
     return avvisi.length ? `${base} Attenzione: ${avvisi.length} elementi non sono dell'SRD e sono arrivati come semplici oggetti, controllali.` : base;
   } catch (e) {
     // 23/11: il motivo vero, per capire cosa non va (prima si leggeva solo «Riprova»)

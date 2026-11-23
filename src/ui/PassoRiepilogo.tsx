@@ -16,7 +16,7 @@ import type { Elementi } from '../creazione/personalizzati';
 import { Avatar, riduciRitratto } from './Avatar';
 import { Fascia, immagine } from './Illustrazione';
 import { iniziali } from '../archivio/archivio';
-import { condizioniPerTiro, CondizioniTavolo, MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
+import { condizioniPerTiro, CondizioniTavolo, NomeRisorsa, MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
 import { Borsa, Libro } from './Zaino';
 import { Indossato } from './Indossato';
 import { OggettiMagici } from './OggettiMagici';
@@ -232,7 +232,7 @@ function Combattimento({ r, tavolo, scheda }: { r: Riepilogo; tavolo: PropsTavol
           <ul className="space-y-1">
             {c.risorse.map((x) => (
               <li key={x.nome} className="text-sm text-testo">
-                <span className="font-medium">{x.nome}</span>: {x.usi}{x.dettaglio ? ` (${x.dettaglio})` : ''} <span className="text-testo-2">· {x.recupero}</span>
+                <span className="font-medium"><NomeRisorsa r={x} /></span>: {x.usi}{x.dettaglio ? ` (${x.dettaglio})` : ''} <span className="text-testo-2">· {x.recupero}</span>
               </li>
             ))}
           </ul>

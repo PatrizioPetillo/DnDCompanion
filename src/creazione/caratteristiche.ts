@@ -119,12 +119,15 @@ export function daCompletare(b: Bozza, c: Car, d: Dati = DATI): boolean {
 }
 
 // ───────── Maestria (ladro, p. 61): competenza doppia su abilità in cui hai già competenza ─────────
-function sceltaMaestria(b: Bozza, d: Dati): { id: Id; quantita: number } | undefined {
+// Dal 23/11 anche al 2° livello (bardo, ranger, mago con Studioso: solo tra 6 abilità). Una scelta di Maestria per classe fino al 2°.
+function sceltaMaestria(b: Bozza, d: Dati): { id: Id; quantita: number; opzioni?: Id[] } | undefined {
   const classe = b.classe ? d.classi[b.classe] : undefined;
-  for (const f of classe?.features.filter((x) => x.livello <= 1) ?? []) for (const e of f.effetti)
-    if (e.tipo === 'scelta' && e.scelta.tipo === 'maestria') return { id: e.scelta.id, quantita: e.scelta.quantita };
+  for (const f of classe?.features.filter((x) => x.livello <= (b.livello ?? 1)) ?? []) for (const e of f.effetti)
+    if (e.tipo === 'scelta' && e.scelta.tipo === 'maestria') return { id: e.scelta.id, quantita: e.scelta.quantita, ...(e.scelta.opzioni ? { opzioni: e.scelta.opzioni } : {}) };
   return undefined;
 }
+// Le abilità su cui si può mettere la Maestria (oltre ad averne la competenza)
+export const maestriaAmmessa = (b: Bozza, id: Id, d: Dati = DATI) => { const s = sceltaMaestria(b, d); return !!s && (!s.opzioni || s.opzioni.includes(id)); };
 
 export function contatoreMaestria(b: Bozza, d: Dati = DATI): { scelte: number; quante: number } {
   const s = sceltaMaestria(b, d);
@@ -137,7 +140,7 @@ export function scegliMaestria(b: Bozza, id: Id, d: Dati = DATI): Bozza {
   const prese = b.scelte[s.id] ?? [];
   if (prese.includes(id)) return { ...b, scelte: { ...b.scelte, [s.id]: prese.filter((x) => x !== id) } };
   const voce = statoAbilita(b, d).find((a) => a.id === id);
-  if (!voce || !(voce.stato === 'data' || voce.stato === 'scelta') || prese.length >= s.quantita) return b;
+  if (!voce || !(voce.stato === 'data' || voce.stato === 'scelta') || prese.length >= s.quantita || (s.opzioni && !s.opzioni.includes(id))) return b;
   return { ...b, scelte: { ...b.scelte, [s.id]: [...prese, id] } };
 }
 

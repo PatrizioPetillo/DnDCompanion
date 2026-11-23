@@ -64,7 +64,7 @@ export function blocchiMagia(b: Bozza, d: Dati = DATI): Blocco[] {
     if (m.libro) conta('libro', 'Nel libro', m.libro.iniziali);
     if (m.preparati) conta('preparati', 'Preparati', m.preparati.limite);
     const classe = m.fonte.tipo === 'classe' ? d.classi[m.fonte.id] : undefined;
-    const capacita = (classe?.features ?? []).filter((f) => f.livello <= 1 && CAPACITA[f.id]).map((f) => ({ nome: f.nome, testo: CAPACITA[f.id] }));
+    const capacita = (classe?.features ?? []).filter((f) => f.livello <= (b.livello ?? 1) && CAPACITA[f.id]).map((f) => ({ nome: f.nome, testo: CAPACITA[f.id] }));
     const lanci = m.lanciGratuiti && m.lanciGratuiti.incantesimi.length
       ? `${m.lanciGratuiti.incantesimi.map((i) => nomeInc(i, d)).join(', ')}: ${m.lanciGratuiti.usi === 1 ? '1 volta' : `${m.lanciGratuiti.usi} volte`} gratis per riposo ${m.lanciGratuiti.recupero === 'lungo' ? 'lungo' : 'breve'}${m.slot ? ', poi anche con gli slot' : ''}`
       : undefined;

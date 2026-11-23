@@ -22,6 +22,9 @@ import { Indossato } from './Indossato';
 import { OggettiMagici } from './OggettiMagici';
 import { Monete } from './Monete';
 import { FoglioDalBasso } from './SchedaIncantesimo';
+import { NuovoLivello } from './NuovoLivello';
+import { Famiglio } from './Famiglio';
+import { puoAvereFamiglio } from '../creazione/famiglio';
 
 type Scheda = 'combattimento' | 'abilita' | 'magia' | 'zaino' | 'chi';
 // Icone disegnate a mano (tratto semplice), per riconoscere la scheda al volo
@@ -41,9 +44,11 @@ const somma = (n: Numero, finale: string) =>
   `${n.termini.map((t) => `${t.etichetta} ${t.valore < 0 ? `−${-t.valore}` : t.valore}`).join(' + ')} = ${finale}`;
 const segno = (n: number) => (n >= 0 ? `+${n}` : `−${-n}`);
 
-export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaPartita, ritratto, bloccata, riapri, cambiaRitratto }: {
+export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaPartita, ritratto, bloccata, riapri, cambiaRitratto, apriSali, nuovoLivello, confermaLivello, annullaLivello }: {
   bozza: Bozza; cambia: (b: Bozza) => void; apri: (p: IdPasso) => void; ricevuta?: boolean;
   bloccata?: boolean; riapri?: () => void; cambiaRitratto?: (r: string | undefined) => void;   // personaggio salvato (19/11)
+  apriSali?: () => void;   // «Sali di livello» (23/11)
+  nuovoLivello?: boolean; confermaLivello?: (b: Bozza) => void; annullaLivello?: () => void;
   partita?: StatoPartita; cambiaPartita?: (s: StatoPartita) => void;    // uso al tavolo; assenti per una scheda ricevuta
   ritratto?: string;
   elementi?: Elementi;                                                    // background personalizzati che la scheda usa: viaggiano con lei
@@ -80,6 +85,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
 
       {ritrattoAperto && <FoglioRitratto ritratto={ritratto} nome={r.testata.nome} cambia={cambiaRitratto} chiudi={() => setRitrattoAperto(false)} />}
 
+      {nuovoLivello && confermaLivello && annullaLivello && <NuovoLivello bozza={bozza} conferma={confermaLivello} annulla={annullaLivello} />}
       <Avvisi bozza={bozza} cambia={cambia} apri={apri} ricevuta={ricevuta || bloccata} />
 
       {tavolo && <Riposi {...tavolo} />}
@@ -100,9 +106,10 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         {vistaScheda === 'combattimento' && <Combattimento r={r} tavolo={tavolo} scheda={scheda} />}
         {vistaScheda === 'abilita' && <Abilita r={r} scheda={scheda} tavolo={tavolo} />}
         {vistaScheda === 'magia' && (tavolo ? <MagiaTavolo {...tavolo} /> : <Magia r={r} />)}
+        {vistaScheda === 'magia' && puoAvereFamiglio(bozza, scheda) && <Famiglio bozza={bozza} cambia={ricevuta ? undefined : cambia} />}
         {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} bozza={bozza} cambia={ricevuta ? undefined : cambia} restituibile={!ricevuta && !bloccata} />}
         {vistaScheda === 'chi' && <ChiE r={r} bozza={bozza} cambia={cambia} ricevuta={ricevuta || bloccata}
-          salvato={bloccata ? { il: bozza.conclusoIl!, riapri } : undefined} />}
+          salvato={bloccata ? { il: bozza.conclusoIl!, riapri, apriSali, livello: bozza.livello ?? 1 } : undefined} />}
       </div>
 
     </section>
@@ -353,7 +360,7 @@ function Zaino({ r, scheda, tavolo, bozza, cambia, restituibile = false }: { r: 
   );
 }
 
-interface Salvato { il: string; riapri?: () => void }
+interface Salvato { il: string; riapri?: () => void; apriSali?: () => void; livello: number }
 
 function ChiE({ r, bozza, cambia, ricevuta, salvato }: { r: Riepilogo; bozza: Bozza; cambia: (b: Bozza) => void; ricevuta?: boolean; salvato?: Salvato }) {
   const accettati = avvisiRiepilogo(bozza).filter((a) => a.accettato);
@@ -390,10 +397,11 @@ function ChiE({ r, bozza, cambia, ricevuta, salvato }: { r: Riepilogo; bozza: Bo
 }
 
 // Dopo il salvataggio la creazione è chiusa: qui l'uscita di sicurezza (il ritratto si cambia toccandolo in cima)
-function Creazione({ il, riapri }: Salvato) {
+function Creazione({ il, riapri, apriSali, livello }: Salvato) {
   return (
     <div className="rounded-xl border border-bordo bg-superficie p-3">
       <h2 className="text-base font-medium text-testo">Creazione</h2>
+      {apriSali && <button onClick={apriSali} className="mt-2 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Sali al {livello + 1}° livello</button>}
       <p className="mt-1 text-sm text-testo-2">Salvato il {new Date(il).toLocaleDateString('it-IT')}. Le scelte della creazione sono bloccate; il ritratto si cambia toccandolo in cima alla scheda.</p>
       {riapri && <button onClick={riapri} className="mt-3 min-h-11 w-full rounded-lg border border-attenzione/60 px-3 text-sm text-attenzione">Riapri la creazione</button>}
     </div>

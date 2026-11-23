@@ -1,7 +1,7 @@
 // Passo 5: Caratteristiche (sezione 5.2). Point buy, serie standard o tiri (SRD p. 21), quelli ammessi dal tavolo; il bonus scelto nel Background
 // è già applicato; sotto ogni caratteristica le abilità che ne dipendono.
 import { useEffect, useState } from 'react';
-import { assegna, metodiAmmessi, metodoIniziale, contatoreAbilitaClasse, contatoreMaestria, daCompletare, scegliMaestria, NON_ASSEGNATO, opzioniPunteggio, punteggiIniziali, consigliatiPointBuy, scegliAbilitaClasse, spesaPointBuy, statoAbilita, type StatoAbilita } from '../creazione/caratteristiche';
+import { assegna, metodiAmmessi, metodoIniziale, contatoreAbilitaClasse, contatoreMaestria, daCompletare, maestriaAmmessa, scegliMaestria, NON_ASSEGNATO, opzioniPunteggio, punteggiIniziali, consigliatiPointBuy, scegliAbilitaClasse, spesaPointBuy, statoAbilita, type StatoAbilita } from '../creazione/caratteristiche';
 import { comePersonaggio, type Bozza } from '../creazione/percorso';
 import { DATI, modificatore } from '../regole';
 import { ABILITA, NOME_CAR } from '../regole/dati/base';
@@ -159,7 +159,7 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
                             <span className="min-w-0 flex-1 leading-tight break-words hyphens-auto">{a.nome}</span>
                             <span className="w-7 shrink-0 text-right">{a.totale !== undefined ? segno(a.totale) : ''}</span>
                           </button>
-                          {maestria.quante > 0 && tua && (
+                          {maestria.quante > 0 && tua && maestriaAmmessa(bozza, a.id) && (
                             <button
                               onClick={() => cambia(scegliMaestria(bozza, a.id))}
                               disabled={!a.maestria && maestria.scelte >= maestria.quante}

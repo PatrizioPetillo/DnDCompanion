@@ -1,5 +1,9 @@
 // Passo 2: Classe (sezione 5.2). La scheda della classe e, dentro lo stesso riquadro, le sue scelte di livello 1
 // (Padronanza d'armi, strumenti, ordini, stile, supplica, lingua del ladro), come in Character Keep.
+import { capacitaDelLivello, regolaPf, scriviTiroPf } from '../creazione/livello';
+import { SceltaPf } from './SaliDiLivello';
+import { comePersonaggio } from '../creazione/percorso';
+import { calcolaScheda } from '../regole';
 import { scelteDiClasse } from '../creazione/classe';
 import { visibile, type Bozza } from '../creazione/percorso';
 import { cosaOttieni, type Privilegio } from '../creazione/cosa-ottieni';
@@ -62,6 +66,7 @@ export function PassoClasse({ bozza, scegli, cambia }: { bozza: Bozza; scegli: (
               </button>
 
               {scelta && <CosaOttieni classeId={c.id} />}
+              {scelta && (bozza.livello ?? 1) > 1 && <LivelliSuccessivi bozza={bozza} cambia={cambia} />}
 
               {scelta && scelte.length > 0 && (
                 <div className="space-y-3 border-t border-bordo px-4 pb-4 pt-3">
@@ -91,6 +96,29 @@ export function PassoClasse({ bozza, scegli, cambia }: { bozza: Bozza; scegli: (
 }
 
 // Cosa dà la classe al livello 1: si apre sotto la scheda scelta (richiesta di Patrizio, 19/11)
+// Dal 2° livello (23/11): cosa porta ogni livello e i PF secondo la regola del tavolo (SRD p. 23)
+function LivelliSuccessivi({ bozza, cambia }: { bozza: Bozza; cambia: (b: Bozza) => void }) {
+  const classe = DATI.classi[bozza.classe!];
+  const pg = comePersonaggio({ ...bozza, specie: bozza.specie ?? 'human' });
+  let cos = 0;
+  try { if (pg) cos = calcolaScheda(pg).modificatori.COS; } catch { /* scheda incompleta: COS 0 */ }
+  const livelli = Array.from({ length: (bozza.livello ?? 1) - 1 }, (_, i) => i + 2);
+  return (
+    <div className="space-y-4 border-t border-bordo px-4 pb-4 pt-3">
+      {livelli.map((n) => (
+        <div key={n} className="space-y-2">
+          <h3 className="text-sm font-medium text-testo">Cosa ottieni al {n}° livello</h3>
+          <ul className="space-y-1 text-sm text-testo">
+            {capacitaDelLivello(bozza, n).map((x) => <li key={x.nome}><strong>{x.nome}.</strong> {x.testo}{x.pagina ? <span className="text-xs text-testo-2"> SRD p. {x.pagina}</span> : null}</li>)}
+          </ul>
+          <SceltaPf livello={n} dadoVita={classe.dadoVita} cos={cos} regola={regolaPf(bozza)} tiro={bozza.tiriPf?.[n] ?? null}
+            cambia={(t) => cambia(scriviTiroPf(bozza, n, t))} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CosaOttieni({ classeId }: { classeId: string }) {
   const c = cosaOttieni(classeId);
   const voce = (p: Privilegio) => (

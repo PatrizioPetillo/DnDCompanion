@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, aggiungiOggettoVelato, copiaPerTavolo, aggiungiMovimento, elenco, salvaIncontro, togliIncontro, salvaOggettoTavolo, togliOggettoTavolo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio, type PersonaggioSalvato } from './archivio/archivio';
 import { elementiUsati, registra, unione, type Elementi } from './creazione/personalizzati';
+import { prossimoLivello } from './creazione/livello';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, concludi, concluso, daCompletarePrimaDiSalvare, PASSI, prossimoPasso, riapri, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
 import { importaJSON } from './creazione/riepilogo';
 import { descriviTolte } from './creazione/testi';
@@ -161,6 +162,7 @@ export default function App() {
     : bloccato && (inPasso || vista === 'indice') ? 'riepilogo' : vista;
   const daFare = daCompletarePrimaDiSalvare(stati);
   const [appenaSalvato, setAppenaSalvato] = useState(false);
+  const [saliAperto, setSaliAperto] = useState(false);   // «Sali di livello» (23/11)
   const [compendio, setCompendio] = useState(false);   // elenco degli incantesimi dal menu (20/11)
   const salva = () => { setBozza(concludi(bozza)); setVista('riepilogo'); setAppenaSalvato(true); window.scrollTo(0, 0); };
   // 23/11 (richiesta di Patrizio): Avanti e Indietro saltano i passi che non servono, cioè la Magia per chi non ha
@@ -219,6 +221,7 @@ export default function App() {
               <VoceMenu onClick={() => { setRicevuta(null); setTavoloRicevuto(null); setVista('tavoli'); }}>I miei tavoli (master)</VoceMenu>
               {corrente && !ricevuta && !bloccato && <VoceMenu onClick={() => setVista('indice')}>Passi di {bozza.nome.trim() || 'questo personaggio'}</VoceMenu>}
               {corrente && !ricevuta && <VoceMenu onClick={() => setVista('riepilogo')}>Scheda (riepilogo)</VoceMenu>}
+              {corrente && !ricevuta && bloccato && prossimoLivello(bozza) && <VoceMenu onClick={() => { setMenu(false); setVista('riepilogo'); setSaliAperto(true); }}>Sali al {prossimoLivello(bozza)}° livello</VoceMenu>}
               {(ricevuta || (corrente && (inPasso || vistaReale === 'indice'))) && <>
                 <p className="border-b border-bordo bg-sfondo px-4 pb-1 pt-3 text-xs uppercase tracking-widest text-testo-2">Esporta {(ricevuta ?? bozza).nome.trim() || 'la scheda'}</p>
                 <VoceMenu onClick={async () => { setMenu(false); setMessaggio('Preparo il PDF…'); setMessaggio(await scaricaPdf(ricevuta ?? bozza, ricevuta ? undefined : corrente?.ritratto)); }}>Scarica il PDF</VoceMenu>
@@ -288,7 +291,7 @@ export default function App() {
             nuovo={() => {
               const t = tavoloRicevuto;
               setTavoloRicevuto(null);
-              setArchivio(nuovo(unisciElementi(archivio, t.elementi), { ...bozzaVuota(), tavolo: t }).archivio);
+              setArchivio(nuovo(unisciElementi(archivio, t.elementi), { ...bozzaVuota(), livello: t.livello, tavolo: t }).archivio);   // nasce al livello del tavolo (23/11)
               setVista('classe');
             }}
             usa={(id) => {
@@ -448,6 +451,10 @@ export default function App() {
           <PassoRiepilogo bozza={bozza} cambia={setBozza} apri={(p) => setVista(p)} partita={partita}
             cambiaPartita={(s) => modifica({ partita: s })} ritratto={corrente?.ritratto}
             bloccata={bloccato} cambiaRitratto={(r) => modifica({ ritratto: r })}
+            apriSali={prossimoLivello(bozza) && !saliAperto ? () => setSaliAperto(true) : undefined}
+            nuovoLivello={saliAperto && bloccato && !!prossimoLivello(bozza)}
+            confermaLivello={(b) => { setSaliAperto(false); setBozza(b); setMessaggio(`${b.nome.trim() || 'Il personaggio'} è al ${b.livello}° livello.`); }}
+            annullaLivello={() => setSaliAperto(false)}
             riapri={() => {
               if (!window.confirm(`Riaprire la creazione di ${bozza.nome.trim() || 'questo personaggio'}? Potrai cambiare classe, specie, incantesimi e il resto; poi andrà salvato di nuovo.`)) return;
               setBozza(riapri(bozza));

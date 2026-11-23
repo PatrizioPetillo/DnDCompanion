@@ -206,7 +206,8 @@ export interface Tavolo {
   schema: 1;
   nome: string;
   regole: 'srd-5.2';
-  livello: 1;
+  livello: number;                                   // livello di partenza dei personaggi (23/11)
+  pf?: import('./livelli').RegolaPf;                  // PF dal 2° livello; senza: a scelta del giocatore
   metodiPunteggi: MetodoPunteggi[];
   fonti: { srd: true; escludi?: Id[] };              // classi, specie, background dell'SRD non ammessi
   elementi?: ElementiPersonalizzati;                 // quelli del master: per il tavolo sono ammessi
@@ -224,6 +225,7 @@ export interface Personaggio {
   tavolo?: Tavolo;
   livello: number;                                // 1-2 per ora (aumento di livello, 23/11)
   tiriPf?: Record<number, number>;                // livello → dado vita tirato; senza: valore fisso (p. 23)
+  famiglio?: { forma: Id; nome?: string; natura?: 'celestiale' | 'folletto' | 'immondo' };   // Trova famiglio (23/11)
   classe: Id;
   sottoclasse?: Id;
   specie: Id;

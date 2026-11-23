@@ -9,8 +9,8 @@ import { DUE_MANI_ARMI, GITTATA_ARMI } from './dati/oggetti';
 import { metri } from './misure';
 import { avvisiTavolo, coperto } from './tavolo';
 
-// Fin dove arrivano i dati delle classi (aumento di livello, 23/11): si alza una tappa alla volta
-export const LIVELLO_MASSIMO = 2;
+import { LIVELLO_MASSIMO } from './livelli';
+export { LIVELLO_MASSIMO };
 import {
   CARATTERISTICHE, type Avviso, type Car, type ConcessioneMagia, type Effetto, type FormulaCA, type Id,
   type Attacco, type LivelloAvviso, type MagiaCalcolata, type Numero, type Personaggio, type RifSRD, type Risorsa, type Scelta,

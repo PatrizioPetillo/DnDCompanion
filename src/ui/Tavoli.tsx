@@ -13,6 +13,7 @@ import { creaLinkTavolo } from '../esporta/link';
 import { nuovoCanaleTavolo, tavoliAttivi } from '../sblocchi/tavolo-canale';
 import { DATI } from '../regole';
 import { descriviTavolo, NOME_ECCEZIONE, NOME_METODO } from '../regole/tavolo';
+import { LIVELLO_MASSIMO, NOME_REGOLA_PF, type RegolaPf } from '../regole/livelli';
 import type { EccezioneTavolo, Id, MetodoPunteggi, Tavolo } from '../regole/tipi';
 import { Avatar } from './Avatar';
 import { Separatore } from './PassoMagia';
@@ -176,6 +177,26 @@ export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, sal
       <label className="block text-sm font-medium text-testo" htmlFor="nome-tavolo">Nome del tavolo</label>
       <input id="nome-tavolo" value={tavolo.nome} onChange={(e) => cambia({ ...tavolo, nome: e.target.value })} maxLength={80}
         placeholder="Es. La Torre di Hillmarch" className={`mt-1 h-12 w-full rounded-lg border bg-superficie px-3 text-base text-testo ${tavolo.nome.trim() ? 'border-bordo' : 'border-attenzione bg-attenzione/10'}`} />
+
+      {/* Livello di partenza e PF dal 2° livello (23/11, scelte di Patrizio) */}
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        <label className="block text-sm font-medium text-testo">Livello di partenza
+          <select value={tavolo.livello} onChange={(e) => cambia({ ...tavolo, livello: Number(e.target.value) })}
+            className="mt-1 h-12 w-full rounded-lg border border-bordo bg-superficie px-2 text-base text-testo">
+            {Array.from({ length: LIVELLO_MASSIMO }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}° livello</option>)}
+          </select>
+        </label>
+        <label className="block text-sm font-medium text-testo">PF dal 2° livello
+          <select value={tavolo.pf ?? 'scelta'} onChange={(e) => {
+            const v = e.target.value as RegolaPf;
+            const { pf: _pf, ...resto } = tavolo;
+            cambia(v === 'scelta' ? resto : { ...resto, pf: v });
+          }} className="mt-1 h-12 w-full rounded-lg border border-bordo bg-superficie px-2 text-base text-testo">
+            {(Object.keys(NOME_REGOLA_PF) as RegolaPf[]).map((r) => <option key={r} value={r}>{NOME_REGOLA_PF[r]}</option>)}
+          </select>
+        </label>
+      </div>
+      <p className="mt-1 text-xs text-testo-2">I personaggi nuovi nascono al livello di partenza. Per ora l'app arriva al {LIVELLO_MASSIMO}° livello. Valore fisso: metà del dado vita + 1 (SRD p. 23).</p>
 
       <h2 className="mb-2 mt-5 text-base font-medium text-testo">Punteggi delle caratteristiche</h2>
       <div className="grid grid-cols-3 gap-2">

@@ -59,6 +59,7 @@ function passoDiAvviso(a: Avviso, b: Bozza, d: Dati): IdPasso {
   const id = a.id;
   if (id.startsWith('tavolo-escluso:')) return ({ classi: 'classe', specie: 'specie', background: 'background' } as const)[id.split(':')[1] as 'classi'] ?? 'riepilogo';
   if (id === 'tavolo-metodo') return 'caratteristiche';
+  if (/^(tavolo-livello|tavolo-pf|livello-non-supportato|supplica-doppia)/.test(id)) return 'classe';   // livello e PF si vedono nella Classe (23/11)
   if (/^(bonus-background|talento-personalizzato)/.test(id)) return 'background';                      // i bonus si scelgono nel background (come Character Keep)
   if (/^(point-buy|serie-standard|massimo-20)/.test(id)) return 'caratteristiche';
   if (/^(armatura-|scudo-|equipaggiamento-|monete-|focus-|arma-|materiale)/.test(id)) return 'equipaggiamento';   // i materiali si comprano lì
@@ -73,7 +74,8 @@ function passoDiAvviso(a: Avviso, b: Bozza, d: Dati): IdPasso {
   if (b.specie && prefisso === b.specie) return 'specie';
   if (b.background && prefisso === b.background) return 'background';
   if (b.classe && prefisso === b.classe) {
-    if (parte === 'abilita' || parte === 'maestria') return 'caratteristiche';   // abilità della classe e Maestria: nella griglia
+    if (parte === 'abilita' || parte === 'maestria' || parte === 'studioso') return 'caratteristiche';   // abilità della classe e Maestria: nella griglia
+    if (parte === 'guerriero-benedetto' || parte === 'guerriero-druidico') return 'magia';           // i 2 trucchetti dello stile (2° livello)
     if (parte === 'equip') return 'equipaggiamento';                            // lo strumento a scelta del bardo
     return 'classe';                                                           // Padronanza d'armi, strumenti, ordini, stile, suppliche, lingua
   }

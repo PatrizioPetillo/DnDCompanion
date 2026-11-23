@@ -1,6 +1,7 @@
 // Regole del tavolo (sezione 5.1): il master decide metodo dei punteggi, cosa è ammesso, i suoi elementi e le eccezioni.
 // L'app avvisa, non vieta (principio 3): un personaggio fuori dalle regole del tavolo riceve avvisi, non viene cambiato.
 // TypeScript puro.
+import { LIVELLO_MASSIMO, NOME_REGOLA_PF } from './livelli';
 import { LINGUE_RARE } from './dati/base';
 import type { Dati } from './dati';
 import type { Avviso, EccezioneTavolo, Id, MetodoPunteggi, Personaggio, Tavolo } from './tipi';
@@ -48,6 +49,13 @@ export function avvisiTavolo(pg: Personaggio, t: Tavolo, d: Dati): Avviso[] {
         ? `${NOME_GRUPPO[gruppo]} «${nome}» è un elemento tuo, non tra quelli del tavolo «${t.nome || 'senza nome'}»: chiedi al master`
         : `${NOME_GRUPPO[gruppo]} «${nome}» non è ammesso al tavolo «${t.nome || 'senza nome'}»` });
   };
+  // Livello di partenza e regola dei PF (23/11)
+  if ((pg.livello ?? 1) < t.livello)
+    out.push({ id: `tavolo-livello:${t.livello}`, livello: 'attenzione', messaggio: `Il tavolo «${t.nome || 'senza nome'}» parte dal ${t.livello}° livello: sali di livello dalla scheda` });
+  const tirati = Object.keys(pg.tiriPf ?? {}).length;
+  if (t.pf === 'fisso' && tirati) out.push({ id: 'tavolo-pf-fisso', livello: 'attenzione', messaggio: 'Al tavolo i PF dal 2° livello sono il valore fisso: hai scritto dei tiri' });
+  if (t.pf === 'tiro' && (pg.livello ?? 1) > 1 && tirati < (pg.livello ?? 1) - 1)
+    out.push({ id: 'tavolo-pf-tiro', livello: 'attenzione', messaggio: 'Al tavolo i PF dal 2° livello si tirano: scrivi il risultato del dado vita' });
   voce('classi', pg.classe, d.classi[pg.classe]?.nome ?? pg.classe);
   voce('specie', pg.specie, d.specie[pg.specie]?.nome ?? pg.specie);
   voce('background', pg.background, d.background[pg.background]?.nome ?? pg.background);
@@ -60,7 +68,7 @@ export function avvisiTavolo(pg: Personaggio, t: Tavolo, d: Dati): Avviso[] {
 // Controllo di un tavolo arrivato da un link: solo forme note, elementi personalizzati ben fatti
 export function validaTavolo(x: unknown, d: Dati): Tavolo | null {
   const t = x as Tavolo;
-  if (!t || t.schema !== 1 || t.regole !== 'srd-5.2' || t.livello !== 1 || typeof t.nome !== 'string') return null;
+  if (!t || t.schema !== 1 || t.regole !== 'srd-5.2' || !Number.isInteger(t.livello) || t.livello < 1 || t.livello > LIVELLO_MASSIMO || typeof t.nome !== 'string') return null;
   const metodi = (Array.isArray(t.metodiPunteggi) ? t.metodiPunteggi : []).filter((m): m is MetodoPunteggi => m in NOME_METODO);
   if (!metodi.length) return null;
   const eccezioni = (Array.isArray(t.eccezioni) ? t.eccezioni : []).filter((e): e is EccezioneTavolo => e in NOME_ECCEZIONE);
@@ -70,7 +78,8 @@ export function validaTavolo(x: unknown, d: Dati): Tavolo | null {
   const background = solo(t.elementi?.background, d.background);
   const specie = solo(t.elementi?.specie, d.specie);
   return {
-    schema: 1, nome: t.nome.slice(0, 80), regole: 'srd-5.2', livello: 1, metodiPunteggi: metodi, fonti: { srd: true, escludi }, eccezioni,
+    schema: 1, nome: t.nome.slice(0, 80), regole: 'srd-5.2', livello: t.livello, metodiPunteggi: metodi, fonti: { srd: true, escludi }, eccezioni,
+    ...(t.pf === 'fisso' || t.pf === 'tiro' ? { pf: t.pf } : {}),
     ...(Object.keys(background).length || Object.keys(specie).length ? { elementi: { background, ...(Object.keys(specie).length ? { specie } : {}) } } : {}),
     ...(typeof t.note === 'string' && t.note.trim() ? { note: t.note.slice(0, 2000) } : {}),
     // del canale entrano solo id e chiave: il segreto del master non deve mai arrivare a un giocatore
@@ -80,7 +89,8 @@ export function validaTavolo(x: unknown, d: Dati): Tavolo | null {
 
 // Le regole del tavolo in poche righe, per chi apre il link
 export function descriviTavolo(t: Tavolo, d: Dati): string[] {
-  const righe = [`Punteggi: ${t.metodiPunteggi.map((m) => NOME_METODO[m]).join(' o ')}`];
+  const righe = [...(t.livello > 1 ? [`Si parte dal ${t.livello}° livello · PF: ${NOME_REGOLA_PF[t.pf ?? 'scelta'].toLowerCase()}`] : []),
+    `Punteggi: ${t.metodiPunteggi.map((m) => NOME_METODO[m]).join(' o ')}`];
   const esclusi = (gruppo: Gruppo) => (t.fonti.escludi ?? []).filter((id) => d[gruppo][id]).map((id) => d[gruppo][id].nome);
   for (const [g, nome] of [['classi', 'Classi'], ['specie', 'Specie'], ['background', 'Background']] as const) {
     const e = esclusi(g);

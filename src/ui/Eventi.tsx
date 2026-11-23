@@ -10,6 +10,7 @@ import type { Car, Personaggio } from '../regole/tipi';
 import { idDaSegreto } from '../sblocchi/cifra';
 import { ascoltaCanale, cercaEventi, mandaEvento, servizioAttivo } from '../sblocchi/servizio';
 import { FoglioDalBasso } from './SchedaIncantesimo';
+import { casuale } from '../partita/dadi';
 
 // ───────── Giocatore ─────────
 export function useEventi(archivio: Archivio, setArchivio: (f: (a: Archivio) => Archivio) => void) {
@@ -78,7 +79,7 @@ function TiroSalvezza({ nome, p, ev, rispondi }: { nome: string; p: Archivio['pe
   const totaleBonus = bonus - eff.meno;
   const tira = () => {
     if (eff.fallitoAuto) { setTiro('Fallito in automatico per una condizione (SRD p. 177-191).'); setEsito('fallito'); return; }
-    const d = [1 + Math.floor(Math.random() * 20), 1 + Math.floor(Math.random() * 20)];
+    const d = [casuale(20), casuale(20)];
     const d20 = eff.svantaggio ? Math.min(...d) : d[0];
     const tot = d20 + totaleBonus;
     setEsito(tot >= ev.cd ? 'riuscito' : 'fallito');

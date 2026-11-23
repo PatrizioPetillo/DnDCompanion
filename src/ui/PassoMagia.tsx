@@ -7,6 +7,8 @@ import { blocchiMagia, type Blocco, type TipoScelta } from '../creazione/magia';
 import type { Bozza } from '../creazione/percorso';
 import { DATI } from '../regole';
 import { NOME_LISTA } from '../regole/dati';
+import { INCANTESIMI_CONSIGLIATI } from '../creazione/consigli';
+import { Consiglio } from './Consiglio';
 import type { Id, Numero } from '../regole/tipi';
 import { SchedaIncantesimo } from './SchedaIncantesimo';
 import { SelettoreIncantesimi } from './SelettoreIncantesimi';
@@ -34,6 +36,15 @@ export function PassoMagia({ bozza, cambia }: { bozza: Bozza; cambia: (b: Bozza)
       {blocchi.map((b) => (
         <div key={b.id}>
           <Separatore titolo={b.nome} />
+          {bozza.classe && b.id === bozza.classe && INCANTESIMI_CONSIGLIATI[bozza.classe] && (
+            <Consiglio titolo="Non sai quali scegliere?">
+              <p>Qualche scelta sicura per cominciare:</p>
+              <ul className="space-y-1">
+                {INCANTESIMI_CONSIGLIATI[bozza.classe].map((x) => <li key={x.id}><span className="font-medium">{DATI.incantesimi[x.id]?.nome}</span> ({DATI.incantesimi[x.id]?.livello ? '1°' : 'trucchetto'}): {x.riga}.</li>)}
+              </ul>
+              <p>In generale: almeno un trucchetto che fa danni, e un incantesimo che ti protegge o cura.</p>
+            </Consiglio>
+          )}
           <BloccoMagia blocco={b} bozza={bozza} cambia={cambia} />
         </div>
       ))}

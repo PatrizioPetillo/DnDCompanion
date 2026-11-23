@@ -19,6 +19,7 @@ const BUDGET: [number, number, number][] = [
 ];
 
 import type { IdCondizione } from '../partita/condizioni';
+import { casuale } from '../partita/dadi';
 
 // mostro, ca e immunità ci sono quando il nemico viene dall'elenco dell'SRD
 export interface Nemico { id: string; nome: string; gs: string; quanti: number; iniziativa: number; pf?: number; ca?: number; mostro?: string; immunita?: IdCondizione[] }
@@ -64,7 +65,7 @@ export interface Combattente {
 }
 export interface Combattimento { ordine: Combattente[]; turno: number; round: number }
 
-export const d20 = () => 1 + Math.floor(Math.random() * 20);
+export const d20 = () => casuale(20);   // modulo dei dadi (23/11)
 
 export function tiraIniziativa(pg: { id: string; nome: string; bonus: number }[], nemici: Nemico[], dado: () => number = d20): Combattimento {
   const ordine: Combattente[] = [

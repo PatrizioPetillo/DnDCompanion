@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { assegna, metodiAmmessi, metodoIniziale, contatoreAbilitaClasse, contatoreMaestria, daCompletare, scegliMaestria, NON_ASSEGNATO, opzioniPunteggio, punteggiIniziali, consigliatiPointBuy, scegliAbilitaClasse, spesaPointBuy, statoAbilita, type StatoAbilita } from '../creazione/caratteristiche';
 import { comePersonaggio, type Bozza } from '../creazione/percorso';
 import { DATI, modificatore } from '../regole';
-import { NOME_CAR } from '../regole/dati/base';
+import { ABILITA, NOME_CAR } from '../regole/dati/base';
+import { abilitaConsigliate, ilClasse, RIGA_PERCEZIONE, testoPrincipali } from '../creazione/consigli';
+import { Consiglio } from './Consiglio';
 import type { Car, MetodoPunteggi } from '../regole/tipi';
 
 const ETICHETTA_METODO: Record<MetodoPunteggi, string> = { pointBuy27: 'Point buy', serieStandard: 'Serie standard', tiri: 'Tiri' };
@@ -72,6 +74,15 @@ export function PassoCaratteristiche({ bozza, cambia }: { bozza: Bozza; cambia: 
         }} className="mb-3 min-h-11 w-full rounded-lg border border-accento px-3 text-sm text-accento">
           Metti i valori consigliati per la tua classe ({classe.nome})
         </button>
+      )}
+      {bozza.classe && classe && (
+        <Consiglio>
+          <p>{ilClasse(classe.nome)} usa soprattutto {testoPrincipali(bozza.classe)}: mettici i punteggi più alti (SRD p. 21).</p>
+          {abilitaConsigliate(bozza.classe).length > 0 && (
+            <p>Abilità della classe che le usano: <span className="font-medium">{abilitaConsigliate(bozza.classe).map((a) => ABILITA[a]?.nome).join(', ')}</span>.</p>
+          )}
+          {classe.abilita.opzioni?.includes('perception') && <p>{RIGA_PERCEZIONE}</p>}
+        </Consiglio>
       )}
       {p?.metodo === 'tiri' && (
         <p className="mb-3 text-sm text-testo-2">

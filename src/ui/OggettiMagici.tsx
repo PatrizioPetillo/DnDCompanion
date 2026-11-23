@@ -11,6 +11,7 @@ import { FoglioDalBasso } from './SchedaIncantesimo';
 import { leggiQR } from '../sblocchi/cifra';
 import { cercaSblocco, servizioAttivo, svelaVelo } from '../sblocchi/servizio';
 import { ScannerQR } from './QR';
+import { casuale } from '../partita/dadi';
 
 const nuovoUid = () => `om-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -329,7 +330,7 @@ function UltimaCarica({ testo, pagina, tiro, tira, distruggi }: { testo: string;
     <div className="space-y-2 rounded-lg border border-attenzione p-2 text-sm text-testo" role="status">
       <p>{testo} <span className="text-xs text-testo-2">SRD p. {pagina}</span></p>
       {tiro === undefined ? (
-        <button onClick={() => tira(1 + Math.floor(Math.random() * 20))} className="min-h-11 w-full rounded-lg border border-bordo">Tira 1d20</button>
+        <button onClick={() => tira(casuale(20))} className="min-h-11 w-full rounded-lg border border-bordo">Tira 1d20</button>
       ) : tiro === 1 ? (
         <>
           <p className="font-medium text-attenzione">Hai tirato 1: è distrutta.</p>

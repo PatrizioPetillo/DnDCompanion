@@ -101,6 +101,8 @@ async def main():
                 if 'caratteristiche' in titolo.lower():
                     c = pg.locator('button:has-text("Metti i valori consigliati")')
                     if await c.count(): await c.first.tap(); await pg.wait_for_timeout(150)
+                if 'magia' in titolo.lower():
+                    log.append('consiglio magia: ' + str(await pg.locator('summary:has-text("Non sai quali scegliere?")').count()))
                 ok = await riempi(pg, log)
                 passi.append((titolo, ok))
                 await pg.screenshot(path=f'/tmp/giro-{classe}_{passo}.png', full_page=False)
@@ -126,7 +128,7 @@ async def main():
             ultimo = max(arch.get('personaggi', []), key=lambda x: x.get('aggiornato', ''), default={})
             salvato = bool(ultimo.get('conclusoIl') or ultimo.get('bozza', {}).get('conclusoIl'))
             rapporto[classe] = {'passi': passi, 'salvato': salvato, 'avvisi': avvisi[:12], 'bloccato': [l for l in log if l.startswith('BLOCC')]}
-            print(log[-6:]); print(classe, 'salvato' if salvato else 'NON SALVATO', [t for t, ok in passi if not ok], avvisi[:6])
+            print([l for l in log if l.startswith('consiglio')]); print(classe, 'salvato' if salvato else 'NON SALVATO', [t for t, ok in passi if not ok], avvisi[:6])
         print('errori pagina:', errori[:5])
         json.dump(rapporto, open('/tmp/giro-rapporto.json', 'w'), ensure_ascii=False, indent=1)
         await b.close()

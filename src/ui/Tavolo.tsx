@@ -10,7 +10,9 @@ import { dopoIlLancio, mancaComponente } from '../partita/componenti';
 import { cambia as cambiaIncantesimo, cambiati, cambiDopoRiposoLungo, sostituti, type CambioPossibile } from '../partita/riposo-incantesimi';
 import { Tendina } from './Tendina';
 import { FoglioDalBasso, SchedaIncantesimo } from './SchedaIncantesimo';
-import { testoDadi } from '../regole/dati/dadi-incantesimi';
+import { DADI_INCANTESIMI, testoDadi } from '../regole/dati/dadi-incantesimi';
+import { daIncantesimo, type RichiestaTiro } from '../partita/tiri';
+import { IconaD20, Tiro } from './Tiro';
 import { aggiungi, cambiaLivello, CONDIZIONE, CONDIZIONI, fannoPerdereConcentrazione, inEffetto, livelloIndebolimento, riassunto, togli, type IdCondizione } from '../partita/condizioni';
 import { GUIDA_CONDIZIONI } from '../guide/guide';
 
@@ -236,6 +238,7 @@ export function MagiaTavolo({ scheda, partita, cambia, bozza }: PropsTavolo) {
   const [filtro, setFiltro] = useState('tutti');
   const [lancio, setLancio] = useState<{ magia: MagiaCalcolata; id: Id } | null>(null);
   const [leggi, setLeggi] = useState<Id | null>(null);
+  const [tiro, setTiro] = useState<RichiestaTiro | null>(null);   // dadi (idea 6)
   const [avviso, setAvviso] = useState<string | null>(null);
   const v = vista(scheda, partita, 0);
   const passa = (id: Id) => {
@@ -316,6 +319,10 @@ export function MagiaTavolo({ scheda, partita, cambia, bozza }: PropsTavolo) {
                     {i.livello > 0 && (
                       <button onClick={() => setLancio({ magia: m, id })} className="min-h-11 shrink-0 rounded-lg border border-accento px-3 text-sm text-accento">Lancia</button>
                     )}
+                    {i.livello === 0 && DADI_INCANTESIMI[id] && (() => {
+                      const rq = daIncantesimo(id, m, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0);
+                      return rq && <button onClick={() => setTiro(rq)} aria-label={`Tira: ${i.nome}`} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-oro/70"><IconaD20 /></button>;
+                    })()}
                     {i.livello === 0 && i.concentrazione && (
                       <button onClick={() => cambia(lancia(partita, v, m.id, id, { tipo: 'trucchetto' }).stato)} className="min-h-11 shrink-0 rounded-lg border border-bordo px-3 text-sm text-testo">Lancia</button>
                     )}
@@ -330,15 +337,22 @@ export function MagiaTavolo({ scheda, partita, cambia, bozza }: PropsTavolo) {
 
       {lancio && (
         <SceltaLancio v={v} m={lancio.magia} id={lancio.id} partita={partita} chiudi={() => setLancio(null)}
-          fatto={(s, interrotto) => { cambia(dopoIlLancio(scheda, s, lancio.id)); setLancio(null); setAvviso(interrotto ? `Hai interrotto ${nome(interrotto)}: ora sei concentrato su ${nome(lancio.id)}.` : null); }} />
+          fatto={(s, interrotto, livello) => {
+            cambia(dopoIlLancio(scheda, s, lancio.id)); setLancio(null);
+            setAvviso(interrotto ? `Hai interrotto ${nome(interrotto)}: ora sei concentrato su ${nome(lancio.id)}.` : null);
+            // dadi (idea 6): se l'incantesimo fa danni o cura, si apre il tiro con lo slot usato
+            const rq = daIncantesimo(lancio.id, lancio.magia, lancio.magia.caratteristica ? scheda.modificatori[lancio.magia.caratteristica] : 0, livello);
+            if (rq) setTiro(rq);
+          }} />
       )}
       {leggi && <SchedaIncantesimo id={leggi} chiudi={() => setLeggi(null)} />}
+      {tiro && <Tiro r={tiro} {...condizioniPerTiro({ scheda, partita, cambia, dado: 0 })} chiudi={() => setTiro(null)} />}
     </div>
   );
 }
 
 function SceltaLancio({ v, m, id, partita, chiudi, fatto }: {
-  v: VistaPartita; m: MagiaCalcolata; id: Id; partita: StatoPartita; chiudi: () => void; fatto: (s: StatoPartita, interrotto: Id | null) => void;
+  v: VistaPartita; m: MagiaCalcolata; id: Id; partita: StatoPartita; chiudi: () => void; fatto: (s: StatoPartita, interrotto: Id | null, livello?: number) => void;
 }) {
   const i = DATI.incantesimi[id];
   const modi = modiDiLancio(v, m, id);
@@ -353,7 +367,7 @@ function SceltaLancio({ v, m, id, partita, chiudi, fatto }: {
       <div className="space-y-2">
         {modi.map((o) => (
           <button key={o.etichetta} disabled={!o.disponibile}
-            onClick={() => { const r = lancia(partita, v, m.id, id, o.modo); fatto(r.stato, r.interrotto); }}
+            onClick={() => { const r = lancia(partita, v, m.id, id, o.modo); fatto(r.stato, r.interrotto, 'livello' in o.modo ? o.modo.livello : undefined); }}
             className="min-h-12 w-full rounded-xl border border-accento px-3 text-left text-base text-accento disabled:border-bordo disabled:text-testo-2/50">
             {o.etichetta}
           </button>
@@ -367,6 +381,9 @@ function SceltaLancio({ v, m, id, partita, chiudi, fatto }: {
 
 // ───────── Condizioni (22/11) ─────────
 // Il giocatore segna quelle che ha; l'app riassume cosa cambia ai tiri (glossario dell'SRD, p. 177-191).
+// Le condizioni che contano per i dadi (idea 6): quelle segnate, più il privo di sensi a 0 PF
+export const condizioniPerTiro = (t: PropsTavolo) => ({ condizioni: t.partita.condizioni ?? [], pfZero: vista(t.scheda, t.partita, 0).pf.attuali === 0 && !t.partita.morte.morto });
+
 export function CondizioniTavolo({ scheda, partita, cambia }: PropsTavolo) {
   const [aperta, setAperta] = useState<IdCondizione | null>(null);
   const [nota, setNota] = useState<string | null>(null);

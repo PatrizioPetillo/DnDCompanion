@@ -120,3 +120,25 @@ export function effettoTs(segnate: CondizioneSegnata[], pfZero: boolean, car: st
     meno: 2 * livelloIndebolimento(segnate),
   };
 }
+
+// Per i dadi (idea 6, 23/11): cosa propongono le condizioni per un tiro, con il perché. Il giocatore può cambiarlo.
+// L'iniziativa è una prova di Destrezza (p. 13): valgono le condizioni sulle prove e quelle sull'iniziativa.
+export type GenereTiro = 'attacco' | 'prova' | 'iniziativa' | { ts: string };
+export function perTiro(segnate: CondizioneSegnata[], pfZero: boolean, g: GenereTiro):
+  { vantaggi: string[]; svantaggi: string[]; fallitoAuto: string | null; meno: number } {
+  const ids = inEffetto(segnate, pfZero);
+  const vantaggi: string[] = [], svantaggi: string[] = [];
+  let fallitoAuto: string | null = null;
+  for (const id of ids) {
+    const e = CONDIZIONE[id].effetti, nome = CONDIZIONE[id].nome.toLowerCase();
+    const metti = (v?: VS) => { if (v === 'vantaggio') vantaggi.push(nome); if (v === 'svantaggio') svantaggi.push(nome); };
+    if (g === 'attacco') metti(e.tuoiAttacchi);
+    else if (g === 'prova') metti(e.prove);
+    else if (g === 'iniziativa') { metti(e.prove); metti(e.iniziativa); }
+    else {
+      if ((g.ts === 'FOR' || g.ts === 'DES') && e.tsForDesFalliti) fallitoAuto = nome;
+      if (g.ts === 'DES' && e.tsDesSvantaggio) svantaggi.push(nome);
+    }
+  }
+  return { vantaggi: [...new Set(vantaggi)], svantaggi: [...new Set(svantaggi)], fallitoAuto, meno: 2 * livelloIndebolimento(segnate) };
+}

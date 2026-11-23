@@ -4,6 +4,8 @@
 import { useState } from 'react';
 import { comePersonaggio, type IdPasso } from '../creazione/percorso';
 import { Restituisci } from './PassoEquipaggiamento';
+import { IconaD20, Tiro } from './Tiro';
+import { daAttacco, daIncantesimo, daIniziativa, daProva, daTiroSalvezza, type RichiestaTiro } from '../partita/tiri';
 import { accettaAvviso, avvisiRiepilogo, riepilogo, type Riepilogo } from '../creazione/riepilogo';
 import type { Bozza } from '../creazione/percorso';
 import { metri } from '../regole/misure';
@@ -14,7 +16,7 @@ import type { Elementi } from '../creazione/personalizzati';
 import { Avatar, riduciRitratto } from './Avatar';
 import { Fascia, immagine } from './Illustrazione';
 import { iniziali } from '../archivio/archivio';
-import { CondizioniTavolo, MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
+import { condizioniPerTiro, CondizioniTavolo, MagiaTavolo, PuntiFerita, RisorseTavolo, Riposi, type PropsTavolo } from './Tavolo';
 import { Borsa, Libro } from './Zaino';
 import { Indossato } from './Indossato';
 import { OggettiMagici } from './OggettiMagici';
@@ -95,8 +97,8 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
       </nav>
 
       <div role="tabpanel">
-        {vistaScheda === 'combattimento' && <Combattimento r={r} tavolo={tavolo} />}
-        {vistaScheda === 'abilita' && <Abilita r={r} />}
+        {vistaScheda === 'combattimento' && <Combattimento r={r} tavolo={tavolo} scheda={scheda} />}
+        {vistaScheda === 'abilita' && <Abilita r={r} scheda={scheda} tavolo={tavolo} />}
         {vistaScheda === 'magia' && (tavolo ? <MagiaTavolo {...tavolo} /> : <Magia r={r} />)}
         {vistaScheda === 'zaino' && <Zaino r={r} scheda={scheda} tavolo={tavolo} bozza={bozza} cambia={ricevuta ? undefined : cambia} restituibile={!ricevuta && !bloccata} />}
         {vistaScheda === 'chi' && <ChiE r={r} bozza={bozza} cambia={cambia} ricevuta={ricevuta || bloccata}
@@ -139,8 +141,9 @@ function Avvisi({ bozza, cambia, apri, ricevuta }: { bozza: Bozza; cambia: (b: B
   );
 }
 
-function Combattimento({ r, tavolo }: { r: Riepilogo; tavolo: PropsTavolo | null }) {
+function Combattimento({ r, tavolo, scheda }: { r: Riepilogo; tavolo: PropsTavolo | null; scheda: SchedaCalcolata }) {
   const [spiega, setSpiega] = useState<string | null>(null);
+  const [tiro, setTiro] = useState<RichiestaTiro | null>(null);      // dadi (idea 6, 23/11)
   const c = r.combattimento;
   const aperto = c.numeri.find((n) => n.id === spiega);
   return (
@@ -157,17 +160,20 @@ function Combattimento({ r, tavolo }: { r: Riepilogo; tavolo: PropsTavolo | null
         ))}
       </div>
       {aperto?.somma && <p className="-mt-2 text-sm text-testo-2">{aperto.etichetta}: {somma(aperto.somma, aperto.valore)}</p>}
+      <BottoneTiro etichetta="Tira l'iniziativa" onClick={() => setTiro(daIniziativa(scheda.iniziativa.totale))} />
 
       <div>
         <h2 className="mb-2 text-base font-medium text-testo">Tiri salvezza</h2>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+        <div className="grid grid-cols-2 gap-x-4">
           {c.tiriSalvezza.map((t) => (
-            <div key={t.car} className="flex items-center gap-2 text-sm">
+            <button key={t.car} onClick={() => setTiro(daTiroSalvezza(t.car, scheda.tiriSalvezza[t.car].totale))}
+              aria-label={`Tira il tiro salvezza su ${t.nome} ${t.valore}${t.competente ? ', con competenza' : ''}`}
+              className="flex min-h-11 items-center gap-2 rounded-lg text-left text-sm">
               <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${t.competente ? 'bg-accento' : 'border border-bordo'}`} />
               <span className="flex-1 text-testo">{t.nome}</span>
               <span className="text-testo">{t.valore}</span>
-              {t.competente && <span className="sr-only">con competenza</span>}
-            </div>
+              <span aria-hidden className="text-oro"><IconaD20 /></span>
+            </button>
           ))}
         </div>
       </div>
@@ -187,6 +193,7 @@ function Combattimento({ r, tavolo }: { r: Riepilogo; tavolo: PropsTavolo | null
                 {a.padronanza ? ` · Padronanza: ${a.padronanza}` : ''}
               </p>
               {a.note.map((n) => <p key={n} className="text-xs text-attenzione">{n}</p>)}
+              {a.danni.dadi && <BottoneTiro etichetta={`Tira: ${a.nome}`} onClick={() => setTiro(daAttacco(a))} />}
             </li>
           ))}
         </ul>
@@ -204,6 +211,12 @@ function Combattimento({ r, tavolo }: { r: Riepilogo; tavolo: PropsTavolo | null
                 </div>
                 <p className="text-sm text-testo">{t.dadi}</p>
                 <p className="text-xs text-testo-2">{t.fonte}{t.nota ? ` · ${t.nota}` : ''}</p>
+                {(() => {
+                  const [mid, iid] = t.id.split(':');
+                  const m = scheda.magia.find((x) => x.id === mid);
+                  const rq = m && daIncantesimo(iid, m, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0);
+                  return rq ? <BottoneTiro etichetta={`Tira: ${t.nome}`} onClick={() => setTiro(rq)} /> : null;
+                })()}
               </li>
             ))}
           </ul>
@@ -223,11 +236,22 @@ function Combattimento({ r, tavolo }: { r: Riepilogo; tavolo: PropsTavolo | null
         </div>
       )}
       {c.altro.length > 0 && <ul className="space-y-1 text-sm text-testo">{c.altro.map((x) => <li key={x}>{x}</li>)}</ul>}
+      {tiro && <Tiro r={tiro} {...(tavolo ? condizioniPerTiro(tavolo) : {})} chiudi={() => setTiro(null)} />}
     </div>
   );
 }
 
-function Abilita({ r }: { r: Riepilogo }) {
+// Il pulsante dei dadi: sempre uguale, con l'icona del d20 (idea 6)
+function BottoneTiro({ etichetta, onClick }: { etichetta: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-oro/70 text-sm text-testo">
+      <IconaD20 /> {etichetta}
+    </button>
+  );
+}
+
+function Abilita({ r, scheda, tavolo }: { r: Riepilogo; scheda: SchedaCalcolata; tavolo: PropsTavolo | null }) {
+  const [tiro, setTiro] = useState<RichiestaTiro | null>(null);
   // Come nella creazione: FOR DES COS a sinistra, INT SAG CAR a destra, colonne indipendenti
   const riquadro = (c: Riepilogo['abilita'][number]) => (
     <div key={c.car} className="rounded-xl border border-bordo bg-superficie p-2.5">
@@ -236,14 +260,17 @@ function Abilita({ r }: { r: Riepilogo }) {
         <span className="text-sm text-testo">{c.punteggio} <span className="text-testo-2">({c.mod})</span></span>
       </div>
       {c.voci.length > 0 && (
-        <ul className="mt-1.5 space-y-1">
+        <ul className="mt-1">
           {c.voci.map((v) => (
-            <li key={v.id} className="flex items-center gap-1.5 text-xs">
-              <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${v.maestria ? 'bg-oro ring-2 ring-accento' : v.competente ? 'bg-accento' : 'border border-bordo'}`} />
-              <span className={`min-w-0 flex-1 ${v.competente ? 'text-testo' : 'text-testo-2'}`}>{v.nome}{v.maestria ? ' (maestria)' : ''}
-                {v.svantaggio && <span className="block text-xs text-attenzione">{v.svantaggio}</span>}</span>
-              <span className="text-testo">{v.valore}</span>
-              {v.competente && !v.maestria && <span className="sr-only">con competenza</span>}
+            <li key={v.id}>
+              <button onClick={() => setTiro(daProva(v.nome, scheda.abilita[v.id].totale, scheda.abilita[v.id].svantaggio ? 'armatura' : undefined))}
+                aria-label={`Tira ${v.nome} ${v.valore}${v.maestria ? ', maestria' : v.competente ? ', con competenza' : ''}`}
+                className="flex min-h-11 w-full items-center gap-1.5 text-left text-xs">
+                <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${v.maestria ? 'bg-oro ring-2 ring-accento' : v.competente ? 'bg-accento' : 'border border-bordo'}`} />
+                <span className={`min-w-0 flex-1 ${v.competente ? 'text-testo' : 'text-testo-2'}`}>{v.nome}{v.maestria ? ' (maestria)' : ''}
+                  {v.svantaggio && <span className="block text-xs text-attenzione">{v.svantaggio}</span>}</span>
+                <span className="text-testo">{v.valore}</span>
+              </button>
             </li>
           ))}
         </ul>
@@ -251,7 +278,13 @@ function Abilita({ r }: { r: Riepilogo }) {
     </div>
   );
   const colonna = (cs: string[]) => <div className="space-y-2">{r.abilita.filter((c) => cs.includes(c.car)).map(riquadro)}</div>;
-  return <div className="grid grid-cols-2 items-start gap-2">{colonna(['FOR', 'DES', 'COS'])}{colonna(['INT', 'SAG', 'CAR'])}</div>;
+  return (
+    <>
+      <p className="mb-2 text-xs text-testo-2">Tocca un'abilità per tirare la prova.</p>
+      <div className="grid grid-cols-2 items-start gap-2">{colonna(['FOR', 'DES', 'COS'])}{colonna(['INT', 'SAG', 'CAR'])}</div>
+      {tiro && <Tiro r={tiro} {...(tavolo ? condizioniPerTiro(tavolo) : {})} chiudi={() => setTiro(null)} />}
+    </>
+  );
 }
 
 function Magia({ r }: { r: Riepilogo }) {

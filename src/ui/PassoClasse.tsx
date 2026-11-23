@@ -5,6 +5,8 @@ import { visibile, type Bozza } from '../creazione/percorso';
 import { cosaOttieni, type Privilegio } from '../creazione/cosa-ottieni';
 import { SCHEDE_CLASSE } from '../creazione/testi';
 import { DATI } from '../regole';
+import { classiFacili, RIGA_TALENTO, STILI_DI_GIOCO } from '../creazione/consigli';
+import { Consiglio } from './Consiglio';
 import { Tendina } from './Tendina';
 import { Fascia, immagine } from './Illustrazione';
 
@@ -23,6 +25,17 @@ export function PassoClasse({ bozza, scegli, cambia }: { bozza: Bozza; scegli: (
     <section>
       <h1 className="mb-1 font-titolo text-2xl text-accento">Scegli la classe</h1>
       <p className="mb-4 text-sm text-testo-2">È il mestiere del tuo personaggio: decide come combatte e se usa la magia.</p>
+      <Consiglio>
+        <p>Pensa a cosa ti piacerebbe fare al tavolo:</p>
+        <ul className="space-y-1">
+          {STILI_DI_GIOCO.map((s) => <li key={s.stile}><span className="font-medium">{s.stile}:</span> {s.classi.map((c) => DATI.classi[c]?.nome).join(', ')}.</li>)}
+        </ul>
+        <p>Le più semplici per la prima partita: {classiFacili().map((c) => DATI.classi[c]?.nome).join(', ')}.</p>
+        <p className="font-medium">Guerriero: lo stile di combattimento</p>
+        <ul className="space-y-1">
+          {(['defense', 'archery', 'great-weapon-fighting', 'two-weapon-fighting'] as const).map((t) => <li key={t}><span className="font-medium">{DATI.talenti[t]?.nome}:</span> {RIGA_TALENTO[t]}</li>)}
+        </ul>
+      </Consiglio>
       <ul className="space-y-3">
         {Object.values(DATI.classi).filter((c) => visibile(bozza, c.id, bozza.classe)).map((c) => {
           const t = SCHEDE_CLASSE[c.id];

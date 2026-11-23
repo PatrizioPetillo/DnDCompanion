@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { visibile, type Bozza } from '../creazione/percorso';
 import { DAL_MANUALE, moduloDa, moduloVuoto, type ModuloBackground as Modulo } from '../creazione/personalizzati';
 import { DATI } from '../regole';
+import { backgroundConsigliati, CON_ARTICOLO, principali, RIGA_TALENTO, unClasse } from '../creazione/consigli';
+import { Consiglio } from './Consiglio';
 import { ABILITA, NOME_CAR } from '../regole/dati/base';
 import { NOME_LISTA } from '../regole/dati';
 import type { Background } from '../regole/tipi';
@@ -103,6 +105,16 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
     <section>
       <h1 className="mb-1 font-titolo text-2xl text-accento">Scegli il background</h1>
       <p className="mb-4 text-sm text-testo-2">Cosa faceva il tuo personaggio prima di partire all'avventura.</p>
+      <Consiglio>
+        {bozza.classe && backgroundConsigliati(bozza.classe).length > 0 && (
+          <p>Per {unClasse(DATI.classi[bozza.classe]?.nome ?? '')} conviene un background che aumenta {CON_ARTICOLO[principali(bozza.classe)[0]]}:{' '}
+            <span className="font-medium">{backgroundConsigliati(bozza.classe).map((b) => DATI.background[b]?.nome).join(', ')}</span>. Lo suggerisce anche l'SRD (p. 19-20).</p>
+        )}
+        <p>Il talento che dà ogni background:</p>
+        <ul className="space-y-1">
+          {srd.map((b) => <li key={b.id}><span className="font-medium">{b.nome}, {DATI.talenti[b.talento.talento]?.nome}:</span> {RIGA_TALENTO[b.talento.talento]}</li>)}
+        </ul>
+      </Consiglio>
       <ul className="space-y-3">{srd.map(scheda)}</ul>
 
       {bozza.tavolo ? (

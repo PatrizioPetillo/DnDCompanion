@@ -4,6 +4,7 @@ import { OGGETTI_MAGICI, MAX_SINTONIA, type EffettoMagico } from './dati/oggetti
 import { ARMI } from './dati/base';
 import type { Dati } from './dati';
 import type { OggettoMagicoPosseduto } from './tipi';
+import { casuale, type Dado } from '../partita/dadi';
 
 export interface OggettoAttivo { uid: string; nome: string; effetti: EffettoMagico[]; base?: string }
 
@@ -76,7 +77,7 @@ export function svela(o: OggettoMagicoPosseduto, s: import('./tipi').OggettoSvel
 export const caricheConosciute = (o: OggettoMagicoPosseduto) => !!o.caricheNote || (richiedeSintonia(o) && !!o.sintonizzato);
 
 // Ricarica all'alba (22/11): tira i dadi dell'oggetto e aggiunge, senza superare il massimo
-export function tiraRicarica(r: { dadi: number; facce: number; piu: number } | 'tutte', massimo: number, dado = (f: number) => 1 + Math.floor(Math.random() * f)) {
+export function tiraRicarica(r: { dadi: number; facce: number; piu: number } | 'tutte', massimo: number, dado: Dado = casuale) {
   if (r === 'tutte') return { tiri: [] as number[], totale: massimo };
   const tiri = Array.from({ length: r.dadi }, () => dado(r.facce));
   return { tiri, totale: tiri.reduce((t, x) => t + x, 0) + r.piu };

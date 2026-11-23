@@ -5,6 +5,8 @@ import { moduloDaSpecie, moduloSpecieVuoto, type ModuloSpecie as Modulo } from '
 import { ModuloSpecie } from './ModuloSpecie';
 import { Separatore } from './PassoMagia';
 import { DATI } from '../regole';
+import { CONSIGLIO_SPECIE, RIGA_TALENTO } from '../creazione/consigli';
+import { Consiglio } from './Consiglio';
 import { ABILITA, NOME_CAR } from '../regole/dati/base';
 import { metri } from '../regole/misure';
 import { Fascia } from './Illustrazione';
@@ -65,6 +67,13 @@ export function PassoSpecie({ bozza, scegli, cambia, salvaSpecie, eliminaSpecie 
     <section>
       <h1 className="mb-1 font-titolo text-2xl text-accento">Scegli la specie</h1>
       <p className="mb-4 text-sm text-testo-2">Da dove viene il tuo personaggio: ti dà taglia, velocità e alcuni tratti.</p>
+      <Consiglio>
+        <p>{CONSIGLIO_SPECIE}</p>
+        <p>L'umano sceglie anche un talento d'origine (Versatile):</p>
+        <ul className="space-y-1">
+          {(['alert', 'magic-initiate', 'savage-attacker', 'skilled'] as const).map((t) => <li key={t}><span className="font-medium">{DATI.talenti[t]?.nome}:</span> {RIGA_TALENTO[t]}</li>)}
+        </ul>
+      </Consiglio>
       <ul className="space-y-3">
         {Object.values(DATI.specie).filter((sp) => visibile(bozza, sp.id, bozza.specie))
           .sort((a, b) => Number(!!a.personalizzato) - Number(!!b.personalizzato)).map((sp) => {

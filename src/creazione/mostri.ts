@@ -1,4 +1,4 @@
-// I mostri dell'SRD per gli incontri del master (23/11): solo i numeri delle schede, nessuna tattica.
+// I mostri dell'SRD per gli incontri del master (23/11): i numeri per l'incontro e, a parte, la scheda completa dell'SRD.
 // Dati in src/regole/dati/mostri.json (strumenti/mostri-srd.py): nome italiano (SRD 5.2.1 IT) e inglese (SRD 5.2),
 // tipo, CA, iniziativa, PF, GS, PE, immunità alle condizioni e pagina dell'SRD 5.2.
 import type { IdCondizione } from '../partita/condizioni';
@@ -25,3 +25,14 @@ export function cercaMostri(tutti: Mostro[], testo: string, gs = ''): Mostro[] {
 }
 
 export const caricaMostri = async (): Promise<Mostro[]> => (await import('../regole/dati/mostri.json')).default as Mostro[];
+
+// La scheda completa (23/11, scelta di Patrizio): testo dell'SRD 5.2.1 italiano (strumenti/mostri-testi.py),
+// caricata solo quando il master la apre. car: [punteggio, modificatore, tiro salvezza].
+export interface VoceMostro { nome: string; testo: string }
+export interface SezioneMostro { titolo: string; intro?: string; voci: VoceMostro[] }
+export interface TestoMostro {
+  velocita?: string; car: Record<'FOR' | 'DES' | 'COS' | 'INT' | 'SAG' | 'CAR', [number, string, string]>;
+  righe: [string, string][]; sezioni: SezioneMostro[];
+}
+export const caricaTestiMostri = async (): Promise<Record<string, TestoMostro>> =>
+  (await import('../regole/dati/mostri-testi.json')).default as unknown as Record<string, TestoMostro>;

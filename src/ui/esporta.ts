@@ -4,6 +4,15 @@ import { creaLink } from '../esporta/link';   // già nel pezzo principale (lo u
 import type { Bozza } from '../creazione/percorso';
 import type { Elementi } from '../creazione/personalizzati';
 
+// Il motivo di un errore, in parole: un pezzo dell'app che non si scarica di solito vuol dire che è uscita
+// una versione nuova mentre l'app era aperta (23/11)
+function motivo(e: unknown): string {
+  const t = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  if (/dynamically imported module|Importing a module script failed|error loading dynamically|ChunkLoadError/i.test(t))
+    return "c'è una versione nuova dell'app: chiudila del tutto, riaprila e riprova.";
+  return t.slice(0, 160);
+}
+
 function scarica(dati: BlobPart, tipo: string, nome: string) {
   const url = URL.createObjectURL(new Blob([dati], { type: tipo }));
   const a = document.createElement('a');
@@ -18,7 +27,7 @@ export async function scaricaPdf(bozza: Bozza, ritratto?: string): Promise<strin
     const { pdfDellaScheda } = await import('../esporta/prepara-pdf');
     scarica(await pdfDellaScheda(bozza, ritratto) as BlobPart, 'application/pdf', nomeFile(bozza).replace(/\.json$/, '.pdf'));
     return null;
-  } catch { return 'Non sono riuscito a creare il PDF. Riprova.'; }
+  } catch (e) { console.error('PDF', e); return `Non sono riuscito a creare il PDF. Motivo: ${motivo(e)}`; }
 }
 
 // Il link contiene tutta la scheda: chi lo apre la vede, senza toccare il suo personaggio
@@ -46,7 +55,6 @@ export async function scaricaFoundry(bozza: Bozza): Promise<string> {
   } catch (e) {
     // 23/11: il motivo vero, per capire cosa non va (prima si leggeva solo «Riprova»)
     console.error('Foundry', e);
-    const motivo = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 160) : String(e).slice(0, 160);
-    return `Non sono riuscito a creare il file per Foundry. Motivo: ${motivo}`;
+    return `Non sono riuscito a creare il file per Foundry. Motivo: ${motivo(e)}`;
   }
 }

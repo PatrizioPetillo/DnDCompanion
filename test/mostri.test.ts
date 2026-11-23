@@ -61,3 +61,34 @@ describe('i mostri negli incontri', () => {
     expect(c.ordine[0].condizioni).toEqual([[], []]);
   });
 });
+
+// Schede complete (23/11): testo dell'SRD 5.2.1 italiano, letto dal PDF con i nomi delle voci in grassetto
+import testi from '../src/regole/dati/mostri-testi.json';
+import type { TestoMostro } from '../src/creazione/mostri';
+describe('Schede complete dei mostri', () => {
+  const T = testi as unknown as Record<string, TestoMostro>;
+  const tutti = dati as unknown as { id: string; nome: string }[];
+  it('una scheda per ogni mostro, con le sei caratteristiche e voci con nome e testo', () => {
+    for (const m of tutti) {
+      const t = T[m.id];
+      expect(t, m.nome).toBeDefined();
+      expect(Object.keys(t.car).sort()).toEqual(['CAR', 'COS', 'DES', 'FOR', 'INT', 'SAG']);
+      expect(t.righe.some(([e]) => e === 'GS')).toBe(true);
+      for (const s of t.sezioni) for (const v of s.voci) {
+        expect(v.nome.length, `${m.nome}: ${v.nome}`).toBeLessThan(70);
+        expect(v.testo, `${m.nome}: ${v.nome}`).toMatch(/^[^a-z.,;]/);
+      }
+    }
+  });
+  it('controlli a campione sulle pagine dell\'SRD', () => {
+    const g = T['goblin-boss'];
+    expect(g.sezioni.map((s) => s.titolo)).toEqual(['Azioni', 'Azioni bonus', 'Reazioni']);
+    expect(g.sezioni[0].voci.map((v) => v.nome)).toEqual(['Multiattacco', 'Scimitarra', 'Arco corto']);
+    expect(g.sezioni[0].voci[1].testo).toContain('5 (1d6 + 2) danni taglienti');
+    const l = T.lich;
+    expect(l.sezioni.find((s) => s.titolo === 'Azioni leggendarie')!.voci).toHaveLength(3);
+    expect(l.sezioni.find((s) => s.titolo === 'Azioni')!.voci.find((v) => v.nome === 'Incantesimi')!.testo).toContain('\nA volontà:');
+    expect(T['young-white-dragon'].car.INT).toEqual([6, '−2', '−2']);   // refuso del PDF «−2 2»
+    expect(T['giant-fly'].sezioni).toEqual([]);                           // nell'SRD sta tra gli oggetti magici, senza azioni
+  });
+});

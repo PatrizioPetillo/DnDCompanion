@@ -15,6 +15,7 @@ import { NOME_CAR } from '../regole/dati/base';
 import type { Car } from '../regole/tipi';
 import { semplici, Tendina } from './Tendina';
 import { FoglioDalBasso } from './SchedaIncantesimo';
+import { SchedaMostro } from './SchedaMostro';
 
 const nuovoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const pe = (n: number) => n.toLocaleString('it-IT');
@@ -102,6 +103,7 @@ function SchedaIncontro({ inc, pg, salva, chiudi, togli }: {
 }) {
   const metti = (o: Partial<Incontro>) => salva({ ...inc, ...o });
   const c = inc.combattimento;
+  const [mostro, setMostro] = useState<string | null>(null);     // la scheda completa aperta sopra l'incontro
   // L'iniziativa tirata sul telefono del giocatore (tavolo collegato) entra da sola, se è di questo combattimento
   const arrivate = c ? c.ordine.flatMap((x) => {
     if (x.tipo !== 'pg' || (!x.attesa && !x.dalGiocatore)) return [];
@@ -115,13 +117,14 @@ function SchedaIncontro({ inc, pg, salva, chiudi, togli }: {
   }, [firmaArrivate]);   // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="text-lg font-medium text-testo">{c ? `Round ${c.round}` : 'Prepara l\'incontro'}</h2>}>
-      {c ? <Combattendo c={c} pg={pg} cambia={(n) => metti({ combattimento: n })} fine={() => window.confirm('Finire il combattimento?') && metti({ combattimento: undefined })} />
-        : <Prepara inc={inc} pg={pg} metti={metti} togli={togli} />}
+      {mostro && <SchedaMostro id={mostro} chiudi={() => setMostro(null)} />}
+      {c ? <Combattendo c={c} pg={pg} nemici={inc.nemici} apriMostro={setMostro} cambia={(n) => metti({ combattimento: n })} fine={() => window.confirm('Finire il combattimento?') && metti({ combattimento: undefined })} />
+        : <Prepara inc={inc} pg={pg} metti={metti} togli={togli} apriMostro={setMostro} />}
     </FoglioDalBasso>
   );
 }
 
-function Prepara({ inc, pg, metti, togli }: { inc: Incontro; pg: InfoPg[]; metti: (o: Partial<Incontro>) => void; togli: () => void }) {
+function Prepara({ inc, pg, metti, togli, apriMostro }: { inc: Incontro; pg: InfoPg[]; apriMostro: (id: string) => void; metti: (o: Partial<Incontro>) => void; togli: () => void }) {
   const [elenco, setElenco] = useState(false);
   const b = budget(inc, pg);
   const tot = peNemici(inc.nemici);
@@ -176,7 +179,10 @@ function Prepara({ inc, pg, metti, togli }: { inc: Incontro; pg: InfoPg[]; metti
               </span>
             </div>
             {n.mostro && (
-              <p className="text-xs text-testo-2">Dall'SRD · CA {n.ca}{n.immunita?.length ? ` · immune a: ${n.immunita.map(nomeCond).join(', ')}` : ''}</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-testo-2">Dall'SRD · CA {n.ca}{n.immunita?.length ? ` · immune a: ${n.immunita.map(nomeCond).join(', ')}` : ''}</p>
+                <button onClick={() => apriMostro(n.mostro!)} className="min-h-11 shrink-0 px-2 text-sm text-accento">Scheda</button>
+              </div>
             )}
             <div className="grid grid-cols-3 gap-2 text-xs text-testo-2">
               <label className="block">GS
@@ -294,7 +300,9 @@ function RigaPg({ x, i, c, info, ora, cambia }: { x: Combattente; i: number; c: 
   );
 }
 
-function Combattendo({ c, pg, cambia, fine }: { c: Combattimento; pg: InfoPg[]; cambia: (c: Combattimento) => void; fine: () => void }) {
+function Combattendo({ c, pg, nemici, apriMostro, cambia, fine }: {
+  c: Combattimento; pg: InfoPg[]; nemici: Nemico[]; apriMostro: (id: string) => void; cambia: (c: Combattimento) => void; fine: () => void;
+}) {
   return (
     <div className="space-y-3">
       <ol className="space-y-2">
@@ -309,6 +317,8 @@ function Combattendo({ c, pg, cambia, fine }: { c: Combattimento; pg: InfoPg[]; 
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-base text-testo">{x.quanti && x.quanti > 1 ? `${x.quanti} × ` : ''}{x.nome}{ora ? ' · tocca a lui' : ''}</span>
                   {x.ca && <span className="block text-xs text-testo-2">CA {x.ca}</span>}
+                  {(() => { const id = nemici.find((n) => `n:${n.id}` === x.id)?.mostro; return id ? (
+                    <button onClick={() => apriMostro(id)} className="min-h-11 text-sm text-accento">Scheda: azioni e tratti</button>) : null; })()}
                   <label className="flex items-center gap-1 text-xs text-testo-2">d20
                     <input inputMode="numeric" value={x.tiro} aria-label={`d20 di ${x.nome}`} onChange={(e) => cambia(cambiaTiro(c, x.id, Number(e.target.value) || 1))}
                       className="h-11 w-12 rounded border border-bordo bg-sfondo text-center text-base text-testo" /> {segno(x.bonus)}</label>
@@ -377,7 +387,7 @@ function ElencoMostri({ chiudi, scegli }: { chiudi: () => void; scegli: (m: Most
             {lista.length > 80 && <p className="text-xs text-testo-2">Ne vedi 80: scrivi qualche lettera del nome o scegli il grado di sfida.</p>}
           </>
         )}
-        <p className="text-xs text-testo-2">Azioni e tratti sono nella scheda del mostro nell'SRD: qui ci sono solo i numeri che servono all'incontro.</p>
+        <p className="text-xs text-testo-2">Nell'incontro, «Scheda» apre azioni, tratti e reazioni del mostro come nell'SRD.</p>
       </div>
     </FoglioDalBasso>
   );

@@ -14,6 +14,7 @@ const ORIGINE = Object.values(DATI.talenti).filter((t) => t.categoria === 'origi
 const ABILITA_ORD = Object.entries(ABILITA).sort((a, b) => a[1].nome.localeCompare(b[1].nome, 'it'));
 const TRUCCHETTI = Object.values(DATI.incantesimi).filter((i) => i.livello === 0).sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
 const PRIMO = Object.values(DATI.incantesimi).filter((i) => i.livello === 1).sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
+const SECONDO = Object.values(DATI.incantesimi).filter((i) => i.livello === 2).sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
 const LISTE: { id: ListaSpecie; nome: string }[] = [{ id: 'cleric', nome: 'Chierico' }, { id: 'druid', nome: 'Druido' }, { id: 'wizard', nome: 'Mago' }];
 const VELOCITA = ['6', '7,5', '9', '10,5', '12'];
 const magiaVuota = (): MagiaModulo => ({ caratteristica: 'scelta', trucchettiFissi: [], trucchettiScelti: null, incantesimo1: '' });
@@ -175,7 +176,13 @@ export function ModuloSpecie({ iniziale, chiudi, salva }: { iniziale: Modulo; ch
                 opzioni={[{ id: 'nessuno', nome: 'Nessuno', disattivata: false }, ...PRIMO.map((i) => ({ id: i.id, nome: i.nome, disattivata: false }))]}
                 cambia={(v) => metti({ incantesimo1: !v || v === 'nessuno' ? '' : v })} />
               {g.incantesimo1 && <p className="text-xs text-testo-2">Sempre preparato: una volta gratis per riposo lungo, poi con gli slot se ne hai.</p>}
-              <p className="text-xs text-testo-2">Gli incantesimi che arrivano ai livelli 3 e 5 non servono: l'app crea personaggi di livello 1.</p>
+              <Tendina etichetta="Dal 3° livello del personaggio (facoltativo, di 1°)" valore={g.incantesimo3 || 'nessuno'}
+                opzioni={[{ id: 'nessuno', nome: 'Nessuno', disattivata: false }, ...PRIMO.map((i) => ({ id: i.id, nome: i.nome, disattivata: false }))]}
+                cambia={(v) => metti({ incantesimo3: !v || v === 'nessuno' ? '' : v })} />
+              <Tendina etichetta="Dal 5° livello del personaggio (facoltativo, di 2°)" valore={g.incantesimo5 || 'nessuno'}
+                opzioni={[{ id: 'nessuno', nome: 'Nessuno', disattivata: false }, ...SECONDO.map((i) => ({ id: i.id, nome: i.nome, disattivata: false }))]}
+                cambia={(v) => metti({ incantesimo5: !v || v === 'nessuno' ? '' : v })} />
+              <p className="text-xs text-testo-2">Come per l'elfo e il tiefling: sempre preparati, una volta gratis per riposo lungo, poi con gli slot.</p>
               <Errore c="magia" />
             </div>
           )}

@@ -106,7 +106,11 @@ export function nuovoLivello(b: Bozza, scelte: Scelte, d: Dati = DATI): { livell
     const giaNoti = conosciuti(prima);
     for (const m of scheda.magia) {
       const p0 = prima.find((x) => x.id === m.id);
-      const lista = m.lista ? Object.values(d.incantesimi).filter((i) => i.liste.includes(m.lista!)) : [];
+      // senza lista (Patto del tomo): da qualsiasi lista di classe (p. 73)
+      const lista = m.lista ? Object.values(d.incantesimi).filter((i) => i.liste.includes(m.lista!)) : Object.values(d.incantesimi).filter((i) => i.liste.length > 0);
+      // Patto del tomo preso salendo di livello (è una supplica, p. 73): 2 rituali di 1° da qualsiasi lista
+      if (!p0 && m.id === 'pact-of-the-tome' && m.scelte.incantesimi) magia.push({ chiave: `scelta:${m.scelte.incantesimi}`, titolo: 'Rituale: Patto del tomo', quante: 2,
+        opzioni: conNome(lista.filter((i) => i.livello === 1 && i.rituale).map((i) => i.id), d).map((o) => giaNoti.has(o.id) ? { ...o, disattivata: true, motivo: 'lo conosci già' } : o) });
       // trucchetti in più (anche quelli di una fonte nuova, come Guerriero benedetto)
       const nuoviT = m.trucchetti.attesi - (p0?.trucchetti.scelti.length ?? 0) - (m.trucchetti.fissi?.length ?? 0) + (p0?.trucchetti.fissi?.length ?? 0);
       if (m.scelte.trucchetti && nuoviT > 0) magia.push({ chiave: `trucchetti:${m.scelte.trucchetti}`, titolo: m.fonte.tipo === 'classe' && m.id !== b.classe ? `Trucchetto: ${m.nome.replace(/^Classe: /, '')}` : 'Trucchetto nuovo', quante: nuoviT,

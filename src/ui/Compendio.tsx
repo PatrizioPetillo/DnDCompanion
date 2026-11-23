@@ -63,7 +63,7 @@ export function Compendio({ chiudi }: { chiudi: () => void }) {
         {interruttore('rituale', 'si', 'Rituali')}
         {filtrato && <button onClick={() => setF({})} className="min-h-11 px-2 text-sm text-accento">Azzera</button>}
       </div>
-      <p className="mb-3 text-xs text-testo-2">Al 1° livello si usano solo i trucchetti e gli incantesimi di 1°.</p>
+      <p className="mb-3 text-xs text-testo-2">Al 1° livello si usano i trucchetti e gli incantesimi di 1°; per chi lancia incantesimi come classe principale gli slot di 2° arrivano al 3° livello, quelli di 3° al 5° (paladino e ranger: di 2° al 5°).</p>
 
       {totale === 0 && <p className="py-6 text-center text-sm text-testo-2">Nessun incantesimo con questi filtri.</p>}
       {gruppi.map((g) => (

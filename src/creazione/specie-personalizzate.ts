@@ -17,6 +17,9 @@ export interface MagiaModulo {
   trucchettiFissi: Id[];
   trucchettiScelti: { quantita: number; lista: ListaSpecie } | null;
   incantesimo1: Id;                                    // '' = nessuno; sempre preparato, 1 volta gratis per riposo lungo
+  // Dal 3° e dal 5° livello del personaggio (23/11, ora l'app arriva al 5°): come elfo e tiefling dell'SRD (p. 85-86)
+  incantesimo3?: Id;                                   // di 1° livello
+  incantesimo5?: Id;                                   // di 2° livello
 }
 export interface ModuloSpecie {
   id?: Id;
@@ -65,6 +68,8 @@ export function controllaSpecie(m: ModuloSpecie, d: Dati = DATI): { campo: strin
     if (!g.trucchettiFissi.length && !g.trucchettiScelti && !g.incantesimo1) e.push({ campo: 'magia', messaggio: 'Aggiungi almeno un trucchetto o un incantesimo, oppure togli la magia' });
     for (const t of g.trucchettiFissi) if (d.incantesimi[t]?.livello !== 0) e.push({ campo: 'magia', messaggio: `${d.incantesimi[t]?.nome ?? t} non è un trucchetto` });
     if (g.incantesimo1 && d.incantesimi[g.incantesimo1]?.livello !== 1) e.push({ campo: 'magia', messaggio: 'L\'incantesimo deve essere di 1° livello' });
+    if (g.incantesimo3 && d.incantesimi[g.incantesimo3]?.livello !== 1) e.push({ campo: 'magia', messaggio: 'L\'incantesimo del 3° livello deve essere di 1° livello' });
+    if (g.incantesimo5 && d.incantesimi[g.incantesimo5]?.livello !== 2) e.push({ campo: 'magia', messaggio: 'L\'incantesimo del 5° livello deve essere di 2° livello' });
     if (g.trucchettiScelti && (g.trucchettiScelti.quantita < 1 || g.trucchettiScelti.quantita > 3)) e.push({ campo: 'magia', messaggio: 'Trucchetti a scelta: da 1 a 3' });
   }
   m.tratti.forEach((t, i) => { if (!t.nome.trim()) e.push({ campo: `tratto-${i}`, messaggio: 'Dai un nome al tratto (o toglilo)' }); });
@@ -118,9 +123,14 @@ export function creaSpecie(m: ModuloSpecie, d: Dati = DATI): Specie {
       puoUsareSlot: !!g.incantesimo1, srd: { pagina: 0 },
     };
     ef.push({ tipo: 'magia', concessione: c });
+    for (const [l, sp] of [[3, g.incantesimo3], [5, g.incantesimo5]] as const) if (sp)
+      ef.push({ tipo: 'dalLivello', livello: l, effetti: [{ tipo: 'magia', concessione: { id: `${id}-${l}`, nome: `Specie: ${nome} (${l}° livello)`, fonte: { tipo: 'specie', id },
+        caratteristica: c.caratteristica, semprePreparati: [sp], lanciGratuiti: { incantesimi: [sp], usi: 1, recupero: 'lungo' }, puoUsareSlot: true, slot: 'normali', srd: { pagina: 0 } } }] });
     const parti = [...g.trucchettiFissi.map((t) => d.incantesimi[t]?.nome ?? t),
       ...(g.trucchettiScelti ? [`${g.trucchettiScelti.quantita} trucchett${g.trucchettiScelti.quantita === 1 ? 'o' : 'i'} (${NOME_LISTA_IT[g.trucchettiScelti.lista]})`] : []),
-      ...(g.incantesimo1 ? [d.incantesimi[g.incantesimo1]?.nome ?? g.incantesimo1] : [])];
+      ...(g.incantesimo1 ? [d.incantesimi[g.incantesimo1]?.nome ?? g.incantesimo1] : []),
+      ...(g.incantesimo3 ? [`${d.incantesimi[g.incantesimo3]?.nome ?? g.incantesimo3} (dal 3°)`] : []),
+      ...(g.incantesimo5 ? [`${d.incantesimi[g.incantesimo5]?.nome ?? g.incantesimo5} (dal 5°)`] : [])];
     tratti.push(tratto('magia', `Magia: ${parti.join(', ')}`, ef));
   }
 

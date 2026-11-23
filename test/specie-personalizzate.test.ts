@@ -63,6 +63,17 @@ describe('Modulo della specie', () => {
     const senza = { ...pg, scelte: { ...pg.scelte, [`${sp.id}.trucchetti`]: [] } };
     expect(statoPassi(senza).magia.stato).toBe('da-fare');
   });
+  it('incantesimi dal 3° e dal 5° livello del personaggio, come elfo e tiefling (23/11)', async () => {
+    const sp = creaSpecie({ ...BASE, magia: { caratteristica: 'INT', trucchettiFissi: ['light'], trucchettiScelti: null, incantesimo1: '', incantesimo3: 'sleep', incantesimo5: 'misty-step' } });
+    usa(sp);
+    const { L5_LADRO, L2_LADRO } = await import('./livelli-prova');
+    const al5 = calcolaScheda({ ...L5_LADRO, specie: sp.id });
+    expect(al5.magia.find((x) => x.id === `${sp.id}-3`)?.semprePreparati).toEqual(['sleep']);
+    expect(al5.magia.find((x) => x.id === `${sp.id}-5`)?.lanciGratuiti).toMatchObject({ incantesimi: ['misty-step'], usi: 1 });
+    expect(calcolaScheda({ ...L2_LADRO, specie: sp.id }).magia.some((x) => x.id === `${sp.id}-3`)).toBe(false);
+    expect(controllaSpecie({ ...BASE, magia: { caratteristica: 'INT', trucchettiFissi: ['light'], trucchettiScelti: null, incantesimo1: '', incantesimo5: 'sleep' } }).map((e) => e.messaggio))
+      .toContain('L\'incantesimo del 5° livello deve essere di 2° livello');
+  });
   it('tratto con usi: diventa una risorsa con i pallini', () => {
     const sp = creaSpecie({ ...BASE, tratti: [{ nome: 'Passo nella nebbia', testo: 'Ti teletrasporti di 9 m', usi: 'competenza', riposo: 'lungo' }] });
     usa(sp);

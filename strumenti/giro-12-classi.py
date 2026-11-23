@@ -1,4 +1,4 @@
-# Prova dall'interfaccia (23/11): crea un personaggio per ognuna delle 12 classi passando da tutti i passi, come un giocatore.
+# Prova dall'interfaccia (23/11; dal blocco 36 anche i livelli fino al 5°, --livello=N): crea un personaggio per ognuna delle 12 classi passando da tutti i passi, come un giocatore.
 # Serve l'app avviata con «npx vite preview --port 4173» e Playwright per Python. Uso: python3 strumenti/giro-12-classi.py [Classe ...]
 # Giro delle 12 classi dall'interfaccia: ogni passo si riempie come farebbe un giocatore, poi si salva.
 import asyncio, json, re, sys
@@ -7,7 +7,7 @@ from playwright.async_api import async_playwright
 PG = [('Barbaro','Soldato','Nano'), ('Bardo','Criminale','Halfling'), ('Chierico','Accolito','Dragonide'), ('Druido','Sapiente','Elfo'),
       ('Guerriero','Soldato','Orco'), ('Monaco','Criminale','Umano'), ('Paladino','Soldato','Tiefling'), ('Ranger','Soldato','Gnomo'),
       ('Ladro','Criminale','Halfling'), ('Stregone','Sapiente','Dragonide'), ('Warlock','Accolito','Tiefling'), ('Mago','Accolito','Umano')]
-if len(sys.argv) > 1: PG = [x for x in PG if x[0] in sys.argv[1:]]
+if [a for a in sys.argv[1:] if not a.startswith('--')]: PG = [x for x in PG if x[0] in sys.argv[1:]]
 
 async def da_fare(pg):
     t = await pg.locator('button:has-text("Avanti"), button:has-text("Salva il personaggio")').last.inner_text()
@@ -79,6 +79,19 @@ async def riempi(pg, log):
         return False
     return False
 
+LIVELLO_FINALE = int(next((a.split('=')[1] for a in sys.argv if a.startswith('--livello=')), '5'))
+
+async def riempi_tendine(sez):
+    for _ in range(8):   # una scelta può farne comparire altre (il talento, Guerriero benedetto)
+        vuote = 0
+        for s in await sez.locator('select').all():
+            if await s.input_value() or not await s.is_visible(): continue
+            vuote += 1
+            ok = [v for v in [await o.get_attribute('value') for o in await s.locator('option:not([disabled])').all()] if v]
+            if ok: await s.select_option(ok[0]); await asyncio.sleep(0.05)
+        if not vuote: return True
+    return False
+
 async def main():
     rapporto = {}
     async with async_playwright() as p:
@@ -91,8 +104,10 @@ async def main():
         await pg.goto('http://localhost:4173/'); await pg.evaluate("localStorage.clear()"); await pg.reload()
         for classe, bg, specie in PG:
             log, passi = [], []
+            salito_ok = True
             await pg.goto('http://localhost:4173/'); await pg.tap('text=I miei personaggi')
             await pg.tap('button[aria-label="Crea un nuovo personaggio"]'); await pg.wait_for_timeout(200)
+            await pg.get_by_role('button', name='Crea da zero').tap(); await pg.wait_for_timeout(200)   # dal 23/11 il «+» propone anche i personaggi pronti
             await pg.locator(f'li:has-text("{classe}") >> button >> nth=0').first.tap(); await pg.wait_for_timeout(200)
             for passo in range(8):
                 titolo = (await pg.locator('main h1').first.inner_text()).strip()
@@ -114,6 +129,21 @@ async def main():
                     if await chiudi.count(): await chiudi.tap(); await pg.wait_for_timeout(300)
                     break
                 await pg.locator('button:has-text("Avanti")').last.tap(); await pg.wait_for_timeout(250)
+            # Revisione del 23/11: dopo il salvataggio sale di livello dall'interfaccia fino al 5°
+            for n in range(2, LIVELLO_FINALE + 1):
+                if not salito_ok: break
+                await pg.get_by_role('tab', name='Chi è').tap(); await pg.wait_for_timeout(150)
+                sali = pg.get_by_role('button', name=f'Sali al {n}° livello')
+                if not await sali.count(): log.append(f'BLOCCATO: niente «Sali al {n}°»'); salito_ok = False; break
+                await sali.first.tap(); await pg.wait_for_timeout(250)
+                sez = pg.locator('section[aria-labelledby="titolo-livello"]')
+                await riempi_tendine(sez)
+                passa = sez.get_by_role('button', name=f'Passa al {n}° livello')
+                if not (await passa.count() and await passa.is_enabled()):
+                    vuote = [await x.evaluate("e=>(e.labels[0]?.innerText||'')+' :: '+[...e.options].map(o=>o.value+(o.disabled?'(x)':'')).join(',')") for x in await sez.locator('select').all() if not await x.input_value() and await x.is_visible()]
+                    log.append(f'BLOCCATO al {n}°: tendine vuote {vuote}'); salito_ok = False; break
+                await passa.tap(); await pg.wait_for_timeout(350)
+                passi.append((f'livello {n}', True))
             # Riepilogo: numeri e avvisi
             testo = await pg.locator('main').inner_text()
             avvisi = []

@@ -216,3 +216,19 @@ describe('Sali di livello: cambi facoltativi (23/11)', () => {
     expect(t.opzioniNuove!.map((o) => o.id)).toEqual(expect.arrayContaining(['archery', 'great-weapon-fighting']));
   });
 });
+
+describe('Sali di livello: Patto del tomo preso al 5° (revisione del 23/11)', () => {
+  it('compaiono i 3 trucchetti da qualsiasi lista e i 2 rituali di 1°, e il livello si completa', async () => {
+    const L = await import('./livelli-prova');
+    const b = salvato(L.L4_WARLOCK);
+    const s = riempi(b, { 'scelta:warlock.suppliche-5': ['pact-of-the-tome', 'one-with-shadows'] });
+    const r = nuovoLivello(b, s)!;
+    const t = r.magia.find((x) => x.chiave === 'trucchetti:warlock.tomo.trucchetti')!;
+    expect(t.quante).toBe(3);
+    expect(t.opzioni.some((o) => o.id === 'sacred-flame')).toBe(true);   // anche dalla lista del chierico
+    expect(r.magia.find((x) => x.chiave === 'scelta:warlock.tomo.rituali')?.opzioni.every((o) => o.id && true)).toBe(true);
+    expect(completo(b, s, null, false)).toBe(true);
+    const nuova = bozzaNuova(b, s, null);
+    expect(calcolaScheda(comePersonaggio(nuova)!).avvisi.filter((a) => a.livello === 'errore' && !a.accettato).map((a) => a.id)).toEqual([]);
+  });
+});

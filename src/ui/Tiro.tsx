@@ -41,7 +41,9 @@ export function Tiro({ r, condizioni = [], pfZero = false, chiudi, quandoTira }:
   // si apre già tirata, con il modo proposto
   const [d20, setD20] = useState<TiroD20 | null>(() => (r.d20 && !proposta?.fallitoAuto
     ? tiraD20(r.d20.bonus, modoProposto, { attacco: r.d20.attacco, meno: proposta?.meno ?? 0 }) : null));
-  const [danni, setDanni] = useState<Record<number, TiroDanni[]>>({});
+  // Toccando il dado dei danni (23/11) i danni sono già tirati, se la voce è una sola (l'arma versatile chiede quale)
+  const [danni, setDanni] = useState<Record<number, TiroDanni[]>>((): Record<number, TiroDanni[]> => (!r.d20 && r.danni.length === 1
+    ? { 0: Array.from({ length: r.danni[0].ripeti ?? 1 }, () => tiraEspressione(r.danni[0].espressione)) } : {}));
   const [critico, setCritico] = useState(() => !!d20?.critico);
   const [n, setN] = useState(0);                        // cambia a ogni tiro: fa ripartire l'animazione
   const annuncio = useRef<HTMLParagraphElement>(null);
@@ -130,7 +132,7 @@ export function Tiro({ r, condizioni = [], pfZero = false, chiudi, quandoTira }:
             </section>
           );
         })}
-        {r.danni.length > 0 && r.d20?.attacco && (
+        {r.danni.length > 0 && (r.d20?.attacco || r.puoCritico) && (
           <label className="flex min-h-11 items-center gap-2 text-sm text-testo">
             <input type="checkbox" checked={critico} onChange={(e) => setCritico(e.target.checked)} className="h-5 w-5 accent-[var(--accento)]" />
             Colpo critico (anche quando il master te lo dice, per esempio contro un bersaglio paralizzato)
@@ -143,6 +145,14 @@ export function Tiro({ r, condizioni = [], pfZero = false, chiudi, quandoTira }:
     </FoglioDalBasso>
   );
 }
+
+// Il dado dei danni (23/11): un d6, per distinguerlo a colpo d'occhio dal d20 del tiro per colpire
+export const IconaDanni = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" className="text-oro" aria-hidden="true">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
+    <circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" /><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none" />
+  </svg>
+);
 
 export const IconaD20 = ({ grande = false }: { grande?: boolean }) => (
   <svg width={grande ? 44 : 32} height={grande ? 44 : 32} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" className="text-oro" aria-hidden="true">

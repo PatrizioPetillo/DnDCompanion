@@ -15,6 +15,7 @@ export interface RichiestaTiro {
   cd?: { valore: number; car: Car };      // l'incantesimo chiede un tiro salvezza al bersaglio: tira il master o il bersaglio
   danni: Danni[];                         // più di una voce: per esempio un'arma versatile a una o a due mani
   nota?: string;
+  puoCritico?: boolean;                   // solo danni dopo un tiro per colpire: la casella «Colpo critico» resta
 }
 
 const conMod = (dadi: string, mod: number) => leggi(`${dadi}${mod ? (mod > 0 ? ` + ${mod}` : ` - ${-mod}`) : ''}`);
@@ -77,3 +78,10 @@ export const daIniziativa = (bonus: number): RichiestaTiro =>
   ({ titolo: 'Iniziativa', sottotitolo: 'Prova di Destrezza (SRD p. 13)', d20: { bonus, genere: 'iniziativa', attacco: false, etichetta: `Iniziativa ${segno(bonus)}` }, danni: [] });
 
 export const testoEspressione = scrivi;
+
+// Solo i danni (23/11): il giocatore ha già tirato per colpire (anche con i suoi dadi) e tocca il dado dei danni.
+// Il critico si segna a mano: lo decide il tiro per colpire, che qui non c'è (SRD p. 16).
+export function soloDanni(r: RichiestaTiro): RichiestaTiro {
+  const { d20, ...resto } = r;
+  return { ...resto, sottotitolo: 'Danni', ...(d20?.attacco ? { puoCritico: true } : {}) };
+}

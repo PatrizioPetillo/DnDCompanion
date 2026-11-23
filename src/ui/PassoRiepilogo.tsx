@@ -4,8 +4,8 @@
 import { useState } from 'react';
 import { comePersonaggio, type IdPasso } from '../creazione/percorso';
 import { Restituisci } from './PassoEquipaggiamento';
-import { IconaD20, Tiro } from './Tiro';
-import { daAttacco, daIncantesimo, daIniziativa, daProva, daTiroSalvezza, type RichiestaTiro } from '../partita/tiri';
+import { IconaD20, IconaDanni, Tiro } from './Tiro';
+import { daAttacco, daIncantesimo, daIniziativa, daProva, daTiroSalvezza, soloDanni, type RichiestaTiro } from '../partita/tiri';
 import { accettaAvviso, avvisiRiepilogo, riepilogo, type Riepilogo } from '../creazione/riepilogo';
 import type { Bozza } from '../creazione/percorso';
 import { metri } from '../regole/misure';
@@ -178,7 +178,12 @@ function Combattimento({ r, tavolo, scheda }: { r: Riepilogo; tavolo: PropsTavol
         ))}
       </div>
       {aperto?.somma && <p className="-mt-2 text-sm text-testo-2">{aperto.etichetta}: {somma(aperto.somma, aperto.valore)}</p>}
-      <BottoneTiro etichetta="Tira l'iniziativa" onClick={() => setTiro(daIniziativa(scheda.iniziativa.totale))} />
+      <button onClick={() => setTiro(daIniziativa(scheda.iniziativa.totale))} aria-label={`Tira l'iniziativa ${segno(scheda.iniziativa.totale)}`}
+        className="flex min-h-11 w-full items-center gap-2 rounded-lg border border-oro/70 px-3 text-left text-sm">
+        <span className="flex-1 text-testo">Tira l'iniziativa</span>
+        <span className="text-base text-testo">{segno(scheda.iniziativa.totale)}</span>
+        <span aria-hidden className="text-oro"><IconaD20 /></span>
+      </button>
       {tavolo?.partita.iniziativa && (
         <p className="-mt-2 text-sm text-testo-2">Ultima iniziativa: <span className="text-testo">{tavolo.partita.iniziativa.totale}</span> (alle {new Date(tavolo.partita.iniziativa.il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}){tavolo.bozza?.tavolo?.canale ? ' · arriva da sola al master' : ''}</p>
       )}
@@ -204,17 +209,20 @@ function Combattimento({ r, tavolo, scheda }: { r: Riepilogo; tavolo: PropsTavol
         <ul className="space-y-2">
           {c.attacchi.map((a) => (
             <li key={a.id} className="rounded-xl border border-bordo bg-superficie p-3">
-              <div className="flex items-baseline justify-between gap-2">
+              {/* 23/11: due dadi dove servono, accanto a ciò che tirano: il d20 sul bonus per colpire, il d6 sui danni */}
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-base font-medium text-testo">{a.nome}{a.quantita > 1 ? ` × ${a.quantita}` : ''}</span>
-                <span className="text-base text-testo">{segno(a.colpire.totale)}</span>
+                <BottoneDado valore={segno(a.colpire.totale)} etichetta={`Tiro per colpire con ${a.nome}: ${segno(a.colpire.totale)}`} onClick={() => setTiro(daAttacco(a))} />
               </div>
-              <p className="text-sm text-testo">{a.danni.testo}{a.danni.testoDueMani ? ` · a due mani ${a.danni.testoDueMani}` : ''}</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm text-testo">{a.danni.testo}{a.danni.testoDueMani ? ` · a due mani ${a.danni.testoDueMani}` : ''}</p>
+                {a.danni.dadi && <BottoneDado danni etichetta={`Danni di ${a.nome}`} onClick={() => setTiro(soloDanni(daAttacco(a)))} />}
+              </div>
               <p className="text-xs text-testo-2">
                 {a.gittata ? `Gittata ${metri(a.gittata[0]).replace(' metri', '')}/${metri(a.gittata[1])}` : 'Mischia'}
                 {a.padronanza ? ` · Padronanza: ${a.padronanza}` : ''}
               </p>
-              {a.note.map((n) => <p key={n} className="text-xs text-attenzione">{n}</p>)}
-              {a.danni.dadi && <BottoneTiro etichetta={`Tira: ${a.nome}`} onClick={() => setTiro(daAttacco(a))} />}
+              {a.note.map((n) => <p key={n} className={`text-xs ${n.startsWith('Con ') ? 'text-testo-2' : 'text-attenzione'}`}>{n}</p>)}
             </li>
           ))}
         </ul>
@@ -224,22 +232,26 @@ function Combattimento({ r, tavolo, scheda }: { r: Riepilogo; tavolo: PropsTavol
         <div>
           <h2 className="mb-2 text-base font-medium text-testo">Trucchetti d'attacco</h2>
           <ul className="space-y-2">
-            {c.trucchetti.map((t) => (
-              <li key={t.id} className="rounded-xl border border-bordo bg-superficie p-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-base font-medium text-testo">{t.nome}</span>
-                  <span className="shrink-0 text-sm text-testo">{t.tiro}</span>
-                </div>
-                <p className="text-sm text-testo">{t.dadi}</p>
-                <p className="text-xs text-testo-2">{t.fonte}{t.nota ? ` · ${t.nota}` : ''}</p>
-                {(() => {
-                  const [mid, iid] = t.id.split(':');
-                  const m = scheda.magia.find((x) => x.id === mid);
-                  const rq = m && daIncantesimo(iid, m, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0, undefined, (scheda.bonusDanniTrucchetti?.[iid] ?? []).reduce((s, t) => s + t.valore, 0), scheda.livello);
-                  return rq ? <BottoneTiro etichetta={`Tira: ${t.nome}`} onClick={() => setTiro(rq)} /> : null;
-                })()}
-              </li>
-            ))}
+            {c.trucchetti.map((t) => {
+              const [mid, iid] = t.id.split(':');
+              const m = scheda.magia.find((x) => x.id === mid);
+              const rq = m && daIncantesimo(iid, m, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0, undefined, (scheda.bonusDanniTrucchetti?.[iid] ?? []).reduce((s, t) => s + t.valore, 0), scheda.livello);
+              return (
+                <li key={t.id} className="rounded-xl border border-bordo bg-superficie p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-base font-medium text-testo">{t.nome}</span>
+                    {rq?.d20
+                      ? <BottoneDado valore={segno(rq.d20.bonus)} etichetta={`Attacco con ${t.nome}: ${segno(rq.d20.bonus)}`} onClick={() => setTiro(rq)} />
+                      : <span className="shrink-0 text-sm text-testo">{t.tiro}</span>}
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm text-testo">{t.dadi}</p>
+                    {rq && rq.danni.length > 0 && <BottoneDado danni etichetta={`Danni di ${t.nome}`} onClick={() => setTiro(rq.d20 ? soloDanni(rq) : rq)} />}
+                  </div>
+                  <p className="text-xs text-testo-2">{t.fonte}{t.nota ? ` · ${t.nota}` : ''}</p>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -265,10 +277,13 @@ function Combattimento({ r, tavolo, scheda }: { r: Riepilogo; tavolo: PropsTavol
 }
 
 // Il pulsante dei dadi: sempre uguale, con l'icona del d20 (idea 6)
-function BottoneTiro({ etichetta, onClick }: { etichetta: string; onClick: () => void }) {
+// Il dado accanto al numero che tira (23/11): d20 per il tiro per colpire (con il bonus), d6 per i danni
+function BottoneDado({ valore, etichetta, onClick, danni = false }: { valore?: string; etichetta: string; onClick: () => void; danni?: boolean }) {
   return (
-    <button onClick={onClick} className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-oro/70 text-sm text-testo">
-      <IconaD20 /> {etichetta}
+    <button onClick={onClick} aria-label={etichetta} title={etichetta}
+      className="flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-oro/70 px-2 text-base text-testo">
+      {valore && <span className="tabular-nums">{valore}</span>}
+      {danni ? <IconaDanni /> : <span className="[&_svg]:h-7 [&_svg]:w-7"><IconaD20 /></span>}
     </button>
   );
 }

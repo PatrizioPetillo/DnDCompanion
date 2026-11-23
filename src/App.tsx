@@ -20,6 +20,7 @@ import { DATI } from './regole';
 import type { Tavolo } from './regole/tipi';
 import { ElencoTavoli, ModuloTavolo, TavoloRicevuto } from './ui/Tavoli';
 import { FoglioDalBasso } from './ui/SchedaIncantesimo';
+import { Caricamento } from './ui/Caricamento';
 import { mandaLink, scaricaCopia, scaricaFoundry, scaricaPdf } from './ui/esporta';
 import { Compendio } from './ui/Compendio';
 import { Home } from './ui/Home';
@@ -51,6 +52,7 @@ export default function App() {
   const [tema, setTema] = useTema();
   const [vista, setVistaGrezza] = useState<Vista>('home');
   const [messaggio, setMessaggio] = useState<string | null>(null);
+  const [preparo, setPreparo] = useState<string | null>(null);   // attesa con il d20 (23/11)
   const corrente = attivo(archivio);
   const bozza = corrente?.bozza ?? bozzaVuota();
   const partita = corrente?.partita;
@@ -234,8 +236,8 @@ export default function App() {
               {corrente && !ricevuta && bloccato && prossimoLivello(bozza) && <VoceMenu onClick={() => { setMenu(false); setVista('riepilogo'); setSaliAperto(true); }}>Sali al {prossimoLivello(bozza)}° livello</VoceMenu>}
               {(ricevuta || (corrente && (inPasso || vistaReale === 'indice'))) && <>
                 <p className="border-b border-bordo bg-sfondo px-4 pb-1 pt-3 text-xs uppercase tracking-widest text-testo-2">Esporta {(ricevuta ?? bozza).nome.trim() || 'la scheda'}</p>
-                <VoceMenu onClick={async () => { setMenu(false); setMessaggio('Preparo il PDF…'); setMessaggio(await scaricaPdf(ricevuta ?? bozza, ricevuta ? undefined : corrente?.ritratto)); }}>Scarica il PDF</VoceMenu>
-                <VoceMenu onClick={async () => { setMenu(false); setMessaggio('Preparo il file per Foundry…'); setMessaggio(await scaricaFoundry(ricevuta ?? bozza)); }}>Per Foundry VTT (prova)</VoceMenu>
+                <VoceMenu onClick={async () => { setMenu(false); setMessaggio(null); setPreparo('Preparo il PDF…'); const m = await scaricaPdf(ricevuta ?? bozza, ricevuta ? undefined : corrente?.ritratto); setPreparo(null); setMessaggio(m); }}>Scarica il PDF</VoceMenu>
+                <VoceMenu onClick={async () => { setMenu(false); setMessaggio(null); setPreparo('Preparo il file per Foundry…'); const m = await scaricaFoundry(ricevuta ?? bozza); setPreparo(null); setMessaggio(m); }}>Per Foundry VTT (prova)</VoceMenu>
                 {!ricevuta && <>
                   <VoceMenu onClick={async () => { setMenu(false); 
                     // Collegamento col master (22/11): il link porta il segreto del canale; si crea la prima volta
@@ -273,6 +275,7 @@ export default function App() {
         )}
         <AvvisiMaster archivio={archivio} setArchivio={(f) => setArchivio(f)} avvisi={eventi.avvisi} togli={eventi.togliAvviso} aggiungi={eventi.aggiungiAvviso} />
         <div key={vistaReale} className={tavoloRicevuto || oggettoRicevuto || bottinoRicevuto ? '' : direzione === 'indietro' ? 'anim-indietro' : 'anim-avanti'}>
+        {preparo && <Caricamento testo={preparo} />}
         {messaggio && (
           <div role="status" className="mb-4 rounded-xl border border-attenzione/50 bg-superficie p-3 text-sm text-testo">
             {messaggio}

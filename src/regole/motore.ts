@@ -588,7 +588,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
     }
     if (a.proprieta.includes('pesante') && (a.tipo === 'mischia' ? punteggi.FOR.totale : punteggi.DES.totale) < 13)
       note.push(`Svantaggio ai tiri per colpire: ${a.tipo === 'mischia' ? 'Forza' : 'Destrezza'} sotto 13 (Pesante)`);
-    if (monaco) note.push('Arti marziali: senza armatura né scudo');
+    if (monaco) note.push('Con Arti marziali (finché sei senza armatura né scudo)');
     attacchi.push(attacco(uid ? `magico:${uid}` : id, nomeMagico ?? a.nome, quantita, car, comp, dadi, tipo, {
       bonus: [...(a.tipo === 'distanza' && talenti.includes('archery') ? [{ etichetta: 'Tiro', valore: 2 }] : []), ...(magico ? [{ etichetta: nomeMagico!, valore: magico }] : [])],
       bonusDanni: magico ?? 0,
@@ -598,7 +598,7 @@ export function calcolaScheda(pg: Personaggio, d: Dati = DATI): Scheda {
   }
   // Colpo senz'armi (p. 190): FOR + competenza, 1 + FOR contundenti
   attacchi.push(attacco('unarmed-strike', 'Colpo senz\'armi', 1, arti ? carMigliore() : 'FOR', true, arti ?? '1', 'contundenti',
-    { note: arti ? ['Arti marziali: senza armatura né scudo'] : [] }));
+    { note: arti ? ['Con Arti marziali (finché sei senza armatura né scudo)'] : [] }));
 
   // ───────── Strumenti (p. 94-95): background, classe, scelte ─────────
   const strumenti = [...new Set([

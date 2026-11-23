@@ -11,8 +11,8 @@ import { cambia as cambiaIncantesimo, cambiati, cambiDopoRiposoLungo, sostituti,
 import { Tendina } from './Tendina';
 import { FoglioDalBasso, SchedaIncantesimo } from './SchedaIncantesimo';
 import { DADI_INCANTESIMI, testoDadi } from '../regole/dati/dadi-incantesimi';
-import { daIncantesimo, type RichiestaTiro } from '../partita/tiri';
-import { IconaD20, Tiro } from './Tiro';
+import { daIncantesimo, soloDanni, type RichiestaTiro } from '../partita/tiri';
+import { IconaD20, IconaDanni, Tiro } from './Tiro';
 import { aggiungi, cambiaLivello, CONDIZIONE, CONDIZIONI, fannoPerdereConcentrazione, inEffetto, livelloIndebolimento, riassunto, togli, type IdCondizione } from '../partita/condizioni';
 import { GUIDA_CONDIZIONI } from '../guide/guide';
 import { spiegaRisorsa } from '../creazione/spiega-risorse';
@@ -342,7 +342,11 @@ export function MagiaTavolo({ scheda, partita, cambia, bozza }: PropsTavolo) {
                     )}
                     {i.livello === 0 && DADI_INCANTESIMI[id] && (() => {
                       const rq = daIncantesimo(id, m, m.caratteristica ? scheda.modificatori[m.caratteristica] : 0, undefined, (scheda.bonusDanniTrucchetti?.[id] ?? []).reduce((s, t) => s + t.valore, 0), scheda.livello);
-                      return rq && <button onClick={() => setTiro(rq)} aria-label={`Tira: ${i.nome}`} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-oro/70"><IconaD20 /></button>;
+                      // 23/11: come negli attacchi, d20 per colpire (se c'è) e d6 per i danni
+                      return rq && <>
+                        {rq.d20 && <button onClick={() => setTiro(rq)} aria-label={`Attacco con ${i.nome}`} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-oro/70"><IconaD20 /></button>}
+                        <button onClick={() => setTiro(rq.d20 ? soloDanni(rq) : rq)} aria-label={`Danni di ${i.nome}`} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-oro/70"><IconaDanni /></button>
+                      </>;
                     })()}
                     {i.livello === 0 && i.concentrazione && (
                       <button onClick={() => cambia(lancia(partita, v, m.id, id, { tipo: 'trucchetto' }).stato)} className="min-h-11 shrink-0 rounded-lg border border-bordo px-3 text-sm text-testo">Lancia</button>

@@ -106,13 +106,13 @@ export const PREDEFINITI: Predefinito[] = [
     livelli: { 4: asi('DES', 'SAG') },
   },
   {
-    id: 'vharok', nome: 'Vharok Scagliadoro', classe: 'paladin', specie: 'dragonborn', background: 'soldier', allineamento: 'lawful-good',
+    id: 'vharok', nome: 'Vharok Scagliardente', classe: 'paladin', specie: 'dragonborn', background: 'soldier', allineamento: 'lawful-good',
     frase: 'Ha giurato davanti alle ceneri del suo villaggio: nessun altro brucerà, finché lui resta in piedi.',
     bonus: { FOR: 2, COS: 1 },
-    scelte: { 'dragonborn.antenato': ['gold'], 'origine.lingue': ['draconic', 'dwarvish'], 'paladin.abilita': ['insight', 'persuasion'],
+    scelte: { 'dragonborn.antenato': ['red']   /* rosso (fuoco), come nel ritratto; prima oro, stessi numeri */, 'origine.lingue': ['draconic', 'dwarvish'], 'paladin.abilita': ['insight', 'persuasion'],
       'paladin.maestria-armi': ['longsword', 'javelin'], 'soldier.gioco': ['three-dragon-ante'] },
     preparati: { paladin: ['bless', 'cure-wounds'] },
-    ruolo: { aspetto: 'Scaglie d\'oro brunito, un corno spezzato, il mantello cremisi bruciato sull\'orlo.', trattoVisibile: 'Recita il suo giuramento a mezza voce prima di ogni battaglia.',
+    ruolo: { aspetto: 'Scaglie rosso brace, corna lunghe e affilate, il mantello cremisi bruciato sull\'orlo.', trattoVisibile: 'Recita il suo giuramento a mezza voce prima di ogni battaglia.',
       oggetto: 'Un pugno di cenere in un sacchetto di cuoio, cucito al tabarro.', segreto: 'Il fuoco che distrusse il villaggio aveva il colore del suo soffio.' },
     livelli: { 2: { 'scelta:paladin.stile': ['defense'], 'preparati:paladin': ['divine-favor'] }, 3: { 'preparati:paladin': ['heroism'] },
       4: { ...asi('FOR', 'CAR'), 'preparati:paladin': ['command'] }, 5: { 'preparati:paladin': ['magic-weapon'] } },
@@ -198,7 +198,7 @@ export const PREDEFINITI: Predefinito[] = [
 export function creaPredefinito(p: Predefinito, livello = 1, ora = new Date(), d: Dati = DATI, tavolo?: Bozza['tavolo']): Bozza {
   const s = SERIE_PER_CLASSE[p.classe];
   let b: Bozza = {
-    ...bozzaVuota(), nome: p.nome, idea: p.frase, allineamento: p.allineamento, ruolo: p.ruolo,
+    ...bozzaVuota(), nome: p.nome, idea: p.frase, predefinito: p.id, allineamento: p.allineamento, ruolo: p.ruolo,
     classe: p.classe, specie: p.specie, background: p.background, bonusBackground: p.bonus,
     punteggi: { metodo: 'serieStandard', base: { FOR: s[0], DES: s[1], COS: s[2], INT: s[3], SAG: s[4], CAR: s[5] } },
     scelte: { ...p.scelte }, incantesimi: { preparati: { ...(p.preparati ?? {}) }, ...(p.libro ? { libro: [...p.libro] } : {}) },

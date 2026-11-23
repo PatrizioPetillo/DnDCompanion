@@ -33,5 +33,5 @@ Esempi di soggetto: «a young human wizard holding a glowing staff and an open s
 ## Personaggi pronti (23/11)
 predefiniti/brannoc.webp · serafina · edda · ilvaren · marzio · ushra · vharok · tamsin · nyssa · livia · fenwick · elarion
 **Formato diverso dagli altri (scelta di Patrizio, 23/11): figura intera, in verticale, 800 × 1200 (2:3)**, WebP ≤ 100 kB.
-La testa in alto, al centro, nel primo quinto dell'immagine: l'avatar rotondo prende quella parte; aprendo il ritratto si vede tutta la figura.
+Per ognuno anche **<id>-volto.webp** (512 × 512): il volto ritagliato a mano dalla figura, che diventa il ritratto e l'avatar. Aprendo il ritratto, «Figura intera» mostra <id>.webp.
 Prompt nel file «App PG B20 - Prompt personaggi pronti» del progetto.

@@ -228,6 +228,7 @@ export interface Tavolo {
 export interface Personaggio {
   schema: 1;
   idea?: string;
+  predefinito?: Id;   // nato da un personaggio pronto (23/11): la sua figura intera si apre dal ritratto
   nome: string;
   tavolo?: Tavolo;
   livello: number;                                // 1-2 per ora (aumento di livello, 23/11)

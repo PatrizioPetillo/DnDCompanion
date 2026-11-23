@@ -57,6 +57,8 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
   const [vistaScheda, setScheda] = useState<Scheda>('combattimento');
   const [ritrattoAperto, setRitrattoAperto] = useState(false);
   const r = riepilogo(bozza);
+  // Personaggio pronto: la sua figura intera, finché il giocatore non cambia il ritratto (cambiandolo diventa suo)
+  const figura = bozza.predefinito ? immagine('predefiniti', bozza.predefinito) : undefined;
   if (!r) return (
     <section>
       <h1 className="mb-1 font-titolo text-2xl text-accento">Riepilogo</h1>
@@ -72,7 +74,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
   return (
     <section>
       {/* Testata (20/11): il ritratto se c'è, altrimenti l'immagine della classe; toccando l'avatar si apre in grande */}
-      {ritratto ? <FasciaRitratto src={ritratto} /> : pg && <Fascia gruppo="classi" id={pg.classe} alto={120} arrotonda={false} suSfondo />}
+      {figura ? <FasciaRitratto src={figura} posizione="50% 12%" /> : ritratto ? <FasciaRitratto src={ritratto} /> : pg && <Fascia gruppo="classi" id={pg.classe} alto={120} arrotonda={false} suSfondo />}
       <div className={`mb-3 flex items-center gap-3 ${ritratto || (pg && immagine('classi', pg.classe)) ? 'relative -mt-10' : ''}`}>
         <button onClick={() => setRitrattoAperto(true)} aria-label={ritratto ? 'Apri il ritratto' : 'Scegli un ritratto'} className="relative shrink-0 rounded-full">
           <Avatar ritratto={ritratto} classe={pg?.classe} iniziali={iniziali(r.testata.nome)} />
@@ -84,7 +86,7 @@ export function PassoRiepilogo({ bozza, cambia, apri, ricevuta, partita, cambiaP
         </div>
       </div>
 
-      {ritrattoAperto && <FoglioRitratto ritratto={ritratto} nome={r.testata.nome} cambia={cambiaRitratto} chiudi={() => setRitrattoAperto(false)} />}
+      {ritrattoAperto && <FoglioRitratto ritratto={ritratto} nome={r.testata.nome} figura={figura} cambia={cambiaRitratto && ((x) => { if (bozza.predefinito) { const { predefinito: _, ...resto } = bozza; cambia(resto); } cambiaRitratto(x); })} chiudi={() => setRitrattoAperto(false)} />}
 
       {nuovoLivello && confermaLivello && annullaLivello && <NuovoLivello bozza={bozza} conferma={confermaLivello} annulla={annullaLivello} />}
       <Avvisi bozza={bozza} cambia={cambia} apri={apri} ricevuta={ricevuta || bloccata} />
@@ -418,22 +420,34 @@ function Creazione({ il, riapri, apriSali, livello }: Salvato) {
 }
 
 // Il ritratto nella testata: largo come lo schermo, centrato sul viso, sfuma nello sfondo come le illustrazioni
-function FasciaRitratto({ src }: { src: string }) {
+// (personaggio pronto: la figura intera, presa dall'alto)
+function FasciaRitratto({ src, posizione = '50% 30%' }: { src: string; posizione?: string }) {
   return (
     <div aria-hidden="true" className="relative overflow-hidden rounded-xl" style={{ height: 180 }}>
-      <img src={src} alt="" className="h-full w-full object-cover" style={{ objectPosition: '50% 30%' }} />
+      <img src={src} alt="" className="h-full w-full object-cover" style={{ objectPosition: posizione }} />
       <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 55%, var(--color-sfondo))' }} />
     </div>
   );
 }
 
 // Toccando l'avatar: il ritratto in grande, e (se la scheda è tua) Cambia / Togli. Si può cambiare anche a scheda salvata.
-function FoglioRitratto({ ritratto, nome, cambia, chiudi }: { ritratto?: string; nome: string; cambia?: (r: string | undefined) => void; chiudi: () => void }) {
+function FoglioRitratto({ ritratto, nome, figura, cambia, chiudi }: { ritratto?: string; nome: string; figura?: string; cambia?: (r: string | undefined) => void; chiudi: () => void }) {
   const [errore, setErrore] = useState(false);
+  const [intera, setIntera] = useState(false);
   return (
     <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="font-titolo text-lg text-accento">{nome || 'Ritratto'}</h2>}>
-      {ritratto
-        ? <img src={ritratto} alt={`Ritratto di ${nome}`} className="mx-auto max-h-[70dvh] w-full max-w-96 rounded-xl border border-bordo object-contain" />
+      {figura && (
+        <div role="radiogroup" aria-label="Vista" className="mb-3 grid grid-cols-2 gap-2">
+          {([false, true] as const).map((v) => (
+            <button key={String(v)} role="radio" aria-checked={intera === v} onClick={() => setIntera(v)}
+              className={`min-h-11 rounded-lg text-base ${intera === v ? 'border-2 border-accento text-accento' : 'border border-bordo text-testo'}`}>{v ? 'Figura intera' : 'Ritratto'}</button>
+          ))}
+        </div>
+      )}
+      {figura && intera
+        ? <img src={figura} alt={`${nome}, figura intera`} className="mx-auto max-h-[70dvh] w-auto max-w-full rounded-xl border border-bordo" />
+        : ritratto
+        ? <img src={ritratto} alt={`Ritratto di ${nome}`} className="mx-auto aspect-square w-full max-w-96 rounded-xl border border-bordo object-cover" />
         : <p className="text-sm text-testo-2">Nessun ritratto: per ora si vede l'immagine della classe.</p>}
       {cambia && (
         <div className="mt-4 flex gap-2">

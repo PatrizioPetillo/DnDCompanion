@@ -4,7 +4,7 @@ import { immagine } from './Illustrazione';
 export function Avatar({ ritratto, classe, iniziali, dim = 56 }: { ritratto?: string; classe?: string; iniziali: string; dim?: number }) {
   const src = ritratto ?? immagine('classi', classe);
   return src
-    ? <img src={src} alt="" width={dim} height={dim} className="shrink-0 rounded-full border border-bordo object-cover" style={{ width: dim, height: dim, objectPosition: ritratto ? '50% 8%' : '50% 25%' }} />
+    ? <img src={src} alt="" width={dim} height={dim} className="shrink-0 rounded-full border border-bordo object-cover" style={{ width: dim, height: dim, objectPosition: ritratto ? '50% 50%' : '50% 25%' }} />
     : (
       <span aria-hidden="true" className="flex shrink-0 items-center justify-center rounded-full border border-accento/40 bg-accento/10 font-titolo text-accento"
         style={{ width: dim, height: dim, fontSize: dim * 0.36 }}>

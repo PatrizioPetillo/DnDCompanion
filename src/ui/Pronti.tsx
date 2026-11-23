@@ -7,18 +7,14 @@ import { LIVELLO_MASSIMO } from '../regole/livelli';
 import { immagine } from './Illustrazione';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 
-// Il ritratto del personaggio pronto (se c'è il file) diventa il suo ritratto: a figura intera, in verticale
-// (scelta di Patrizio, 23/11), ridotto a 512 px di larghezza; l'avatar rotondo prende la testa in alto
-export async function ritrattoPronto(id: string, larghezza = 512): Promise<string | undefined> {
-  const url = immagine('predefiniti', id);
+// Il ritratto del personaggio pronto: il volto ritagliato (512 × 512, <id>-volto.webp); la figura intera
+// (<id>.webp, 800 × 1200, scelta di Patrizio del 23/11) si apre dal ritratto, con «Figura intera»
+export async function ritrattoPronto(id: string): Promise<string | undefined> {
+  const url = immagine('predefiniti', `${id}-volto`);
   if (!url) return undefined;
   try {
-    const img = await createImageBitmap(await (await fetch(url)).blob());
-    const c = document.createElement('canvas');
-    c.width = larghezza; c.height = Math.round((img.height / img.width) * larghezza);
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    img.close();
-    return c.toDataURL('image/jpeg', 0.8);
+    const b = await (await fetch(url)).blob();
+    return await new Promise<string>((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = no; r.readAsDataURL(b); });
   } catch { return undefined; }
 }
 
@@ -46,13 +42,13 @@ export function SceltaPronti({ elenco, livelloFisso, scegli, daZero, chiudi }: {
       {elenco.length === 0 && <p className="text-sm text-testo-2">Nessun personaggio pronto rispetta le regole di questo tavolo.</p>}
       <ul className="space-y-3">
         {elenco.map((p) => {
-          const proprio = immagine('predefiniti', p.id);
+          const proprio = immagine('predefiniti', `${p.id}-volto`);
           const src = proprio ?? immagine('classi', p.classe);
           return (
             <li key={p.id}>
               <button onClick={() => scegli(p, livello)} className="flex w-full gap-3 rounded-xl border border-bordo bg-superficie p-3 text-left">
                 {src
-                  ? <img src={src} alt="" className="h-16 w-16 shrink-0 rounded-full border border-bordo object-cover" style={{ objectPosition: proprio ? '50% 8%' : '50% 25%' }} />
+                  ? <img src={src} alt="" className="h-16 w-16 shrink-0 rounded-full border border-bordo object-cover" style={{ objectPosition: proprio ? '50% 50%' : '50% 25%' }} />
                   : <span className="h-16 w-16 shrink-0 rounded-full border border-bordo" />}
                 <span className="min-w-0">
                   <span className="block text-base font-medium text-testo">{p.nome}</span>

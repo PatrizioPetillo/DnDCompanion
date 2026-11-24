@@ -69,6 +69,7 @@ button { cursor: pointer; }
   .anim-srotola { animation: srotola 250ms ease-out; transform-origin: top; }
   /* Dadi (23/11): il dado gira mezzo secondo, poi il risultato appare con un lampo d'ottone */
   .anim-dado { animation: dado-gira 500ms cubic-bezier(.2, .7, .3, 1); }
+  .anim-finestra { animation: finestra 160ms ease-out; }
   .anim-compare { animation: compare 200ms ease-out 150ms both; }   /* sotto i 150 ms l'attesa non si vede: niente lampo */
   .anim-attesa { display: inline-block; animation: attesa 2.4s ease-in-out infinite; }
   .anim-risultato { animation: risultato 350ms ease-out; }
@@ -91,6 +92,7 @@ button { cursor: pointer; }
 @keyframes fiamma { 0% { opacity: 0; transform: scaleY(.2); } 50% { opacity: 1; transform: scaleY(1.15); } 75% { transform: scaleY(.92); } 100% { transform: scaleY(1); } }
 @keyframes guizzo { from { transform: scaleY(1) skewX(0); } to { transform: scaleY(.9) skewX(3deg); } }
 
+@keyframes finestra { from { opacity: 0; transform: scale(.96); } }
 @keyframes compare { from { opacity: 0; } }
 @keyframes attesa { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.06); } 100% { transform: rotate(360deg) scale(1); } }
 @keyframes dado-gira { from { transform: rotate(-540deg) scale(.6); } to { transform: rotate(0) scale(1); } }

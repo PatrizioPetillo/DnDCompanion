@@ -18,6 +18,34 @@ const PER_ID: Record<string, Spiegazione> = {
     `Quando fai l'azione di Attacco, puoi sostituire un attacco con il soffio: un cono di ${metri(15)} o una linea di ${metri(30)} larga ${metri(5)} (scegli ogni volta). ` +
     'Ogni creatura nell\'area fa un tiro salvezza su Destrezza (CD 8 + Costituzione + competenza): se fallisce subisce 1d10 danni del tipo del tuo antenato (2d10 dal 5° livello), ' +
     'se riesce la metà. Usi: quanto il tuo bonus di competenza; tornano con il riposo lungo.' },
+  // 24/11 (segnalazione di Patrizio su Scarica di adrenalina): le risorse che avevano solo la nota breve, verificate sull'SRD 5.2
+  'adrenaline-rush': { pagina: 86, testo: 'Puoi fare l\'azione Scatto come Azione bonus. Quando lo fai ottieni PF temporanei pari al tuo bonus di competenza. Usi: quanto il tuo bonus di competenza; tornano tutti con il riposo breve o lungo.' },
+  'relentless-endurance': { pagina: 86, testo: 'Quando scendi a 0 PF ma non muori sul colpo, puoi restare a 1 PF. Una volta per riposo lungo.' },
+  'channel-divinity': { pagina: 37, testo:
+    'Ogni uso crea uno di questi effetti (CD = la CD dei tuoi incantesimi da chierico). ' +
+    `Scintilla divina: azione Magia, punti il simbolo sacro verso una creatura entro ${metri(30)}, tiri 1d8 + Saggezza e scegli: le fai recuperare quei PF, oppure fa un tiro salvezza su Costituzione e subisce quei danni necrotici o radiosi (la metà se lo supera). ` +
+    `Scacciare non morti: azione Magia, i non morti che scegli entro ${metri(30)} fanno un tiro salvezza su Saggezza; chi fallisce è spaventato e incapacitato per 1 minuto e si allontana da te (finisce se subisce danni). ` +
+    'Dal 5° livello (Bruciare i non morti): quando scacci, chi fallisce subisce anche danni radiosi, tanti d8 quanto il tuo modificatore di Saggezza (almeno 1d8). ' +
+    'Il Dominio della vita aggiunge Preservare la vita (SRD p. 40). Usi: 2; uno torna con il riposo breve, tutti con il riposo lungo.' },
+  'paladin-channel-divinity': { pagina: 54, testo:
+    `Ogni uso crea uno di questi effetti. Senso divino: Azione bonus, per 10 minuti sai dove sono celestiali, immondi e non morti entro ${metri(60)}, e i luoghi consacrati o dissacrati. ` +
+    'Il Giuramento di devozione aggiunge Arma consacrata (SRD p. 56): quando fai l\'azione Attacco, per 10 minuti un\'arma da mischia che impugni aggiunge il tuo Carisma ai tiri per colpire (almeno +1), può fare danni radiosi e fa luce. ' +
+    'Usi: 2; uno torna con il riposo breve, tutti con il riposo lungo.' },
+  'wild-shape': { pagina: 42, testo:
+    'Azione bonus: ti trasformi in una bestia tra le forme che conosci (4 al 2° livello, GS fino a 1/4, senza volo; 6 dal 4°, GS fino a 1/2). ' +
+    'Resti trasformato per un numero di ore pari a metà del tuo livello da druido, o finché non la usi di nuovo, sei incapacitato o muori; puoi uscirne con un\'Azione bonus. ' +
+    'Quando ti trasformi ottieni PF temporanei pari al tuo livello da druido; usi le statistiche della bestia, ma tieni i tuoi PF, Intelligenza, Saggezza e Carisma. ' +
+    'Usi: 2; uno torna con il riposo breve, tutti con il riposo lungo.' },
+  'action-surge': { pagina: 48, testo: 'Nel tuo turno puoi fare un\'azione in più, tranne l\'azione Magia. Una volta, poi torna con il riposo breve o lungo.' },
+  focus: { pagina: 50, testo:
+    'Spendi i punti per: Raffica di colpi (1 punto: due colpi senz\'armi come Azione bonus); Difesa paziente (Disimpegno come Azione bonus gratis, o con 1 punto Disimpegno e Schivata); ' +
+    'Passo del vento (Scatto come Azione bonus gratis, o con 1 punto Disimpegno e Scatto e salto raddoppiato). Dal 5° livello Colpo stordente (1 punto, una volta per turno quando colpisci: tiro salvezza su Costituzione, se fallisce è stordito fino all\'inizio del tuo turno, se riesce velocità dimezzata e il prossimo attacco contro di lui ha vantaggio; SRD p. 51). ' +
+    'La CD è 8 + Saggezza + competenza. Tornano tutti con il riposo breve o lungo.' },
+  'uncanny-metabolism': { pagina: 51, testo: 'Quando tiri l\'iniziativa puoi recuperare tutti i punti concentrazione spesi; se lo fai, tiri il dado delle Arti marziali e recuperi PF pari al risultato + il tuo livello da monaco. Una volta per riposo lungo.' },
+  'sorcery-points': { pagina: 66, testo:
+    'Senza azione, spendi uno slot e ottieni punti pari al suo livello. Con un\'Azione bonus trasformi i punti in uno slot: di 1° per 2 punti (dal 2° livello), di 2° per 3 (dal 3°), di 3° per 5 (dal 5°); lo slot creato sparisce con il riposo lungo. ' +
+    'I punti pagano anche la Metamagia. Tornano tutti con il riposo lungo.' },
+  'magical-cunning': { pagina: 72, testo: 'Con un rito di 1 minuto recuperi slot del patto spesi, al massimo la metà dei tuoi slot (per eccesso). Una volta per riposo lungo.' },
   stonecunning: { pagina: 84, testo:
     `Azione bonus: per 10 minuti hai percezione tellurica entro ${metri(60)}, se sei su una superficie di pietra o la tocchi (naturale o lavorata). ` +
     'Usi: quanto il tuo bonus di competenza; tornano con il riposo lungo.' },

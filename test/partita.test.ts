@@ -15,7 +15,7 @@ describe('Vista di partenza di Travis', () => {
     expect(v.dadiVita).toEqual({ dado: 6, totale: 1, rimasti: 1 });
     expect(v.slot).toEqual([{ livello: 1, totale: 2, rimasti: 2 }]);
     expect(v.patto).toBeNull();
-    expect(v.risorse).toEqual([{ id: 'arcane-recovery', nome: 'Recupero arcano', usi: 1, rimasti: 1, recupero: 'lungo' }]);
+    expect(v.risorse).toEqual([{ id: 'arcane-recovery', nome: 'Recupero arcano', usi: 1, rimasti: 1, recupero: 'lungo', dettaglio: 'dopo un riposo breve recuperi slot per un totale di 1 livello' }]);   // 24/11: il dettaglio arriva al tavolo
     expect(v.gratuiti).toEqual([{ magia: 'magic-initiate', incantesimi: ['healing-word'], usi: 1, rimasti: 1, recupero: 'lungo' }]);
   });
 });

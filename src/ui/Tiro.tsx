@@ -7,7 +7,7 @@ import { perTiro, type CondizioneSegnata } from '../partita/condizioni';
 import { NOME_CAR } from '../regole/dati/base';
 import type { RichiestaTiro } from '../partita/tiri';
 import { testoEspressione } from '../partita/tiri';
-import { FoglioDalBasso } from './SchedaIncantesimo';
+import { Finestra } from './SchedaIncantesimo';
 
 const ridotto = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const segno = (n: number) => (n >= 0 ? `+ ${n}` : `− ${-n}`);
@@ -68,7 +68,7 @@ export function Tiro({ r, condizioni = [], pfZero = false, chiudi, quandoTira }:
     : null;
 
   return (
-    <FoglioDalBasso chiudi={chiudi} titolo={<div><h2 className="text-lg font-medium text-testo">{r.titolo}</h2>{r.sottotitolo && <p className="text-sm text-testo-2">{r.sottotitolo}</p>}</div>}>
+    <Finestra chiudi={chiudi} titolo={<div><h2 className="text-lg font-medium text-testo">{r.titolo}</h2>{r.sottotitolo && <p className="text-sm text-testo-2">{r.sottotitolo}</p>}</div>}>
       <div className="space-y-4">
         {r.d20 && (
           <section aria-label={r.d20.etichetta} className="rounded-xl border border-bordo bg-superficie p-3">
@@ -142,7 +142,7 @@ export function Tiro({ r, condizioni = [], pfZero = false, chiudi, quandoTira }:
         <p ref={annuncio} className="sr-only" aria-live="polite">{d20 ? `${r.d20?.etichetta}: ${d20.totale}` : ''}</p>
         <p className="text-xs text-testo-2">Puoi sempre tirare i tuoi dadi veri: qui c'è lo stesso calcolo.</p>
       </div>
-    </FoglioDalBasso>
+    </Finestra>
   );
 }
 

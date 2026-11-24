@@ -2,7 +2,7 @@
 // Si apre dal foglio dell'incontro, sopra di esso; i testi si scaricano solo la prima volta che serve.
 import { useEffect, useState } from 'react';
 import { caricaMostri, caricaTestiMostri, type Mostro, type TestoMostro } from '../creazione/mostri';
-import { FoglioDalBasso } from './SchedaIncantesimo';
+import { Finestra } from './SchedaIncantesimo';
 
 const CAR = [['FOR', 'For'], ['DES', 'Des'], ['COS', 'Cos'], ['INT', 'Int'], ['SAG', 'Sag'], ['CAR', 'Car']] as const;
 
@@ -17,7 +17,7 @@ export function SchedaMostro({ id, chiudi }: { id: string; chiudi: () => void })
   }, [id]);
   const m = dati?.m, t = dati?.t;
   return (
-    <FoglioDalBasso chiudi={chiudi} titolo={<div><h2 className="font-titolo text-lg text-accento">{m?.nome ?? 'Mostro'}</h2>{m && <p className="text-sm italic text-testo-2">{m.tipo}</p>}</div>}>
+    <Finestra chiudi={chiudi} titolo={<div><h2 className="font-titolo text-lg text-accento">{m?.nome ?? 'Mostro'}</h2>{m && <p className="text-sm italic text-testo-2">{m.tipo}</p>}</div>}>
       {!dati ? <p className="text-sm text-testo-2">Apro la scheda…</p>
         : !m || !t ? <p className="text-sm text-testo-2">Non trovo la scheda di questo mostro. Riprova con la connessione attiva.</p>
         : (
@@ -66,6 +66,6 @@ export function SchedaMostro({ id, chiudi }: { id: string; chiudi: () => void })
             </p>
           </div>
         )}
-    </FoglioDalBasso>
+    </Finestra>
   );
 }

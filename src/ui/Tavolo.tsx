@@ -9,7 +9,7 @@ import type { Bozza } from '../creazione/percorso';
 import { dopoIlLancio, mancaComponente } from '../partita/componenti';
 import { cambia as cambiaIncantesimo, cambiati, cambiDopoRiposoLungo, sostituti, type CambioPossibile } from '../partita/riposo-incantesimi';
 import { Tendina } from './Tendina';
-import { FoglioDalBasso, SchedaIncantesimo } from './SchedaIncantesimo';
+import { FoglioDalBasso, Finestra, SchedaIncantesimo } from './SchedaIncantesimo';
 import { DADI_INCANTESIMI, testoDadi } from '../regole/dati/dadi-incantesimi';
 import { daIncantesimo, soloDanni, type RichiestaTiro } from '../partita/tiri';
 import { IconaD20, IconaDanni, Tiro } from './Tiro';
@@ -62,7 +62,7 @@ export function Riposi({ scheda, partita, cambia, dado, bozza, cambiaBozza }: Pr
         >Riposo lungo</button>
       </div>
       {breve && (
-        <FoglioDalBasso chiudi={() => setBreve(false)} titolo={<h2 className="text-lg font-medium text-testo">Riposo breve (1 ora)</h2>}>
+        <Finestra chiudi={() => setBreve(false)} titolo={<h2 className="text-lg font-medium text-testo">Riposo breve (1 ora)</h2>}>
           <p className="text-sm text-testo">
             Puoi spendere i dadi vita per recuperare PF: tira il dado e scrivi il risultato, l'app aggiunge la Costituzione (SRD p. 187).
           </p>
@@ -79,7 +79,7 @@ export function Riposi({ scheda, partita, cambia, dado, bozza, cambiaBozza }: Pr
           <button onClick={() => { cambia(riposoBreve(partita, scheda)); setBreve(false); }}
             className="mt-3 h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Concludi il riposo breve</button>
           <p className="mt-2 text-xs text-testo-2">Tornano lo slot del patto del warlock e le capacità che lo dicono (per esempio 1 uso dell'Ira).</p>
-        </FoglioDalBasso>
+        </Finestra>
       )}
       {dopoLungo && bozza && cambiaBozza && <CambiDopoRiposo prima={dopoLungo} bozza={bozza} cambia={cambiaBozza} chiudi={() => setDopoLungo(null)} />}
     </>
@@ -215,10 +215,10 @@ export function NomeRisorsa({ r, children }: { r: { id: string; nome: string; de
         {children ?? r.nome}<span className="sr-only">: cosa fa</span>
       </button>
       {aperto && (
-        <FoglioDalBasso chiudi={() => setAperto(false)} titolo={<h2 className="text-lg font-medium text-testo">{r.nome}</h2>}>
+        <Finestra chiudi={() => setAperto(false)} titolo={<h2 className="text-lg font-medium text-testo">{r.nome}</h2>}>
           <p className="text-base text-testo">{s.testo}</p>
           {s.pagina && <p className="mt-3 text-xs text-testo-2">SRD 5.2 p. {s.pagina}</p>}
-        </FoglioDalBasso>
+        </Finestra>
       )}
     </>
   );
@@ -382,7 +382,7 @@ function SceltaLancio({ v, m, id, partita, chiudi, fatto }: {
   const i = DATI.incantesimi[id];
   const modi = modiDiLancio(v, m, id);
   return (
-    <FoglioDalBasso chiudi={chiudi} titolo={<>
+    <Finestra chiudi={chiudi} titolo={<>
       <h2 className="text-lg font-medium text-testo">Lancia {i.nome}</h2>
       <p className="text-sm text-testo-2">{i.it?.tempo ?? i.tempo.testo} · {i.it?.gittata ?? i.gittata}</p>
     </>}>
@@ -400,7 +400,7 @@ function SceltaLancio({ v, m, id, partita, chiudi, fatto }: {
         {modi.length === 0 && <p className="text-sm text-testo-2">Adesso non puoi lanciarlo: non è preparato.</p>}
       </div>
       <p className="mt-3 text-xs text-testo-2">Un solo incantesimo con uno slot per turno (SRD p. 105).</p>
-    </FoglioDalBasso>
+    </Finestra>
   );
 }
 
@@ -472,11 +472,11 @@ export function CondizioniTavolo({ scheda, partita, cambia }: PropsTavolo) {
       {effetto.length > 0 && <p className="mt-2 text-xs text-testo-2">Finiscono quando lo dice l'effetto o il master: toglile tu. Il riposo lungo toglie solo 1 livello di indebolimento.</p>}
 
       {aperta && (
-        <FoglioDalBasso chiudi={() => setAperta(null)} titolo={<><h2 className="text-lg font-medium text-testo">{CONDIZIONE[aperta].nome}</h2><p className="text-sm text-testo-2">SRD p. {CONDIZIONE[aperta].pagina}</p></>}>
+        <Finestra chiudi={() => setAperta(null)} titolo={<><h2 className="text-lg font-medium text-testo">{CONDIZIONE[aperta].nome}</h2><p className="text-sm text-testo-2">SRD p. {CONDIZIONE[aperta].pagina}</p></>}>
           <ul className="space-y-2">
             {(GUIDA_CONDIZIONI.sezioni[0].capitoli.find((c) => c.id === aperta)?.righe ?? [CONDIZIONE[aperta].riga]).map((t, i) => <li key={i} className="text-base text-testo">{t}</li>)}
           </ul>
-        </FoglioDalBasso>
+        </Finestra>
       )}
     </div>
   );

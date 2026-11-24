@@ -36,7 +36,7 @@ function TabellaSrd({ t }: { t: Tabella }) {
   const fitta = t.colonne.length > 3;
   const cella = `${fitta ? 'px-1' : 'px-2'} py-1`;
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t.titolo ?? "Tabella"}>   {/* nella finestra sospesa la tabella può scorrere di lato: da tastiera serve il fuoco */}
       {t.titolo && <p className="mb-1 text-sm font-medium text-testo">{t.titolo}</p>}
       <table className={`w-full border-collapse ${fitta ? 'text-xs' : 'text-sm'}`}>
         <thead><tr>{t.colonne.map((c) => <th key={c} scope="col" className={`border-b border-bordo ${cella} text-left align-bottom font-medium text-testo-2`}>{c}</th>)}</tr></thead>
@@ -51,7 +51,13 @@ let cache: Testi | null = null;
 const pila: number[] = [];
 let prossimo = 0;
 
-export function FoglioDalBasso({ titolo, chiudi, children }: { titolo: React.ReactNode; chiudi: () => void; children: React.ReactNode }) {
+// Finestra sospesa al centro (24/11, scelta di Patrizio): per tutto ciò che ha una descrizione o un'azione
+// (risorse, incantesimi, tiri, condizioni, oggetti, mostri). Il foglio dal basso resta per elenchi e moduli.
+export function Finestra(p: { titolo: React.ReactNode; chiudi: () => void; children: React.ReactNode }) {
+  return <FoglioDalBasso {...p} sospesa />;
+}
+
+export function FoglioDalBasso({ titolo, chiudi, children, sospesa = false }: { titolo: React.ReactNode; chiudi: () => void; children: React.ReactNode; sospesa?: boolean }) {
   const foglio = useRef<HTMLDivElement>(null);
   const idTitolo = useId();
   const chiudiRef = useRef(chiudi);
@@ -81,7 +87,7 @@ export function FoglioDalBasso({ titolo, chiudi, children }: { titolo: React.Rea
     };
   }, []);   // una volta sola: rieseguirlo a ogni render ruberebbe il fuoco ai campi mentre si scrive
   return (
-    <div className="fixed inset-0 z-30 flex flex-col justify-end bg-black/40" onClick={chiudi}>
+    <div className={`fixed inset-0 z-30 flex flex-col bg-black/50 ${sospesa ? 'items-center justify-center px-4 py-[max(1rem,env(safe-area-inset-top))]' : 'justify-end'}`} onClick={chiudi}>
       <div
         ref={foglio}
         role="dialog"
@@ -89,7 +95,9 @@ export function FoglioDalBasso({ titolo, chiudi, children }: { titolo: React.Rea
         aria-labelledby={idTitolo}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="mx-auto flex max-h-[88vh] w-full max-w-120 flex-col rounded-t-2xl border-t border-bordo bg-sfondo pb-[env(safe-area-inset-bottom)] outline-none"
+        className={sospesa
+          ? 'riquadro anim-finestra flex max-h-[85vh] w-full max-w-110 flex-col rounded-2xl border bg-sfondo outline-none'
+          : 'mx-auto flex max-h-[88vh] w-full max-w-120 flex-col rounded-t-2xl border-t border-bordo bg-sfondo pb-[env(safe-area-inset-bottom)] outline-none'}
       >
         <div className="flex items-start justify-between gap-2 border-b border-bordo px-4 py-3">
           <div id={idTitolo} className="min-w-0">{titolo}</div>
@@ -122,7 +130,7 @@ export function SchedaIncantesimo({ id, chiudi }: { id: Id; chiudi: () => void }
   const t = testi?.[id];
   const tipo = i.livello === 0 ? `Trucchetto di ${SCUOLA[i.scuola]}` : `${i.livello}° livello, ${SCUOLA[i.scuola]}`;
   return (
-    <FoglioDalBasso
+    <Finestra
       chiudi={chiudi}
       titolo={<>
         <p className="font-titolo text-xl text-accento">{i.nome}</p>
@@ -150,6 +158,6 @@ export function SchedaIncantesimo({ id, chiudi }: { id: Id; chiudi: () => void }
         {t?.superiori && <TestoSrd testo={t.superiori} prima="Con uno slot di livello superiore." />}
       </div>
       <p className="mt-4 text-xs text-testo-2">Testo dall'SRD 5.2.1 in italiano, licenza CC-BY-4.0.</p>
-    </FoglioDalBasso>
+    </Finestra>
   );
 }

@@ -7,7 +7,7 @@ import { ARMI } from '../regole/dati/base';
 import { OGGETTI_MAGICI, type OggettoMagico } from '../regole/dati/oggetti-magici';
 import { MAX_SINTONIA, copieDoppie, nomeOggetto, richiedeSintonia, sintonizzati, svela, caricheConosciute, ricarica, tiraRicarica } from '../regole/oggetti-magici';
 import type { OggettoMagicoPosseduto } from '../regole/tipi';
-import { FoglioDalBasso } from './SchedaIncantesimo';
+import { FoglioDalBasso, Finestra } from './SchedaIncantesimo';
 import { leggiQR } from '../sblocchi/cifra';
 import { cercaSblocco, servizioAttivo, svelaVelo } from '../sblocchi/servizio';
 import { ScannerQR } from './QR';
@@ -163,7 +163,7 @@ function Aggiungi({ chiudi, aggiungi }: { chiudi: () => void; aggiungi: (o: Ogge
   if (scelto) {
     const manca = (scelto.varianti && !variante) || (scelto.base === 'arma' && !base) || (scelto.base === 'armatura' && !base);
     return (
-      <FoglioDalBasso chiudi={chiudi} titolo={<><h2 className="text-lg font-medium text-testo">{scelto.nome}</h2><p className="text-sm text-testo-2">{scelto.categoria}, {scelto.rarita}{scelto.sintonia ? ' · richiede sintonia' : ''}</p></>}>
+      <Finestra chiudi={chiudi} titolo={<><h2 className="text-lg font-medium text-testo">{scelto.nome}</h2><p className="text-sm text-testo-2">{scelto.categoria}, {scelto.rarita}{scelto.sintonia ? ' · richiede sintonia' : ''}</p></>}>
         <div className="space-y-3">
           <p className="text-sm text-testo">{scelto.riga} <span className="text-xs text-testo-2">SRD p. {scelto.pagina}</span></p>
           {scelto.varianti && (
@@ -200,7 +200,7 @@ function Aggiungi({ chiudi, aggiungi }: { chiudi: () => void; aggiungi: (o: Ogge
             className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo">Aggiungi allo zaino</button>
           <button onClick={() => setScelto(null)} className="min-h-11 w-full text-sm text-accento">Scegli un altro oggetto</button>
         </div>
-      </FoglioDalBasso>
+      </Finestra>
     );
   }
 

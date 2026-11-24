@@ -21,7 +21,7 @@ import { Borsa, Libro } from './Zaino';
 import { Indossato } from './Indossato';
 import { OggettiMagici } from './OggettiMagici';
 import { Monete } from './Monete';
-import { FoglioDalBasso } from './SchedaIncantesimo';
+import { Finestra } from './SchedaIncantesimo';
 import { NuovoLivello } from './NuovoLivello';
 import { Famiglio } from './Famiglio';
 import { semplici, Tendina } from './Tendina';
@@ -450,7 +450,7 @@ function FoglioRitratto({ ritratto, nome, figura, cambia, chiudi }: { ritratto?:
   const [errore, setErrore] = useState(false);
   const [intera, setIntera] = useState(false);
   return (
-    <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="font-titolo text-lg text-accento">{nome || 'Ritratto'}</h2>}>
+    <Finestra chiudi={chiudi} titolo={<h2 className="font-titolo text-lg text-accento">{nome || 'Ritratto'}</h2>}>
       {figura && (
         <div role="radiogroup" aria-label="Vista" className="mb-3 grid grid-cols-2 gap-2">
           {([false, true] as const).map((v) => (
@@ -479,6 +479,6 @@ function FoglioRitratto({ ritratto, nome, figura, cambia, chiudi }: { ritratto?:
         </div>
       )}
       {errore && <p className="mt-2 text-sm text-attenzione">Non riesco a leggere questa immagine: prova con un'altra foto.</p>}
-    </FoglioDalBasso>
+    </Finestra>
   );
 }

@@ -4,6 +4,8 @@ import { PREDEFINITI, creaPredefinito, predefinitiPer } from '../src/creazione/p
 import { comePersonaggio, statoPassi } from '../src/creazione/percorso';
 import { calcolaScheda } from '../src/regole';
 import { tavoloVuoto } from '../src/regole/tavolo';
+import { spiegaRisorsa } from '../src/creazione/spiega-risorse';
+import { vista, statoVuoto } from '../src/partita/partita';
 
 const casi = PREDEFINITI.flatMap((p) => [1, 2, 3, 4, 5].map((l) => [p.nome, l, p] as const));
 
@@ -28,5 +30,14 @@ describe('Personaggi pronti', () => {
     expect(predefinitiPer({ ...t, fonti: { srd: true, escludi: ['wizard', 'goliath'] } }).map((p) => p.id)).not.toEqual(expect.arrayContaining(['elarion']));
     expect(predefinitiPer({ ...t, fonti: { srd: true, escludi: ['wizard', 'goliath'] } })).toHaveLength(10);
     expect(predefinitiPer({ ...t, metodiPunteggi: ['pointBuy27'] })).toHaveLength(0);
+  });
+});
+
+describe('risorse con «cosa fa» (24/11)', () => {
+  it('ogni risorsa dei personaggi pronti, dal 1° al 5°, ha la spiegazione con la pagina dell\'SRD, anche al tavolo', () => {
+    for (const p of PREDEFINITI) for (let l = 1; l <= 5; l++) {
+      const s = calcolaScheda(comePersonaggio(creaPredefinito(p, l, new Date(0)))!);
+      for (const r of vista(s, statoVuoto(), 0, l).risorse) expect(spiegaRisorsa(r)?.pagina, `${p.id} ${l}° ${r.id}`).toBeTypeOf('number');
+    }
   });
 });

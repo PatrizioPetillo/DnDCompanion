@@ -33,7 +33,7 @@ export interface VistaPartita {
   dadiVita: { dado: number; totale: number; rimasti: number };
   slot: { livello: number; totale: number; rimasti: number }[];
   patto: { livello: number; totale: number; rimasti: number } | null;
-  risorse: { id: Id; nome: string; usi: number; rimasti: number; recupero: string }[];
+  risorse: { id: Id; nome: string; usi: number; rimasti: number; recupero: string; dettaglio?: string }[];
   gratuiti: { magia: Id; incantesimi: Id[]; usi: number; rimasti: number; recupero: Riposo }[];
   concentrazione: Id | null;
 }
@@ -44,7 +44,7 @@ export function vista(s: Scheda, st: StatoPartita, dado: number, livello = 1): V
     dadiVita: { dado, totale: livello, rimasti: limita(livello - st.dadiVitaUsati, 0, livello) },
     slot: s.slot.normali.map((totale, i) => ({ livello: i + 1, totale, rimasti: limita(totale - (st.slotUsati[i] ?? 0), 0, totale) })).filter((x) => x.totale > 0),
     patto: s.slot.patto ? { ...s.slot.patto, totale: s.slot.patto.numero, rimasti: limita(s.slot.patto.numero - st.pattoUsati, 0, s.slot.patto.numero) } : null,
-    risorse: s.risorse.map((r) => ({ id: r.id, nome: r.nome, usi: r.usi, rimasti: limita(r.usi - (st.risorseUsate[r.id] ?? 0), 0, r.usi),
+    risorse: s.risorse.map((r) => ({ id: r.id, nome: r.nome, ...(r.dettaglio ? { dettaglio: r.dettaglio } : {}), usi: r.usi, rimasti: limita(r.usi - (st.risorseUsate[r.id] ?? 0), 0, r.usi),
       recupero: r.recupero.some((x) => x.riposo === 'breve') ? 'breve' : 'lungo' })),
     gratuiti: s.magia.filter((m) => m.lanciGratuiti).map((m) => ({ magia: m.id, incantesimi: m.lanciGratuiti!.incantesimi, usi: m.lanciGratuiti!.usi,
       rimasti: limita(m.lanciGratuiti!.usi - (st.gratuitiUsati[m.id] ?? 0), 0, m.lanciGratuiti!.usi), recupero: m.lanciGratuiti!.recupero })),

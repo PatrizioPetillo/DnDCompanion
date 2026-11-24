@@ -5,7 +5,7 @@ import { cambiaComponente, componenti } from '../partita/componenti';
 import { statoVuoto } from '../partita/partita';
 import { DATI } from '../regole';
 import type { MagiaCalcolata, Scheda } from '../regole/tipi';
-import { FoglioDalBasso } from './SchedaIncantesimo';
+import { Finestra } from './SchedaIncantesimo';
 import type { PropsTavolo } from './Tavolo';
 
 const SCUOLA: Record<string, string> = {
@@ -35,7 +35,7 @@ export function Libro({ magia: m, chiudi }: { magia: MagiaCalcolata; chiudi: () 
     ? `Dopo un riposo lungo puoi cambiare ${m.cambio.quanti === 'tutti' ? 'tutti i preparati' : 'un preparato'}, scegliendo tra gli incantesimi del libro (SRD p. ${m.cambio.srd.pagina}).`
     : null;
   return (
-    <FoglioDalBasso chiudi={chiudi} titolo={<>
+    <Finestra chiudi={chiudi} titolo={<>
       <h2 className="font-titolo text-lg text-accento">Libro degli incantesimi</h2>
       <p className="text-sm text-testo-2">Preparati {preparati.length}/{m.preparati?.limite ?? 0} · {scritti.length} incantesimi scritti</p>
     </>}>
@@ -91,7 +91,7 @@ export function Libro({ magia: m, chiudi }: { magia: MagiaCalcolata; chiudi: () 
         </>
       )}
       {cambio && <p className="mt-3 text-sm text-testo-2">{cambio}</p>}
-    </FoglioDalBasso>
+    </Finestra>
   );
 }
 
@@ -100,7 +100,7 @@ export function Borsa({ nome, scheda, tavolo, chiudi, ignoraNonConsumate = false
   const borsa = /borsa/i.test(nome);
   const { senzaCosto, conCosto, nonServono } = componenti(scheda, tavolo?.partita ?? statoVuoto(), undefined, ignoraNonConsumate);
   return (
-    <FoglioDalBasso chiudi={chiudi} titolo={<>
+    <Finestra chiudi={chiudi} titolo={<>
       <h2 className="font-titolo text-lg text-accento">{nome}</h2>
       <p className="text-sm text-testo-2">{borsa ? 'Contiene tutte le componenti senza costo dei tuoi incantesimi' : 'Sostituisce le componenti senza costo dei tuoi incantesimi'} (SRD p. 105-106). Quelle con un costo no: vanno comprate.</p>
     </>}>
@@ -146,6 +146,6 @@ export function Borsa({ nome, scheda, tavolo, chiudi, ignoraNonConsumate = false
           {senzaCosto.map((c) => <li key={c.incantesimo}><span className="text-testo">{c.nome}:</span> <span className="text-testo-2">{c.testo}</span></li>)}
         </ul>
       ) : <p className="text-sm text-testo-2">Nessuno dei tuoi incantesimi ha componenti materiali senza costo.</p>}
-    </FoglioDalBasso>
+    </Finestra>
   );
 }

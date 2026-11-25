@@ -1,11 +1,15 @@
 // Incontri del master (21/11): prepara i nemici, vede subito la difficoltà per il suo gruppo, poi tira l'iniziativa.
 // Dal 23/11 c'è l'elenco dei mostri dell'SRD, solo i numeri; per gli altri il master scrive i suoi (SRD p. 202, 253, 13).
 import { useEffect, useState } from 'react';
-import type { Incontro, MembroGruppo } from '../archivio/archivio';
+import type { Incontro, MembroGruppo, OggettoDelMaster } from '../archivio/archivio';
+import { dividi } from '../esporta/link';
+import { prezzo } from '../creazione/equipaggiamento';
+import { mandaBottino } from './Monete';
+import { daiOggetto } from './OggettiTavolo';
 import { calcolaScheda } from '../regole';
 import {
   budgetGruppo, cambiaPf, cambiaTiro, difficolta, GRADI, NOME_DIFFICOLTA, nomeGrado, peNemici, prossimoTurno, SPIEGA_DIFFICOLTA,
-  cambiaCondizioneNemico, scriviTotale, sposta, tiraIniziativa, totale, turnoPrecedente, type Combattimento, type Combattente, type Nemico,
+  cambiaCondizioneNemico, perSessione, scriviTotale, sessioni, spostaIncontro, sposta, tiraIniziativa, totale, turnoPrecedente, type Combattimento, type Combattente, type Nemico,
 } from '../creazione/incontri';
 import { caricaMostri, cercaMostri, daMostro, type Mostro } from '../creazione/mostri';
 import { CONDIZIONE, CONDIZIONI, inEffetto, type IdCondizione } from '../partita/condizioni';
@@ -58,37 +62,51 @@ function personaggi(membri: MembroGruppo[]): InfoPg[] {
   });
 }
 
-export function Incontri({ incontri, membri, salva, togli }: {
+// Cosa serve per le ricompense (25/11): gli oggetti del tavolo, come salvarli quando si danno, il nome del tavolo per i link
+export interface PerRicompense { oggetti: OggettoDelMaster[]; salvaOggetto: (o: OggettoDelMaster) => void; nomeTavolo: string }
+
+export function Incontri({ incontri, membri, salva, togli, riordina, ricompense }: {
   incontri: Incontro[]; membri: MembroGruppo[]; salva: (i: Incontro) => void; togli: (id: string) => void;
+  riordina: (ids: string[]) => void; ricompense: PerRicompense;
 }) {
   const [aperto, setAperto] = useState<string | null>(null);
   const inc = incontri.find((i) => i.id === aperto);
   const pg = personaggi(membri);
+  const gruppi = perSessione(incontri);
+  const prossimo = gruppi.find((g) => g.daFare.length)?.daFare[0]?.id;
+  const ultimaSessione = [...incontri].reverse().find((i) => i.sessione?.trim())?.sessione;
   return (
     <section className="mt-6">
       <h2 className="text-base font-medium text-testo">Incontri</h2>
-      <p className="mb-2 text-xs text-testo-2">Scrivi i nemici: vedi quanto è difficile per il tuo gruppo e, al tavolo, l'ordine dei turni.</p>
-      {incontri.length > 0 && (
-        <ul className="mb-2 overflow-hidden rounded-xl border border-bordo">
-          {incontri.map((i) => {
-            const d = difficolta(peNemici(i.nemici), budget(i, pg));
-            return (
-              <li key={i.id} className="border-b border-bordo last:border-b-0">
-                <button onClick={() => setAperto(i.id)} className="flex min-h-14 w-full items-center gap-3 bg-superficie px-3 py-2 text-left">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-base text-testo">{i.nome || 'Incontro senza nome'}</span>
-                    <span className="block text-xs text-testo-2">{i.nemici.reduce((t, n) => t + n.quanti, 0)} nemici · {NOME_DIFFICOLTA[d]}{i.combattimento ? ` · round ${i.combattimento.round}` : ''}</span>
-                  </span>
-                  <span aria-hidden className="text-testo-2">›</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <button onClick={() => { const i: Incontro = { id: nuovoId(), nome: '', nemici: [] }; salva(i); setAperto(i.id); }}
+      <p className="mb-2 text-xs text-testo-2">Preparali prima della sessione (nemici, cosa leggere, ricompense): al tavolo li trovi in ordine, il prossimo in cima.</p>
+      {gruppi.map((g) => (
+        <div key={g.sessione ?? '—'} className="mb-2">
+          {(g.sessione || gruppi.length > 1) && <h3 className="mb-1 mt-3 text-sm font-medium text-testo-2">{g.sessione ?? 'Senza sessione'}</h3>}
+          <ul className="overflow-hidden rounded-xl border border-bordo">
+            {[...g.daFare, ...g.fatti].map((i) => {
+              const d = difficolta(peNemici(i.nemici), budget(i, pg));
+              const premi = (i.ricompense?.mo ? 1 : 0) + (i.ricompense?.oggetti?.length ?? 0);
+              return (
+                <li key={i.id} className="border-b border-bordo last:border-b-0">
+                  <button onClick={() => setAperto(i.id)} className={`flex min-h-14 w-full items-center gap-3 bg-superficie px-3 py-2 text-left ${i.fattoIl ? 'opacity-70' : ''}`}>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-base text-testo">{i.fattoIl ? '✓ ' : ''}{i.nome || 'Incontro senza nome'}{i.id === prossimo ? <span className="ml-2 rounded bg-accento px-1.5 py-0.5 align-middle text-xs font-medium text-su-accento">prossimo</span> : null}</span>
+                      <span className="block text-xs text-testo-2">
+                        {i.fattoIl ? 'fatto · ' : ''}{i.nemici.reduce((t, n) => t + n.quanti, 0)} nemici · {NOME_DIFFICOLTA[d]}{premi ? ' · ricompense pronte' : ''}{i.combattimento ? ` · round ${i.combattimento.round}` : ''}
+                      </span>
+                    </span>
+                    <span aria-hidden className="text-testo-2">›</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+      <button onClick={() => { const i: Incontro = { id: nuovoId(), nome: '', nemici: [], ...(ultimaSessione ? { sessione: ultimaSessione } : {}) }; salva(i); setAperto(i.id); }}
         className="min-h-12 w-full rounded-xl border border-accento text-base text-accento">+ Prepara un incontro</button>
-      {inc && <SchedaIncontro inc={inc} pg={pg} salva={salva} chiudi={() => setAperto(null)} togli={() => { togli(inc.id); setAperto(null); }} />}
+      {inc && <SchedaIncontro inc={inc} pg={pg} salva={salva} chiudi={() => setAperto(null)} togli={() => { togli(inc.id); setAperto(null); }}
+        tutti={incontri} sposta={(v) => riordina(spostaIncontro(incontri, inc.id, v))} ricompense={ricompense} />}
     </section>
   );
 }
@@ -97,10 +115,12 @@ function budget(i: Incontro, pg: { livello: number }[]) {
   return budgetGruppo(pg.length ? pg.map((p) => p.livello) : Array.from({ length: i.manuale?.quanti ?? 4 }, () => i.manuale?.livello ?? 1));
 }
 
-function SchedaIncontro({ inc, pg, salva, chiudi, togli }: {
+function SchedaIncontro({ inc, pg, salva, chiudi, togli, tutti, sposta, ricompense }: {
   inc: Incontro; pg: InfoPg[];
   salva: (i: Incontro) => void; chiudi: () => void; togli: () => void;
+  tutti: Incontro[]; sposta: (verso: -1 | 1) => void; ricompense: PerRicompense;
 }) {
+  const [finale, setFinale] = useState(false);     // 25/11: la fine dell'incontro con le ricompense
   const metti = (o: Partial<Incontro>) => salva({ ...inc, ...o });
   const c = inc.combattimento;
   const [mostro, setMostro] = useState<string | null>(null);     // la scheda completa aperta sopra l'incontro
@@ -116,15 +136,20 @@ function SchedaIncontro({ inc, pg, salva, chiudi, togli }: {
     metti({ combattimento: arrivate.reduce((cc, a) => scriviTotale(cc, a.id, a.totale, true), c) });
   }, [firmaArrivate]);   // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="text-lg font-medium text-testo">{c ? `Round ${c.round}` : 'Prepara l\'incontro'}</h2>}>
+    <FoglioDalBasso chiudi={chiudi} titolo={<h2 className="text-lg font-medium text-testo">{finale ? 'Fine dell\'incontro' : c ? `Round ${c.round}` : inc.fattoIl ? 'Incontro fatto' : 'Prepara l\'incontro'}</h2>}>
       {mostro && <SchedaMostro id={mostro} chiudi={() => setMostro(null)} />}
-      {c ? <Combattendo c={c} pg={pg} nemici={inc.nemici} apriMostro={setMostro} cambia={(n) => metti({ combattimento: n })} fine={() => window.confirm('Finire il combattimento?') && metti({ combattimento: undefined })} />
-        : <Prepara inc={inc} pg={pg} metti={metti} togli={togli} apriMostro={setMostro} />}
+      {finale ? <FineIncontro inc={inc} pg={pg} ricompense={ricompense} indietro={() => setFinale(false)}
+          fatto={() => { metti({ combattimento: undefined, fattoIl: new Date().toISOString() }); setFinale(false); chiudi(); }} />
+        : c ? <Combattendo c={c} pg={pg} nemici={inc.nemici} note={inc.note} daLeggere={inc.daLeggere} apriMostro={setMostro} cambia={(n) => metti({ combattimento: n })} fine={() => setFinale(true)} />
+        : <Prepara inc={inc} pg={pg} metti={metti} togli={togli} apriMostro={setMostro} tutti={tutti} sposta={sposta} oggetti={ricompense.oggetti} finisci={() => setFinale(true)} />}
     </FoglioDalBasso>
   );
 }
 
-function Prepara({ inc, pg, metti, togli, apriMostro }: { inc: Incontro; pg: InfoPg[]; apriMostro: (id: string) => void; metti: (o: Partial<Incontro>) => void; togli: () => void }) {
+function Prepara({ inc, pg, metti, togli, apriMostro, tutti, sposta, oggetti, finisci }: {
+  inc: Incontro; pg: InfoPg[]; apriMostro: (id: string) => void; metti: (o: Partial<Incontro>) => void; togli: () => void;
+  tutti: Incontro[]; sposta: (verso: -1 | 1) => void; oggetti: OggettoDelMaster[]; finisci: () => void;
+}) {
   const [elenco, setElenco] = useState(false);
   const b = budget(inc, pg);
   const tot = peNemici(inc.nemici);
@@ -139,6 +164,22 @@ function Prepara({ inc, pg, metti, togli, apriMostro }: { inc: Incontro; pg: Inf
     <div className="space-y-4">
       <label className="block"><span className="mb-1 block text-sm font-medium text-testo">Nome dell'incontro</span>
         <input value={inc.nome} maxLength={80} onChange={(e) => metti({ nome: e.target.value })} placeholder="Es. L'imboscata al guado" className={`w-full ${campo}`} /></label>
+
+      {inc.fattoIl && (
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-bordo bg-superficie p-3">
+          <p className="text-sm text-testo">✓ Fatto il {new Date(inc.fattoIl).toLocaleDateString('it-IT')}</p>
+          <button onClick={() => metti({ fattoIl: undefined })} className="min-h-11 shrink-0 px-2 text-sm text-accento">Segna da fare</button>
+        </div>
+      )}
+
+      <OrdineSessione inc={inc} tutti={tutti} metti={metti} sposta={sposta} />
+
+      <label className="block"><span className="mb-1 block text-sm font-medium text-testo">Da leggere ai giocatori <span className="font-normal text-testo-2">(facoltativo)</span></span>
+        <textarea value={inc.daLeggere ?? ''} maxLength={2000} rows={3} onChange={(e) => metti({ daLeggere: e.target.value || undefined })}
+          placeholder="Es. Il guado è basso, l'acqua vi arriva alle ginocchia. Dall'altra riva, tra i giunchi, qualcosa luccica…" className="w-full rounded-lg border border-bordo bg-sfondo p-2 text-base text-testo" /></label>
+      <label className="block"><span className="mb-1 block text-sm font-medium text-testo">Note solo per te <span className="font-normal text-testo-2">(facoltativo)</span></span>
+        <textarea value={inc.note ?? ''} maxLength={2000} rows={3} onChange={(e) => metti({ note: e.target.value || undefined })}
+          placeholder="Es. I goblin fuggono a metà PF. Il capo porta la chiave della torre." className="w-full rounded-lg border border-bordo bg-sfondo p-2 text-base text-testo" /></label>
 
       <div className="rounded-xl border border-bordo bg-superficie p-3" aria-live="polite">
         <p className={`text-base font-medium ${colore}`}>Difficoltà: {NOME_DIFFICOLTA[d]}</p>
@@ -211,10 +252,13 @@ function Prepara({ inc, pg, metti, togli, apriMostro }: { inc: Incontro; pg: Inf
         }} />}
       </div>
 
+      <Ricompense inc={inc} metti={metti} oggetti={oggetti} />
+
       <button disabled={!inc.nemici.length && !pg.length} onClick={() => metti({ combattimento: tiraIniziativa(pg, inc.nemici) })}
         className="h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo">Inizia: tira l'iniziativa dei nemici</button>
       {!pg.length && <p className="text-xs text-testo-2">Senza schede nel gruppo, nell'ordine dei turni ci saranno solo i nemici.</p>}
       <p className="text-xs text-testo-2">Tu tiri per i nemici (i nemici uguali una volta sola); ogni giocatore tira la sua (SRD p. 13). Con il tavolo collegato il totale arriva dal suo telefono, altrimenti scrivi quello che ti dice.</p>
+      {!inc.fattoIl && <button onClick={finisci} className="min-h-11 w-full rounded-xl border border-bordo text-sm text-testo">Finito senza combattere: ricompense e «fatto»</button>}
       <button onClick={() => window.confirm(`Eliminare «${inc.nome || 'l\'incontro'}»?`) && togli()} className="min-h-11 w-full text-sm text-attenzione">Elimina l'incontro</button>
     </div>
   );
@@ -300,11 +344,18 @@ function RigaPg({ x, i, c, info, ora, cambia }: { x: Combattente; i: number; c: 
   );
 }
 
-function Combattendo({ c, pg, nemici, apriMostro, cambia, fine }: {
-  c: Combattimento; pg: InfoPg[]; nemici: Nemico[]; apriMostro: (id: string) => void; cambia: (c: Combattimento) => void; fine: () => void;
+function Combattendo({ c, pg, nemici, note, daLeggere, apriMostro, cambia, fine }: {
+  c: Combattimento; pg: InfoPg[]; nemici: Nemico[]; note?: string; daLeggere?: string; apriMostro: (id: string) => void; cambia: (c: Combattimento) => void; fine: () => void;
 }) {
   return (
     <div className="space-y-3">
+      {(note || daLeggere) && (
+        <details className="rounded-xl border border-bordo bg-superficie p-3">
+          <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium text-testo">Testo e note dell'incontro</summary>
+          {daLeggere && <><p className="mt-1 text-xs text-testo-2">Da leggere ai giocatori</p><p className="whitespace-pre-line text-base italic text-testo">{daLeggere}</p></>}
+          {note && <><p className="mt-2 text-xs text-testo-2">Solo per te</p><p className="whitespace-pre-line text-sm text-testo">{note}</p></>}
+        </details>
+      )}
       <ol className="space-y-2">
         {c.ordine.map((x, i) => {
           const ora = i === c.turno;
@@ -346,7 +397,7 @@ function Combattendo({ c, pg, nemici, apriMostro, cambia, fine }: {
         <button onClick={() => cambia(prossimoTurno(c))} className="col-span-2 h-12 rounded-xl bg-accento text-base font-medium text-su-accento">Prossimo turno</button>
       </div>
       <p className="text-xs text-testo-2">Parità: tra mostri e personaggi decidi tu, tra personaggi decidono i giocatori (SRD p. 13). Usa le frecce.</p>
-      <button onClick={fine} className="min-h-11 w-full text-sm text-attenzione">Fine del combattimento</button>
+      <button onClick={fine} className="min-h-12 w-full rounded-xl border border-accento text-base text-accento">Fine del combattimento</button>
     </div>
   );
 }
@@ -417,6 +468,113 @@ function CondizioniNemico({ x, cambia }: { x: { nome: string; quanti?: number; i
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ───────── Incontri più ricchi (25/11) ─────────
+// Sessione e ordine: la sessione raggruppa l'elenco; «Prima» e «Dopo» spostano tra gli incontri della stessa sessione
+function OrdineSessione({ inc, tutti, metti, sposta }: { inc: Incontro; tutti: Incontro[]; metti: (o: Partial<Incontro>) => void; sposta: (v: -1 | 1) => void }) {
+  const nomi = sessioni(tutti).filter((s) => s !== inc.sessione?.trim());
+  const stessa = tutti.filter((i) => (i.sessione?.trim() || '') === (inc.sessione?.trim() || '') && !!i.fattoIl === !!inc.fattoIl);
+  const k = stessa.findIndex((i) => i.id === inc.id);
+  return (
+    <div className="space-y-2">
+      <label className="block"><span className="mb-1 block text-sm font-medium text-testo">Sessione <span className="font-normal text-testo-2">(facoltativa)</span></span>
+        <input value={inc.sessione ?? ''} maxLength={40} onChange={(e) => metti({ sessione: e.target.value || undefined })} placeholder="Es. Sessione 1"
+          className="h-11 w-full rounded-lg border border-bordo bg-sfondo px-2 text-base text-testo" /></label>
+      {nomi.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {nomi.map((s) => <button key={s} onClick={() => metti({ sessione: s })} className="min-h-11 rounded-full border border-bordo px-3 text-sm text-testo">{s}</button>)}
+        </div>
+      )}
+      {stessa.length > 1 && (
+        <div className="flex items-center justify-between gap-2 text-sm text-testo">
+          <span>{k + 1}° di {stessa.length}{inc.sessione?.trim() ? ` in «${inc.sessione.trim()}»` : ''}</span>
+          <span className="flex gap-2">
+            <button disabled={k === 0} onClick={() => sposta(-1)} className="min-h-11 rounded-lg border border-bordo px-3 disabled:opacity-40">↑ Prima</button>
+            <button disabled={k === stessa.length - 1} onClick={() => sposta(1)} className="min-h-11 rounded-lg border border-bordo px-3 disabled:opacity-40">↓ Dopo</button>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Ricompense preparate: monete in totale (si dividono alla fine, tra chi c'è) e oggetti del tavolo
+function Ricompense({ inc, metti, oggetti }: { inc: Incontro; metti: (o: Partial<Incontro>) => void; oggetti: OggettoDelMaster[] }) {
+  const r = inc.ricompense ?? {};
+  const cambia = (o: Partial<NonNullable<Incontro['ricompense']>>) => {
+    const n = { ...r, ...o };
+    const vuoto = !n.mo && !n.nota?.trim() && !n.oggetti?.length;
+    metti({ ricompense: vuoto ? undefined : n });
+  };
+  const scelti = r.oggetti ?? [];
+  const [testo, setTesto] = useState(r.mo ? String(r.mo).replace('.', ',') : '');
+  return (
+    <div className="space-y-2 rounded-xl border border-bordo bg-superficie p-3">
+      <h3 className="text-base font-medium text-testo">Ricompense <span className="text-sm font-normal text-testo-2">(facoltative)</span></h3>
+      <label className="flex items-center justify-between gap-2 text-sm text-testo"><span>Monete d'oro in totale</span>
+        <input inputMode="decimal" value={testo} placeholder="0" onChange={(e) => {
+          setTesto(e.target.value);
+          const n = Number(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''));
+          cambia({ mo: Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : undefined });
+        }} className="h-11 w-24 rounded-lg border border-bordo bg-sfondo text-center text-base" /></label>
+      <label className="block text-sm text-testo">Da dove vengono
+        <input value={r.nota ?? ''} maxLength={80} onChange={(e) => cambia({ nota: e.target.value || undefined })} placeholder="Es. Il forziere del capo bandito"
+          className="mt-1 h-11 w-full rounded-lg border border-bordo bg-sfondo px-2 text-base text-testo" /></label>
+      <p className="text-sm text-testo">Oggetti del tavolo</p>
+      {oggetti.length ? (
+        <ul className="space-y-1">
+          {oggetti.map((o) => (
+            <li key={o.uid}>
+              <label className="flex min-h-11 items-center gap-3 text-sm text-testo">
+                <input type="checkbox" className="h-5 w-5 accent-[var(--color-accento)]" checked={scelti.includes(o.uid)}
+                  onChange={(e) => cambia({ oggetti: e.target.checked ? [...scelti, o.uid] : scelti.filter((x) => x !== o.uid) })} />
+                <span>{o.svelato.nome} <span className="text-testo-2">· appare come «{o.apparente}»{o.datoIl ? ' · già dato' : ''}</span></span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="text-xs text-testo-2">Nessun oggetto: crealo in «Oggetti del tavolo», più giù nella pagina, poi spuntalo qui.</p>}
+    </div>
+  );
+}
+
+// Fine dell'incontro: le ricompense preparate a portata di tocco, poi «fatto»
+function FineIncontro({ inc, pg, ricompense, indietro, fatto }: { inc: Incontro; pg: InfoPg[]; ricompense: PerRicompense; indietro: () => void; fatto: () => void }) {
+  const r = inc.ricompense ?? {};
+  const [parti, setParti] = useState(String(pg.length || inc.manuale?.quanti || 4));
+  const [stato, setStato] = useState<Record<string, string>>({});
+  const di = (k: string, t: string | null) => t && setStato((s) => ({ ...s, [k]: t }));
+  const n = Math.max(1, Number(parti) || 1);
+  const { aTesta, resto } = dividi(r.mo ?? 0, n);
+  const oggetti = (r.oggetti ?? []).flatMap((uid) => ricompense.oggetti.filter((o) => o.uid === uid));
+  const nulla = !r.mo && !oggetti.length;
+  return (
+    <div className="space-y-3">
+      {nulla ? <p className="text-base text-testo">Nessuna ricompensa preparata per questo incontro.</p> : <h3 className="text-base font-medium text-testo">Ricompense</h3>}
+      {!!r.mo && (
+        <div className="space-y-2 rounded-xl border border-bordo bg-superficie p-3">
+          <p className="text-base text-testo">{prezzo(r.mo)} in totale{r.nota ? ` · ${r.nota}` : ''}</p>
+          <label className="flex items-center justify-between text-sm text-testo"><span>Da dividere tra</span>
+            <input inputMode="numeric" value={parti} onChange={(e) => setParti(e.target.value.replace(/\D/g, ''))} className="h-11 w-16 rounded-lg border border-bordo bg-sfondo text-center text-base" /></label>
+          <p className="text-sm text-testo">A testa: <span className="font-medium">{prezzo(aTesta)}</span>{resto > 0 ? ` · avanzano ${prezzo(resto)}` : ''}</p>
+          <button disabled={!aTesta} onClick={async () => di('mo', await mandaBottino(aTesta, r.nota ?? inc.nome, ricompense.nomeTavolo))}
+            className="min-h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento disabled:bg-bordo disabled:text-testo">Manda il link del bottino</button>
+          {stato.mo && <p role="status" className="text-sm text-testo">{stato.mo}</p>}
+        </div>
+      )}
+      {oggetti.map((o) => (
+        <div key={o.uid} className="space-y-2 rounded-xl border border-bordo bg-superficie p-3">
+          <p className="text-base text-testo">{o.svelato.nome} <span className="text-sm text-testo-2">· appare come «{o.apparente}»</span></p>
+          <button onClick={async () => di(o.uid, await daiOggetto(o, ricompense.nomeTavolo, ricompense.salvaOggetto))}
+            className="min-h-12 w-full rounded-xl border border-accento text-base text-accento">{o.datoIl ? 'Dallo di nuovo' : 'Dai a un giocatore'}</button>
+          {stato[o.uid] && <p role="status" className="text-sm text-testo">{stato[o.uid]}</p>}
+        </div>
+      ))}
+      <button onClick={fatto} className="min-h-12 w-full rounded-xl bg-accento text-base font-medium text-su-accento">Segna come fatto e chiudi</button>
+      <button onClick={indietro} className="min-h-11 w-full text-sm text-testo">{inc.combattimento ? 'Torna al combattimento' : 'Torna all\'incontro'}</button>
     </div>
   );
 }

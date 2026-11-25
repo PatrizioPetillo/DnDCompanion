@@ -138,3 +138,30 @@ export function cambiaCondizioneNemico(c: Combattimento, id: string, istanza: nu
     return { ...x, condizioni: tutte.map((l, k) => (k !== istanza ? l : metti ? (l.includes(cond) ? l : [...l, cond]) : l.filter((y) => y !== cond))) };
   }) };
 }
+
+// ───────── Elenco degli incontri per sessione (25/11) ─────────
+// Gruppi nell'ordine in cui compare la sessione; senza sessione in fondo. Dentro: prima quelli da fare, nell'ordine scelto, poi i fatti.
+export interface IncontroInElenco { id: string; sessione?: string; fattoIl?: string }
+export function perSessione<T extends IncontroInElenco>(incontri: T[]): { sessione: string | null; daFare: T[]; fatti: T[] }[] {
+  const nomi: (string | null)[] = [];
+  for (const i of incontri) { const s = i.sessione?.trim() || null; if (!nomi.includes(s)) nomi.push(s); }
+  nomi.sort((a, b) => (a === null ? 1 : 0) - (b === null ? 1 : 0));
+  return nomi.map((s) => {
+    const qui = incontri.filter((i) => (i.sessione?.trim() || null) === s);
+    return { sessione: s, daFare: qui.filter((i) => !i.fattoIl), fatti: qui.filter((i) => i.fattoIl) };
+  });
+}
+export const sessioni = (incontri: IncontroInElenco[]) => [...new Set(incontri.map((i) => i.sessione?.trim()).filter((s): s is string => !!s))];
+
+// Sposta un incontro di un posto (su o giù) tra quelli della stessa sessione; restituisce il nuovo ordine di tutti gli id
+export function spostaIncontro(incontri: IncontroInElenco[], id: string, verso: -1 | 1): string[] {
+  const ids = incontri.map((i) => i.id);
+  const me = incontri.find((i) => i.id === id);
+  if (!me) return ids;
+  const stessa = incontri.filter((i) => (i.sessione?.trim() || '') === (me.sessione?.trim() || '') && !!i.fattoIl === !!me.fattoIl).map((i) => i.id);
+  const k = stessa.indexOf(id), altro = stessa[k + verso];
+  if (altro === undefined) return ids;
+  const a = ids.indexOf(id), b = ids.indexOf(altro);
+  [ids[a], ids[b]] = [ids[b], ids[a]];
+  return ids;
+}

@@ -67,7 +67,7 @@ export function ElencoTavoli({ archivio, apri, crea }: { archivio: Archivio; apr
 }
 
 // ───────── Il tavolo, come lo prepara il master: si salva a ogni tocco ─────────
-export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, salvato = true, mieiElementi, membri = [], apriMembro, togliMembro, oggetti = [], salvaOggetto: salvaOggettoG, togliOggetto: togliOggettoG, incontri = [], salvaIncontro: salvaIncontroG, togliIncontro: togliIncontroG }: {
+export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, salvato = true, mieiElementi, membri = [], apriMembro, togliMembro, oggetti = [], salvaOggetto: salvaOggettoG, togliOggetto: togliOggettoG, incontri = [], salvaIncontro: salvaIncontroG, togliIncontro: togliIncontroG, riordinaIncontri: riordinaG }: {
   tavolo: Tavolo;
   cambia: (t: Tavolo) => void;
   torna?: () => void;          // 23/11: torna all'elenco dei tavoli
@@ -83,6 +83,7 @@ export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, sal
   incontri?: Incontro[];
   salvaIncontro?: (i: Incontro) => void;
   togliIncontro?: (id: string) => void;
+  riordinaIncontri?: (ids: string[]) => void;
 }) {
   const [stato, setStato] = useState<string | null>(null);
   // 23/11: ogni modifica si salva subito; la riga «Salvato» lo conferma per un attimo
@@ -93,7 +94,7 @@ export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, sal
   const conSegno = <A extends unknown[]>(f?: (...a: A) => void) => f && ((...a: A) => { f(...a); segna(); });
   const cambia = conSegno(cambiaGrezzo)!;
   const salvaOggetto = conSegno(salvaOggettoG), togliOggetto = conSegno(togliOggettoG);
-  const salvaIncontro = conSegno(salvaIncontroG), togliIncontro = conSegno(togliIncontroG);
+  const salvaIncontro = conSegno(salvaIncontroG), togliIncontro = conSegno(togliIncontroG), riordina = conSegno(riordinaG);
   const [regole, setRegole] = useState(!tavolo.nome.trim());   // un tavolo nuovo si apre sulle regole
   const escludi = tavolo.fonti.escludi ?? [];
   const alterna = (id: Id) => cambia({ ...tavolo, fonti: { srd: true, escludi: escludi.includes(id) ? escludi.filter((x) => x !== id) : [...escludi, id] } });
@@ -271,7 +272,8 @@ export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, sal
       <Gruppo gruppo={membri} apri={apriMembro} togli={togliMembro} collegato={!!tavolo.canale && tavoliAttivi()} />
       <MandaEventi membri={membri} nomeTavolo={tavolo.nome} />
 
-      {salvaIncontro && togliIncontro && <Incontri incontri={incontri} membri={membri} salva={salvaIncontro} togli={togliIncontro} />}
+      {salvaIncontro && togliIncontro && <Incontri incontri={incontri} membri={membri} salva={salvaIncontro} togli={togliIncontro}
+        riordina={riordina ?? (() => {})} ricompense={{ oggetti, salvaOggetto: salvaOggetto ?? (() => {}), nomeTavolo: tavolo.nome }} />}
 
       {salvaOggetto && togliOggetto && <OggettiTavolo oggetti={oggetti} nomeTavolo={tavolo.nome} salva={salvaOggetto} togli={togliOggetto} />}
       <DaiBottino nomeTavolo={tavolo.nome} inGruppo={membri.length} />

@@ -68,6 +68,16 @@ export function Monete({ bozza, totale, cambia }: { bozza: Bozza; totale: number
 }
 
 // ───────── Lato master: nel tavolo ─────────
+// Manda il link del bottino (anche dalle ricompense di un incontro, 25/11): null se annullato, altrimenti cosa dire al master
+export async function mandaBottino(aTesta: number, nota: string, nomeTavolo: string): Promise<string | null> {
+  const b: Bottino = { id: nuovoId(), mo: aTesta, ...(nota.trim() ? { nota: nota.trim() } : {}), ...(nomeTavolo.trim() ? { tavolo: nomeTavolo.trim() } : {}) };
+  const url = await creaLinkBottino(b, location.href);
+  try {
+    if (navigator.share) { await navigator.share({ title: 'Bottino', text: `Bottino: ${prezzo(aTesta)} a testa`, url }); return 'Link del bottino mandato.'; }
+    await navigator.clipboard.writeText(url); return 'Link copiato: mandalo al gruppo. Ognuno lo apre e prende la sua parte.';
+  } catch { return null; }
+}
+
 export function DaiBottino({ nomeTavolo, inGruppo }: { nomeTavolo: string; inGruppo: number }) {
   const [aperto, setAperto] = useState(false);
   const [importo, setImporto] = useState('');
@@ -76,14 +86,7 @@ export function DaiBottino({ nomeTavolo, inGruppo }: { nomeTavolo: string; inGru
   const [stato, setStato] = useState<string | null>(null);
   const mo = leggiMo(importo), n = Math.max(1, Number(parti) || 1);
   const { aTesta, resto } = dividi(mo, n);
-  const manda = async () => {
-    const b: Bottino = { id: nuovoId(), mo: aTesta, ...(nota.trim() ? { nota: nota.trim() } : {}), ...(nomeTavolo.trim() ? { tavolo: nomeTavolo.trim() } : {}) };
-    const url = await creaLinkBottino(b, location.href);
-    try {
-      if (navigator.share) await navigator.share({ title: 'Bottino', text: `Bottino: ${prezzo(aTesta)} a testa`, url });
-      else { await navigator.clipboard.writeText(url); setStato('Link copiato: mandalo al gruppo. Ognuno lo apre e prende la sua parte.'); }
-    } catch { /* annullato */ }
-  };
+  const manda = async () => { const m = await mandaBottino(aTesta, nota, nomeTavolo); if (m && !navigator.share) setStato(m); };
   return (
     <>
       <button onClick={() => setAperto(true)} className="mt-2 min-h-12 w-full rounded-xl border border-accento text-base text-accento">Dai monete al gruppo</button>

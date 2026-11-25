@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, aggiungiOggettoVelato, copiaPerTavolo, aggiungiMovimento, elenco, salvaIncontro, togliIncontro, salvaOggettoTavolo, togliOggettoTavolo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio, type PersonaggioSalvato } from './archivio/archivio';
+import { aggiorna, aggiornaTavolo, aggiungiAlGruppo, aggiungiOggettoVelato, copiaPerTavolo, aggiungiMovimento, elenco, salvaIncontro, togliIncontro, ordinaIncontri, salvaOggettoTavolo, togliOggettoTavolo, togliDalGruppo, apri as apriPersonaggio, attivo, duplica, eCopiaCompleta, elementi, elimina, eliminaBackground, eliminaSpecie, eliminaTavolo, esportaTutto, importaTutto, nuovo, nuovoTavolo, portaAlTavolo, salvaBackground, salvaSpecie, tavoli, unisciElementi, type Archivio, type PersonaggioSalvato } from './archivio/archivio';
 import { elementiUsati, registra, unione, type Elementi } from './creazione/personalizzati';
 import { prossimoLivello } from './creazione/livello';
 import { bozzaVuota, cambiaBackground, cambiaClasse, cambiaSpecie, concludi, concluso, daCompletarePrimaDiSalvare, PASSI, prossimoPasso, riapri, statoPassi, type Bozza, type IdPasso, type StatoPasso } from './creazione/percorso';
@@ -366,6 +366,7 @@ export default function App() {
             togliOggetto={(uid) => setArchivio((a: Archivio) => togliOggettoTavolo(a, tv.id, uid))}
             incontri={tv.incontri} salvaIncontro={(i) => setArchivio((a: Archivio) => salvaIncontro(a, tv.id, i))}
             togliIncontro={(id) => setArchivio((a: Archivio) => togliIncontro(a, tv.id, id))}
+            riordinaIncontri={(ids) => setArchivio((a: Archivio) => ordinaIncontri(a, tv.id, ids))}
             cambia={(t) => setArchivio((a: Archivio) => aggiornaTavolo(a, tv.id, t))}
             elimina={() => { setArchivio(eliminaTavolo(archivio, tv.id)); setVista('tavoli'); }}
             torna={() => setVista('tavoli')} salvato={salvato} />;

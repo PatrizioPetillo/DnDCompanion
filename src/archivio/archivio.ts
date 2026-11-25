@@ -30,7 +30,15 @@ export interface Archivio { versione: 1; personaggi: PersonaggioSalvato[]; attiv
 export interface MembroGruppo { id: string; bozza: Bozza; elementi?: Partial<Elementi>; ricevuto: string; canale?: string; pg?: string; il?: string; stato?: import('../partita/al-tavolo').StatoAlTavolo }   // stato: PF, condizioni e iniziativa dal telefono del giocatore (23/11)   // pg, il: dal tavolo collegato (23/11)   // canale: il segreto per mandargli eventi (22/11)
 export interface TavoloSalvato { id: string; tavolo: Tavolo; aggiornato: string; gruppo?: MembroGruppo[]; oggetti?: OggettoDelMaster[]; incontri?: Incontro[] }
 // Gli incontri preparati dal master (21/11); senza gruppo, il master scrive quanti personaggi e di che livello
-export interface Incontro { id: string; nome: string; nemici: Nemico[]; combattimento?: Combattimento; manuale?: { quanti: number; livello: number } }
+export interface Incontro {
+  id: string; nome: string; nemici: Nemico[]; combattimento?: Combattimento; manuale?: { quanti: number; livello: number };
+  // 25/11 (incontri più ricchi, scelta di Patrizio): sessione, testi, ricompense preparate, fatto
+  sessione?: string;                    // «Sessione 1»: raggruppa gli incontri nell'elenco
+  daLeggere?: string;                   // il testo da leggere ai giocatori
+  note?: string;                        // solo per il master
+  ricompense?: { mo?: number; nota?: string; oggetti?: string[] };   // monete in totale (si dividono al momento) e oggetti del tavolo (uid)
+  fattoIl?: string;
+}
 // Gli oggetti creati dal master (21/11): cosa fanno lo sa solo lui finché non sblocca l'identificazione.
 // segreto: serve a sbloccare (non esce mai dal telefono); id: la sua impronta, nel link; chiave: decifra cosa fa.
 export interface OggettoDelMaster {
@@ -270,6 +278,14 @@ export function sostituisciOggetto(a: Archivio, pgId: string, o: import('../rego
 export const salvaIncontro = (a: Archivio, tavoloId: string, inc: Incontro): Archivio =>
   ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id !== tavoloId ? t : { ...t, incontri: (t.incontri ?? []).some((x) => x.id === inc.id)
     ? (t.incontri ?? []).map((x) => (x.id === inc.id ? inc : x)) : [...(t.incontri ?? []), inc] })) });
+// L'ordine degli incontri del tavolo (25/11): ids nel nuovo ordine; quelli non elencati restano in fondo
+export const ordinaIncontri = (a: Archivio, tavoloId: string, ids: string[]): Archivio =>
+  ({ ...a, tavoli: (a.tavoli ?? []).map((t) => {
+    if (t.id !== tavoloId) return t;
+    const tutti = t.incontri ?? [];
+    const primi = ids.flatMap((id) => tutti.filter((x) => x.id === id));
+    return { ...t, incontri: [...primi, ...tutti.filter((x) => !ids.includes(x.id))] };
+  }) });
 export const togliIncontro = (a: Archivio, tavoloId: string, id: string): Archivio =>
   ({ ...a, tavoli: (a.tavoli ?? []).map((t) => (t.id !== tavoloId ? t : { ...t, incontri: (t.incontri ?? []).filter((x) => x.id !== id) })) });
 

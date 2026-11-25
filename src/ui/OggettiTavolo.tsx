@@ -14,6 +14,18 @@ import { pubblicaSblocco, servizioAttivo } from '../sblocchi/servizio';
 import { FoglioDalBasso } from './SchedaIncantesimo';
 import { MostraQR } from './QR';
 
+// Dà un oggetto con il suo link (anche dalle ricompense di un incontro, 25/11): null se annullato
+export async function daiOggetto(o: OggettoDelMaster, nomeTavolo: string, salva: (o: OggettoDelMaster) => void): Promise<string | null> {
+  const url = await creaLinkOggetto(o, location.href, nomeTavolo);
+  try {
+    let m = 'Link mandato.';
+    if (navigator.share) await navigator.share({ title: o.apparente, text: `Hai trovato: ${o.apparente}`, url });
+    else { await navigator.clipboard.writeText(url); m = 'Link copiato: mandalo al giocatore.'; }
+    salva({ ...o, datoIl: o.datoIl ?? new Date().toISOString() });
+    return m;
+  } catch { return null; }
+}
+
 export function OggettiTavolo({ oggetti, nomeTavolo, salva, togli }: {
   oggetti: OggettoDelMaster[]; nomeTavolo: string; salva: (o: OggettoDelMaster) => void; togli: (uid: string) => void;
 }) {
@@ -22,14 +34,7 @@ export function OggettiTavolo({ oggetti, nomeTavolo, salva, togli }: {
   const [stato, setStato] = useState<Record<string, string>>({});
   const di = (uid: string, t: string) => setStato((s) => ({ ...s, [uid]: t }));
 
-  const dai = async (o: OggettoDelMaster) => {
-    const url = await creaLinkOggetto(o, location.href, nomeTavolo);
-    try {
-      if (navigator.share) await navigator.share({ title: o.apparente, text: `Hai trovato: ${o.apparente}`, url });
-      else { await navigator.clipboard.writeText(url); di(o.uid, 'Link copiato: mandalo al giocatore.'); }
-      salva({ ...o, datoIl: o.datoIl ?? new Date().toISOString() });
-    } catch { /* annullato */ }
-  };
+  const dai = async (o: OggettoDelMaster) => { const m = await daiOggetto(o, nomeTavolo, salva); if (m && !navigator.share) di(o.uid, m); };
   const sblocca = async (o: OggettoDelMaster) => {
     if (!servizioAttivo()) { setQr(o); return; }
     di(o.uid, 'Sblocco…');

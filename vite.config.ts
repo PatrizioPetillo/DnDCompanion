@@ -13,7 +13,7 @@ export default defineConfig({
       manifest: {
         name: 'Companion DomusDraconis',   // nome deciso da Patrizio il 23/11 (app aperta a tutti)
         short_name: 'Companion',
-        description: 'Crea il tuo personaggio di livello 1 secondo le regole del tavolo. Compatibile con la quinta edizione.',
+        description: 'Crea il tuo personaggio dal 1° al 5° livello secondo le regole del tavolo. Compatibile con la quinta edizione.',
         lang: 'it',
         display: 'standalone',
         orientation: 'portrait',
@@ -26,7 +26,8 @@ export default defineConfig({
           { src: 'icona-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,woff,woff2}'], maximumFileSizeToCacheInBytes: 5_000_000 },
+      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,woff,woff2}'], globIgnores: ['avvio/**'],   // le immagini di avvio dell'iPhone non vanno nella cache offline (25/11)
+        maximumFileSizeToCacheInBytes: 5_000_000 },
     }),
   ],
   // I pezzi grandi si scaricano solo quando servono: pdf (pdf-lib + fontkit, solo all'esportazione)

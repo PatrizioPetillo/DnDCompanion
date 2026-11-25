@@ -25,7 +25,9 @@ export function useInvioTavolo(archivio: Archivio, setArchivio: (f: (a: Archivio
   useEffect(() => {
     if (!firma || !tavoliAttivi()) return;
     let annullato = false;
+    let riprova: ReturnType<typeof setTimeout> | undefined;
     const invia = async () => {
+      let fallito = false;
       for (const p of ultimo.current.personaggi.filter((x) => x.bozza.tavolo?.canale)) {
         if (annullato) return;
         // la prima volta: il token per il tavolo e il segreto per gli eventi dal master
@@ -42,12 +44,15 @@ export function useInvioTavolo(archivio: Archivio, setArchivio: (f: (a: Archivio
         const chiave = `${p.id}@${p.bozza.tavolo!.canale!.id}`;
         if (inviati()[chiave] === firmaInvio) continue;
         if (await inviaScheda(p.bozza.tavolo!.canale!, p.id, p.invio.token, testo, stato)) segna(chiave, firmaInvio);
+        else fallito = true;
       }
+      // 24/11: se il servizio dice «troppe richieste» (o la rete cade) si riprova da soli tra 30 secondi
+      if (fallito && !annullato) { clearTimeout(riprova); riprova = setTimeout(() => void invia(), 30_000); }
     };
     const t = setTimeout(() => void invia(), 1000);   // aspetta che il giocatore smetta di toccare
     const online = () => void invia();
     window.addEventListener('online', online);
-    return () => { annullato = true; clearTimeout(t); window.removeEventListener('online', online); };
+    return () => { annullato = true; clearTimeout(t); clearTimeout(riprova); window.removeEventListener('online', online); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firma]);
 }

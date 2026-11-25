@@ -9,6 +9,7 @@
 //   POST /c/<id>          { segreto, evento } → li accoda; l'id deve essere l'impronta del segreto (ce l'ha solo chi ha il link della scheda)
 //   GET  /c/<id>/ascolta  → WebSocket: arriva { seq, il, evento } appena il master lo manda
 import { DurableObject } from 'cloudflare:workers';
+import { Limite } from './limite';
 
 // Tavolo collegato (23/11): i giocatori che hanno il link del tavolo mandano la loro scheda, il master la riceve da solo.
 //   POST /t/<id>              { pg, token, iv, cifrato } → salva l'ultima versione della scheda di quel personaggio
@@ -22,6 +23,8 @@ interface Env { SBLOCCHI: DurableObjectNamespace<Sblocco>; CANALI: DurableObject
 const ID = /^[A-Za-z0-9_-]{22}$/;
 const B64_32 = /^[A-Za-z0-9_-]{43}$/;
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
+// 429 con il tempo da aspettare (24/11): l'app riprova da sola
+const troppe = (secondi: number) => new Response(JSON.stringify({ errore: 'troppe richieste, riprova tra poco' }), { status: 429, headers: { 'content-type': 'application/json', 'retry-after': String(secondi), ...CORS } });
 const json = (x: unknown, status = 200) => new Response(JSON.stringify(x), { status, headers: { 'content-type': 'application/json', ...CORS } });
 
 const daB64url = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
@@ -32,7 +35,10 @@ async function impronta(segreto: string) {
 }
 
 export class Sblocco extends DurableObject<Env> {
+  private limite?: Limite;
+  private async frena() { const a = await (this.limite ??= new Limite(this.ctx.storage)).attesa(); return a === null ? null : troppe(a); }
   async fetch(req: Request): Promise<Response> {
+    const fermo = await this.frena(); if (fermo) return fermo;
     const url = new URL(req.url);
     const id = url.pathname.split('/')[2];
     const chiave = await this.ctx.storage.get<string>('chiave');
@@ -65,7 +71,10 @@ interface Voce { seq: number; il: string; evento: unknown }
 const MAX_EVENTI = 50, DURATA = 30 * 24 * 3600 * 1000;
 
 export class Canale extends DurableObject<Env> {
+  private limite?: Limite;
+  private async frena() { const a = await (this.limite ??= new Limite(this.ctx.storage)).attesa(); return a === null ? null : troppe(a); }
   async fetch(req: Request): Promise<Response> {
+    const fermo = await this.frena(); if (fermo) return fermo;
     const url = new URL(req.url);
     const id = url.pathname.split('/')[2];
     if (url.pathname.endsWith('/ascolta')) {
@@ -102,7 +111,10 @@ interface SchedaTavolo { tok: string; il: string; iv?: string; cifrato?: string;
 const PG = /^[A-Za-z0-9_-]{1,40}$/, MAX_PG = 40, DURATA_TAVOLO = 90 * 24 * 3600 * 1000;
 
 export class TavoloDO extends DurableObject<Env> {
+  private limite?: Limite;
+  private async frena() { const a = await (this.limite ??= new Limite(this.ctx.storage)).attesa(); return a === null ? null : troppe(a); }
   async fetch(req: Request): Promise<Response> {
+    const fermo = await this.frena(); if (fermo) return fermo;
     const url = new URL(req.url);
     const [, , id, azione] = url.pathname.split('/');
     if (azione === 'ascolta') {

@@ -367,6 +367,8 @@ export default function App() {
             incontri={tv.incontri} salvaIncontro={(i) => setArchivio((a: Archivio) => salvaIncontro(a, tv.id, i))}
             togliIncontro={(id) => setArchivio((a: Archivio) => togliIncontro(a, tv.id, id))}
             riordinaIncontri={(ids) => setArchivio((a: Archivio) => ordinaIncontri(a, tv.id, ids))}
+            salvaSpecie={(sp) => setArchivio((a: Archivio) => salvaSpecie(a, sp))}
+            salvaBackground={(bg) => setArchivio((a: Archivio) => salvaBackground(a, bg))}
             cambia={(t) => setArchivio((a: Archivio) => aggiornaTavolo(a, tv.id, t))}
             elimina={() => { setArchivio(eliminaTavolo(archivio, tv.id)); setVista('tavoli'); }}
             torna={() => setVista('tavoli')} salvato={salvato} />;

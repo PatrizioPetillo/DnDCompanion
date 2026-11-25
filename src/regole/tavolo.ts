@@ -96,8 +96,21 @@ export function descriviTavolo(t: Tavolo, d: Dati): string[] {
     const e = esclusi(g);
     if (e.length) righe.push(`${nome} non ammesse: ${e.join(', ')}`.replace('Background non ammesse', 'Background non ammessi'));
   }
-  const pers = [...Object.values(t.elementi?.background ?? {}), ...Object.values(t.elementi?.specie ?? {})].map((x) => x.nome);
-  if (pers.length) righe.push(`Elementi del master: ${pers.join(', ')}`);
+  // 25/11: specie e background aggiunti dal master, con il manuale da cui vengono
+  const conRimando = (x: { nome: string; rimando?: string }) => (x.rimando ? `${x.nome} (${x.rimando})` : x.nome);
+  const sp = Object.values(t.elementi?.specie ?? {}).map(conRimando);
+  const bg = Object.values(t.elementi?.background ?? {}).map(conRimando);
+  if (sp.length) righe.push(`Specie aggiunte dal master: ${sp.join(', ')}`);
+  if (bg.length) righe.push(`Background aggiunti dal master: ${bg.join(', ')}`);
   if (t.eccezioni?.length) righe.push(`Eccezioni concesse: ${t.eccezioni.map((e) => NOME_ECCEZIONE[e].toLowerCase()).join(', ')}`);
   return righe;
+}
+
+// 25/11: cosa usa un personaggio del gruppo che non è né nell'SRD né tra gli elementi del tavolo (l'ha scritto il giocatore)
+export function fuoriDalTavolo(b: { specie?: string | null; background?: string | null }, t: Tavolo, d: Dati): string[] {
+  const srd = (g: 'specie' | 'background', id: string) => !!d[g][id] && !d[g][id].personalizzato;
+  const out: string[] = [];
+  if (b.specie && !srd('specie', b.specie) && !t.elementi?.specie?.[b.specie]) out.push('specie');
+  if (b.background && !srd('background', b.background) && !t.elementi?.background?.[b.background]) out.push('background');
+  return out;
 }

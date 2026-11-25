@@ -123,3 +123,18 @@ describe('I miei tavoli e «Usa un mio personaggio»', () => {
     expect(descriviTavolo(t, DATI)).toEqual(['Punteggi: Point buy', 'Classi non ammesse: Warlock', 'Specie non ammesse: Orco', 'Eccezioni concesse: lingue rare a scelta']);
   });
 });
+
+describe('specie e background dai manuali al tavolo (25/11)', () => {
+  it('l\'invito dice cosa ha aggiunto il master, con il manuale', async () => {
+    const { descriviTavolo } = await import('../src/regole/tavolo');
+    const t = { ...tavoloVuoto(), elementi: { background: {}, specie: { kalashtar: { id: 'kalashtar', nome: 'Kalashtar', rimando: 'Eberron, p. 12' } } } } as never;
+    expect(descriviTavolo(t, DATI)).toContain('Specie aggiunte dal master: Kalashtar (Eberron, p. 12)');
+  });
+  it('segnala al master specie e background scritti dal giocatore e non presenti nel tavolo', async () => {
+    const { fuoriDalTavolo } = await import('../src/regole/tavolo');
+    const t = { ...tavoloVuoto(), elementi: { background: {}, specie: { kalashtar: { id: 'kalashtar', nome: 'Kalashtar' } } } } as never;
+    expect(fuoriDalTavolo({ specie: 'elf', background: 'sage' }, t, DATI)).toEqual([]);
+    expect(fuoriDalTavolo({ specie: 'kalashtar', background: 'sage' }, t, DATI)).toEqual([]);
+    expect(fuoriDalTavolo({ specie: 'kenku', background: 'farmer' }, t, DATI)).toEqual(['specie', 'background']);
+  });
+});

@@ -137,12 +137,18 @@ export function PassoSpecie({ bozza, scegli, cambia, salvaSpecie, eliminaSpecie 
         })}
       </ul>
 
+      {bozza.tavolo && (
+        // 25/11: al tavolo le specie extra le inserisce il master, una volta per tutti
+        <p className="mt-4 rounded-xl border border-bordo bg-superficie p-3 text-sm text-testo-2">
+          Manca la specie che vuoi (Eberron, Ravenloft, altri manuali)? Chiedila al master: la inserisce lui nel tavolo, una volta per tutti, e ti arriva rimandando il link.
+        </p>
+      )}
       {!bozza.tavolo && (
         <>
           <Separatore titolo="Dal tuo manuale" />
           {avviso && <p role="status" className="mb-3 rounded-xl border border-attenzione/50 bg-superficie p-3 text-sm text-testo">{avviso}</p>}
           <p className="mb-2 text-sm text-testo-2">
-            Le specie di Eberron, Ravenloft o di altri manuali non sono nell'SRD: l'app non può contenerle. Se hai il manuale, inseriscila tu: resta nel tuo telefono e nelle tue schede.
+            Le specie di Eberron, Ravenloft o di altri manuali non sono nell'SRD: l'app non può contenerle. Se hai il manuale, inseriscila tu: resta nel tuo telefono e nelle tue schede. Giochi a un tavolo? Chiedila al master: la inserisce lui una volta per tutti.
           </p>
           <button onClick={() => setModulo(moduloSpecieVuoto())} className="h-12 w-full rounded-xl border border-accento text-base text-accento">Inserisci una specie</button>
         </>

@@ -119,16 +119,21 @@ export function PassoBackground({ bozza, scegli, cambia, salvaBackground, elimin
 
       {bozza.tavolo ? (
         // Al tavolo i background extra li sceglie il master: qui solo i suoi, niente «Inseriscilo»
-        miei.length > 0 && <>
-          <Separatore titolo={`Dal master: ${bozza.tavolo.nome || 'il tavolo'}`} />
-          <ul className="mb-3 space-y-3">{miei.map(scheda)}</ul>
+        <>
+          {miei.length > 0 && <>
+            <Separatore titolo={`Dal master: ${bozza.tavolo.nome || 'il tavolo'}`} />
+            <ul className="mb-3 space-y-3">{miei.map(scheda)}</ul>
+          </>}
+          <p className="mt-4 rounded-xl border border-bordo bg-superficie p-3 text-sm text-testo-2">
+            Manca il background che vuoi (Manuale del Giocatore, altri manuali)? Chiedilo al master: lo inserisce lui nel tavolo, una volta per tutti, e ti arriva rimandando il link.
+          </p>
         </>
       ) : <>
       <Separatore titolo="Dal tuo manuale" />
       {avviso && <p role="status" className="mb-3 rounded-xl border border-attenzione/50 bg-superficie p-3 text-sm text-testo">{avviso}</p>}
       {miei.length > 0 && <ul className="mb-3 space-y-3">{miei.map(scheda)}</ul>}
       <p className="mb-2 text-sm text-testo-2">
-        Il Manuale del Giocatore 2024 ha altri 12 background, che non sono nell'SRD: l'app non può contenerli. Se hai il manuale, inseriscili tu: restano nel tuo telefono e nelle tue schede.
+        Il Manuale del Giocatore 2024 ha altri 12 background, che non sono nell'SRD: l'app non può contenerli. Se hai il manuale, inseriscili tu: restano nel tuo telefono e nelle tue schede. Giochi a un tavolo? Chiedili al master: li inserisce lui una volta per tutti.
       </p>
       <ul className="overflow-hidden rounded-xl border border-bordo bg-superficie">
         {daInserire.map((x) => (

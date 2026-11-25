@@ -1,3 +1,9 @@
+import type { Background, Specie } from '../regole/tipi';
+import { ModuloSpecie } from './ModuloSpecie';
+import { ModuloBackground } from './ModuloBackground';
+import { moduloSpecieVuoto, type ModuloSpecie as ModuloSpecieDati } from '../creazione/specie-personalizzate';
+import { moduloVuoto, type ModuloBackground as ModuloBackgroundDati } from '../creazione/personalizzati';
+import { fuoriDalTavolo } from '../regole/tavolo';
 // Il link del tavolo (sezione 5.1). Il master crea un tavolo e manda il link (WhatsApp o altro); il giocatore lo apre
 // e crea il personaggio già con le regole del master. Senza link l'app non ha restrizioni.
 import { rigaGruppo, riassuntoGruppo, type RigaGruppo } from '../creazione/gruppo';
@@ -67,7 +73,7 @@ export function ElencoTavoli({ archivio, apri, crea }: { archivio: Archivio; apr
 }
 
 // ───────── Il tavolo, come lo prepara il master: si salva a ogni tocco ─────────
-export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, salvato = true, mieiElementi, membri = [], apriMembro, togliMembro, oggetti = [], salvaOggetto: salvaOggettoG, togliOggetto: togliOggettoG, incontri = [], salvaIncontro: salvaIncontroG, togliIncontro: togliIncontroG, riordinaIncontri: riordinaG }: {
+export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, salvato = true, mieiElementi, membri = [], apriMembro, togliMembro, oggetti = [], salvaOggetto: salvaOggettoG, togliOggetto: togliOggettoG, incontri = [], salvaIncontro: salvaIncontroG, togliIncontro: togliIncontroG, riordinaIncontri: riordinaG, salvaSpecie, salvaBackground }: {
   tavolo: Tavolo;
   cambia: (t: Tavolo) => void;
   torna?: () => void;          // 23/11: torna all'elenco dei tavoli
@@ -84,7 +90,11 @@ export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, sal
   salvaIncontro?: (i: Incontro) => void;
   togliIncontro?: (id: string) => void;
   riordinaIncontri?: (ids: string[]) => void;
+  salvaSpecie?: (sp: Specie) => void;          // 25/11: il master inserisce specie e background dal tavolo
+  salvaBackground?: (bg: Background) => void;
 }) {
+  const [moduloSp, setModuloSp] = useState<ModuloSpecieDati | null>(null);
+  const [moduloBg, setModuloBg] = useState<ModuloBackgroundDati | null>(null);
   const [stato, setStato] = useState<string | null>(null);
   // 23/11: ogni modifica si salva subito; la riga «Salvato» lo conferma per un attimo
   const [appena, setAppena] = useState(false);
@@ -216,34 +226,49 @@ export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, sal
       {gruppo('Specie', Object.values(DATI.specie).filter((s) => !s.personalizzato))}
       {gruppo('Background', Object.values(DATI.background).filter((b) => !b.personalizzato))}
 
-      {Object.keys(mieiElementi.specie ?? {}).length > 0 && (
-        <>
-          <h2 className="mb-1 mt-5 text-base font-medium text-testo">Specie dai tuoi manuali</h2>
-          <p className="mb-2 text-xs text-testo-2">Quelle che hai inserito tu (Eberron, Ravenloft…): se le metti nel tavolo, arrivano ai giocatori con il link.</p>
-          <div className="flex flex-wrap gap-2">
-            {Object.values(mieiElementi.specie ?? {}).map((sp) => (
-              <button key={sp.id} onClick={() => alternaSp(sp.id)} aria-pressed={!!spTavolo[sp.id]}
-                className={`min-h-11 rounded-full px-4 text-sm ${spTavolo[sp.id] ? 'border-2 border-accento text-accento' : 'border border-bordo text-testo-2'}`}>
-                {sp.nome}
-              </button>
-            ))}
-          </div>
-        </>
+      {/* 25/11: sempre visibile, con la spiegazione per il master e i moduli a portata di mano */}
+      <h2 className="mb-1 mt-5 text-base font-medium text-testo">Specie e background dai tuoi manuali</h2>
+      <p className="mb-2 text-sm text-testo-2">
+        L'app contiene solo le regole libere (SRD 5.2): 9 specie, 4 background, una sottoclasse per classe. Se al tuo tavolo ammetti altro (Eberron, Ravenloft, il Manuale del Giocatore), inseriscilo tu, una volta sola: copi i tratti dal tuo manuale in un modulo guidato e l'app fa i calcoli.
+Quello che metti nel tavolo arriva ai giocatori con il link: lo trovano già pronto, senza inserirlo ognuno per conto suo.
+Perché non c'è già? Quei contenuti appartengono a Wizards of the Coast e non si possono distribuire senza licenza. Li copi tu dal tuo manuale e restano dentro il tuo tavolo.
+      </p>
+      <details className="mb-2 text-sm text-testo-2">
+        <summary className="min-h-11 cursor-pointer py-2 text-accento">Perché non c'è già?</summary>
+        <p>Quei contenuti appartengono a Wizards of the Coast e non si possono distribuire senza licenza (Wizards non dà permessi individuali). Li copi tu dal tuo manuale e restano dentro il tuo tavolo.</p>
+      </details>
+      {(Object.keys(mieiElementi.specie ?? {}).length > 0 || Object.keys(mieiElementi.background).length > 0) && (
+        <p className="mb-1 text-xs text-testo-2">Toccali per metterli nel tavolo o toglierli:</p>
       )}
-      {Object.keys(mieiElementi.background).length > 0 && (
-        <>
-          <h2 className="mb-1 mt-5 text-base font-medium text-testo">Background dai tuoi manuali</h2>
-          <p className="mb-2 text-xs text-testo-2">Quelli che hai inserito tu: se li metti nel tavolo, arrivano ai giocatori con il link.</p>
-          <div className="flex flex-wrap gap-2">
-            {Object.values(mieiElementi.background).map((b) => (
-              <button key={b.id} onClick={() => alternaBg(b.id)} aria-pressed={!!bgTavolo[b.id]}
-                className={`min-h-11 rounded-full px-4 text-sm ${bgTavolo[b.id] ? 'border-2 border-accento text-accento' : 'border border-bordo text-testo-2'}`}>
-                {b.nome}
-              </button>
-            ))}
-          </div>
-        </>
+      <div className="mb-2 flex flex-wrap gap-2">
+        {Object.values(mieiElementi.specie ?? {}).map((sp) => (
+          <button key={sp.id} onClick={() => alternaSp(sp.id)} aria-pressed={!!spTavolo[sp.id]}
+            className={`min-h-11 rounded-full px-4 text-sm ${spTavolo[sp.id] ? 'border-2 border-accento text-accento' : 'border border-bordo text-testo-2'}`}>
+            {sp.nome} <span className="text-xs">· specie</span>
+          </button>
+        ))}
+        {Object.values(mieiElementi.background).map((b) => (
+          <button key={b.id} onClick={() => alternaBg(b.id)} aria-pressed={!!bgTavolo[b.id]}
+            className={`min-h-11 rounded-full px-4 text-sm ${bgTavolo[b.id] ? 'border-2 border-accento text-accento' : 'border border-bordo text-testo-2'}`}>
+            {b.nome} <span className="text-xs">· background</span>
+          </button>
+        ))}
+      </div>
+      {salvaSpecie && salvaBackground && (
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => setModuloSp(moduloSpecieVuoto())} className="min-h-12 rounded-xl border border-accento text-sm text-accento">+ Specie</button>
+          <button onClick={() => setModuloBg(moduloVuoto())} className="min-h-12 rounded-xl border border-accento text-sm text-accento">+ Background</button>
+        </div>
       )}
+      {moduloSp && salvaSpecie && <ModuloSpecie iniziale={moduloSp} chiudi={() => setModuloSp(null)} salva={(sp) => {
+        salvaSpecie(sp); setModuloSp(null);
+        const { modulo: _m, ...senza } = sp; void _m;    // entra subito nel tavolo
+        cambia({ ...tavolo, elementi: { background: bgTavolo, ...tavolo.elementi, specie: { ...spTavolo, [sp.id]: senza } } });
+      }} />}
+      {moduloBg && salvaBackground && <ModuloBackground iniziale={moduloBg} chiudi={() => setModuloBg(null)} salva={(bg) => {
+        salvaBackground(bg); setModuloBg(null);
+        cambia({ ...tavolo, elementi: { ...tavolo.elementi, background: { ...bgTavolo, [bg.id]: bg } } });
+      }} />}
 
       <h2 className="mb-1 mt-5 text-base font-medium text-testo">Eccezioni già concesse</h2>
       <p className="mb-2 text-xs text-testo-2">I giocatori non ricevono l'avviso «chiedi al master» per queste.</p>
@@ -269,7 +294,7 @@ export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, sal
         )}
       </div>
 
-      <Gruppo gruppo={membri} apri={apriMembro} togli={togliMembro} collegato={!!tavolo.canale && tavoliAttivi()} />
+      <Gruppo gruppo={membri} apri={apriMembro} togli={togliMembro} collegato={!!tavolo.canale && tavoliAttivi()} tavolo={tavolo} />
       <MandaEventi membri={membri} nomeTavolo={tavolo.nome} />
 
       {salvaIncontro && togliIncontro && <Incontri incontri={incontri} membri={membri} salva={salvaIncontro} togli={togliIncontro}
@@ -287,7 +312,7 @@ export function ModuloTavolo({ tavolo, cambia: cambiaGrezzo, elimina, torna, sal
 }
 
 // ───────── Il gruppo del master (21/11) ─────────
-function Gruppo({ gruppo, apri, togli, collegato = false }: { gruppo: MembroGruppo[]; apri?: (m: MembroGruppo) => void; togli?: (id: string) => void; collegato?: boolean }) {
+function Gruppo({ gruppo, apri, togli, collegato = false, tavolo }: { gruppo: MembroGruppo[]; apri?: (m: MembroGruppo) => void; togli?: (id: string) => void; collegato?: boolean; tavolo: Tavolo }) {
   const righe = gruppo.map((m) => ({ m, r: rigaGruppo(m.id, m.bozza) })).filter((x): x is { m: MembroGruppo; r: RigaGruppo } => !!x.r);
   // chi ha accettato l'invito e sta ancora creando il personaggio (23/11)
   const inCorso = gruppo.filter((m) => !rigaGruppo(m.id, m.bozza));
@@ -320,6 +345,9 @@ function Gruppo({ gruppo, apri, togli, collegato = false }: { gruppo: MembroGrup
                     {r.avvisi > 0 && <span className="text-xs text-attenzione">{r.avvisi} da controllare</span>}
                   </span>
                   <span className="block text-xs text-testo-2">{r.chi}</span>
+                  {/* 25/11: specie o background scritti dal giocatore, non tra quelli del tavolo */}
+                  {(() => { const f = fuoriDalTavolo(m.bozza, tavolo, DATI); return f.length ? (
+                    <span className="mt-1 block text-xs text-attenzione">{f.length === 2 ? 'Specie e background inseriti' : f[0] === 'specie' ? 'Specie inserita' : 'Background inserito'} dal giocatore, non dal tavolo: {f.length === 2 ? 'controllali' : 'controllalo'}</span>) : null; })()}
                   <span className="mt-2 grid grid-cols-5 gap-1 text-center">
                     {[['CA', r.ca], ['PF', r.pf], ['Iniz.', r.iniziativa], ['Perc.', r.percezione], ['CD', r.cd ?? '—']].map(([e, v]) => (
                       <span key={String(e)} className="rounded-lg bg-sfondo py-1">
